@@ -13,7 +13,7 @@ services:
 
   nginx:
     restart: unless-stopped
-    ports:
+    ports: !override
       - "8080:80"
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
