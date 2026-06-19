@@ -77,10 +77,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 ## Step 5 — Open the app
 
+Famous Mobiles runs on **port 8080** by default (port 80 is reserved for other apps).
+
 | URL | Purpose |
 |-----|---------|
-| `http://YOUR_SERVER_IP` | Staff login |
-| `http://YOUR_SERVER_IP/track` | Public device tracking |
+| `http://YOUR_SERVER_IP:8080` | Staff login |
+| `http://YOUR_SERVER_IP:8080/track` | Public device tracking |
 
 Default login (change immediately after first login):
 - Email: `admin@famousmobiles.com`
@@ -156,7 +158,7 @@ docker compose exec postgres pg_dump -U famousmobiles famousmobiles > backup.sql
 
 ```bash
 sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
+sudo ufw allow 8080/tcp
 sudo ufw allow 443/tcp
 sudo ufw enable
 ```
