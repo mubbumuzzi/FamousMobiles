@@ -45,7 +45,7 @@ public class SecurityConfig {
 
     @Bean
     UserDetailsService userDetailsService() {
-        return username -> userRepository.findByEmail(username)
+        return username -> userRepository.findByMobile(username)
                 .map(UserPrincipal::new)
                 .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found"));
     }

@@ -17,7 +17,7 @@ public record AppProperties(
             long refreshTokenExpirationMs
     ) {}
 
-    public record Admin(String email, String password) {}
+    public record Admin(String email, String password, String mobile) {}
 
     public record Cors(String allowedOrigins) {}
 }

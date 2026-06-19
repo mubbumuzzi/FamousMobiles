@@ -5,7 +5,7 @@ import com.famousmobiles.domain.enums.UserRole;
 public record AuthResponse(
         String accessToken,
         String refreshToken,
-        String email,
+        String mobile,
         String fullName,
         UserRole role,
         boolean mustChangePassword

@@ -85,7 +85,7 @@ Famous Mobiles runs on **port 8080** by default (port 80 is reserved for other a
 | `http://YOUR_SERVER_IP:8080/track` | Public device tracking |
 
 Default login (change immediately after first login):
-- Email: `admin@famousmobiles.com`
+- Mobile: value of `ADMIN_MOBILE` in `.env` (default `9000000000`)
 - Password: value of `ADMIN_PASSWORD` in `.env`
 
 ---

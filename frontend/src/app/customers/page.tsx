@@ -33,7 +33,7 @@ export default function CustomersPage() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Customers</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
           {user?.role !== "TECHNICIAN" && <Button size="sm" onClick={() => setShowForm(!showForm)}>Add Customer</Button>}
         </div>
         <Input placeholder="Search by name or mobile..." value={query} onChange={(e) => { setQuery(e.target.value); load(e.target.value); }} />
@@ -53,9 +53,9 @@ export default function CustomersPage() {
             <Card key={c.id}>
               <CardContent className="flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium">{c.fullName}</p>
-                  <p className="text-sm text-slate-500">{c.mobile} · {c.customerCode}</p>
-                  <p className="text-xs text-slate-400">{c.city}</p>
+                  <p className="font-medium text-slate-900">{c.fullName}</p>
+                  <p className="text-sm text-slate-600">{c.mobile}</p>
+                  <p className="text-xs text-slate-500">{c.customerCode}{c.city ? ` · ${c.city}` : ""}</p>
                 </div>
                 <Link href={`/customers/${c.id}`} className="text-sm text-blue-600">History</Link>
               </CardContent>

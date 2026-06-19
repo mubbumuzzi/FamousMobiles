@@ -20,12 +20,12 @@ export default function TechniciansPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Technicians</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Technicians</h1>
         <div className="grid gap-3 md:grid-cols-2">
           {techs.map((t) => (
             <Card key={t.id}>
               <CardContent className="p-4">
-                <p className="font-semibold">{t.name}</p>
+                <p className="font-semibold text-slate-900">{t.name}</p>
                 <p className="text-sm text-slate-500">{t.mobile} · {t.skillLevel}</p>
                 <p className="text-xs text-slate-400 mt-1">
                   Assigned: {t.assignedJobs ?? 0} · Completed: {t.completedJobs ?? 0}

@@ -26,6 +26,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@famousmobiles.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+      ADMIN_MOBILE: ${ADMIN_MOBILE:-9000000000}
     volumes:
       - ./data/uploads:/data/uploads
     depends_on:

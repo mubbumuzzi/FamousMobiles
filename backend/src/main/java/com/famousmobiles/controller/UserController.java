@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.famousmobiles.dto.CreateUserRequest;
+import com.famousmobiles.dto.UpdateUserRequest;
 import com.famousmobiles.dto.UserResponse;
 import com.famousmobiles.service.AuthService;
 
@@ -41,12 +42,12 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody CreateUserRequest request) {
-        return authService.createUser(request);
+    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        return authService.updateUser(id, request);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable UUID id) {
-        // soft delete could be added
+        authService.deleteUser(id);
     }
 }

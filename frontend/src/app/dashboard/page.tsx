@@ -53,15 +53,15 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader><CardTitle className="text-base">Revenue Today</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold">{formatCurrency(Number(metrics?.revenueToday ?? 0))}</p></CardContent>
+            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueToday ?? 0))}</p></CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle className="text-base">This Week</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold">{formatCurrency(Number(metrics?.revenueThisWeek ?? 0))}</p></CardContent>
+            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisWeek ?? 0))}</p></CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle className="text-base">This Month</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold">{formatCurrency(Number(metrics?.revenueThisMonth ?? 0))}</p></CardContent>
+            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisMonth ?? 0))}</p></CardContent>
           </Card>
         </div>
 
@@ -85,7 +85,7 @@ export default function DashboardPage() {
               <Link href="/tickets/new" className="block rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-medium text-white hover:bg-blue-700">
                 New Repair Ticket
               </Link>
-              <Link href="/search" className="block rounded-lg border px-4 py-3 text-center text-sm font-medium hover:bg-slate-50">
+              <Link href="/search" className="block rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-medium text-slate-900 hover:bg-slate-50">
                 Search Records
               </Link>
             </CardContent>

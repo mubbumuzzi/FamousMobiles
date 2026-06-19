@@ -56,7 +56,8 @@ public class ReportService {
         document.add(new Paragraph("Repair Report " + from + " to " + to, font));
         for (RepairTicket t : tickets) {
             document.add(new Paragraph(t.getTrackingNumber() + " | " + t.getStatus() + " | "
-                    + t.getBrand() + " " + t.getModel(), font));
+                    + t.getBrand() + " " + t.getModel() + " | "
+                    + t.getCustomer().getFullName() + " | " + t.getCustomer().getMobile(), font));
         }
         document.close();
         return baos.toByteArray();
@@ -71,6 +72,7 @@ public class ReportService {
             header.createCell(1).setCellValue("Status");
             header.createCell(2).setCellValue("Device");
             header.createCell(3).setCellValue("Customer");
+            header.createCell(4).setCellValue("Mobile");
             int rowIdx = 1;
             for (RepairTicket t : tickets) {
                 Row row = sheet.createRow(rowIdx++);
@@ -78,6 +80,7 @@ public class ReportService {
                 row.createCell(1).setCellValue(t.getStatus().name());
                 row.createCell(2).setCellValue(t.getBrand() + " " + t.getModel());
                 row.createCell(3).setCellValue(t.getCustomer().getFullName());
+                row.createCell(4).setCellValue(t.getCustomer().getMobile());
             }
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             workbook.write(baos);

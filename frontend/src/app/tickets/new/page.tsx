@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Label, Textarea, Field, selectClassName } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DEVICE_BRANDS } from "@/lib/device-brands";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { ACCESSORIES, CONDITIONS, Customer, DeviceType, Ticket } from "@/lib/types";
@@ -79,37 +81,60 @@ export default function NewTicketPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <form onSubmit={submit} className="mx-auto max-w-2xl space-y-4">
-        <h1 className="text-2xl font-bold">New Repair Ticket</h1>
+        <h1 className="text-2xl font-bold text-slate-900">New Repair Ticket</h1>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Customer</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div>
+            <Field>
               <Label>Existing Customer</Label>
-              <select className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <select className={selectClassName} value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
                 <option value="">-- Select --</option>
                 {customers.map((c) => <option key={c.id} value={c.id}>{c.fullName} ({c.mobile})</option>)}
               </select>
-            </div>
+            </Field>
             <p className="text-xs text-slate-500">Or create new:</p>
-            <Input placeholder="Full Name" value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} />
-            <Input placeholder="Mobile" value={newCustomer.mobile} onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value })} />
+            <Field>
+              <Label>Full Name</Label>
+              <Input placeholder="Enter full name" value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} />
+            </Field>
+            <Field>
+              <Label>Mobile</Label>
+              <Input placeholder="Enter mobile number" value={newCustomer.mobile} onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value })} />
+            </Field>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Device Details</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <div>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <Field>
               <Label>Device Type</Label>
-              <select className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={deviceType} onChange={(e) => setDeviceType(e.target.value as DeviceType)}>
+              <select className={selectClassName} value={deviceType} onChange={(e) => setDeviceType(e.target.value as DeviceType)}>
                 {["MOBILE", "TABLET", "SMART_WATCH", "LAPTOP", "OTHER"].map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
               </select>
-            </div>
-            <Input placeholder="Brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
-            <Input placeholder="Model" value={model} onChange={(e) => setModel(e.target.value)} />
-            <Input placeholder="Color" value={color} onChange={(e) => setColor(e.target.value)} />
-            <Input placeholder="IMEI" value={imei} onChange={(e) => setImei(e.target.value)} className="md:col-span-2" />
+            </Field>
+            <Field>
+              <Label>Brand</Label>
+              <SearchableSelect
+                placeholder="Search brand..."
+                value={brand}
+                onChange={setBrand}
+                options={DEVICE_BRANDS}
+              />
+            </Field>
+            <Field>
+              <Label>Model</Label>
+              <Input placeholder="Enter model" value={model} onChange={(e) => setModel(e.target.value)} />
+            </Field>
+            <Field>
+              <Label>Color</Label>
+              <Input placeholder="Enter color" value={color} onChange={(e) => setColor(e.target.value)} />
+            </Field>
+            <Field className="md:col-span-2">
+              <Label>IMEI</Label>
+              <Input placeholder="Enter IMEI" value={imei} onChange={(e) => setImei(e.target.value)} />
+            </Field>
           </CardContent>
         </Card>
 
@@ -119,25 +144,37 @@ export default function NewTicketPage() {
             <div className="flex flex-wrap gap-2">
               {ACCESSORIES.map((a) => (
                 <button key={a} type="button" onClick={() => toggle(accessories, setAccessories, a)}
-                  className={`rounded-full px-3 py-1 text-xs ${accessories.includes(a) ? "bg-blue-600 text-white" : "bg-slate-100"}`}>{a}</button>
+                  className={`rounded-full px-3 py-1 text-xs ${accessories.includes(a) ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`}>{a}</button>
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
               {CONDITIONS.map((c) => (
                 <button key={c} type="button" onClick={() => toggle(conditions, setConditions, c)}
-                  className={`rounded-full px-3 py-1 text-xs ${conditions.includes(c) ? "bg-red-600 text-white" : "bg-slate-100"}`}>{c}</button>
+                  className={`rounded-full px-3 py-1 text-xs ${conditions.includes(c) ? "bg-red-600 text-white" : "bg-slate-100 text-slate-700"}`}>{c}</button>
               ))}
             </div>
-            <Textarea placeholder="Problem description" value={problem} onChange={(e) => setProblem(e.target.value)} />
+            <Field>
+              <Label>Problem Description</Label>
+              <Textarea placeholder="Describe the issue" value={problem} onChange={(e) => setProblem(e.target.value)} />
+            </Field>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Payment & Delivery</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            <Input type="number" placeholder="Estimated Cost" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)} />
-            <Input type="number" placeholder="Advance Paid" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} />
-            <Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} />
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <Field>
+              <Label>Estimated Cost</Label>
+              <Input type="number" placeholder="0" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)} />
+            </Field>
+            <Field>
+              <Label>Advance Paid</Label>
+              <Input type="number" placeholder="0" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} />
+            </Field>
+            <Field>
+              <Label>Delivery Date</Label>
+              <Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} />
+            </Field>
           </CardContent>
         </Card>
 

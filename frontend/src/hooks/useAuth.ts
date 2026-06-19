@@ -28,5 +28,5 @@ export function useAuthGuard() {
 }
 
 export function saveUser(user: AuthResponse) {
-  localStorage.setItem("fm_user", JSON.stringify({ email: user.email, fullName: user.fullName, role: user.role }));
+  localStorage.setItem("fm_user", JSON.stringify({ mobile: user.mobile, fullName: user.fullName, role: user.role }));
 }

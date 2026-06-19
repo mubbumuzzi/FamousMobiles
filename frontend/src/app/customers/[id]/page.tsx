@@ -26,7 +26,7 @@ export default function CustomerDetailPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">{customer.fullName}</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{customer.fullName}</h1>
         <p className="text-slate-600">{customer.mobile} · {customer.customerCode}</p>
         <h2 className="font-semibold">Repair History</h2>
         {repairs.map((t) => (

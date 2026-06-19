@@ -8,7 +8,7 @@ import { TrackingTimeline } from "@/components/tracking/TrackingTimeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Label, Textarea, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { API_URL, api, getAccessToken } from "@/lib/api";
 import { Payment, REPAIR_STATUSES, RepairStatus, Ticket, TimelineEntry } from "@/lib/types";
@@ -80,7 +80,9 @@ export default function TicketDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h1 className="text-2xl font-bold text-blue-700">{ticket.trackingNumber}</h1>
-            <p className="text-slate-600">{ticket.brand} {ticket.model} · {ticket.customer.fullName}</p>
+            <p className="text-slate-600">{ticket.brand} {ticket.model}</p>
+            <p className="font-medium text-slate-900">{ticket.customer.fullName}</p>
+            <p className="text-slate-600">{ticket.customer.mobile}</p>
           </div>
           <Badge>{formatStatus(ticket.status)}</Badge>
         </div>
@@ -107,7 +109,7 @@ export default function TicketDetailPage() {
             <CardContent className="space-y-2">
               {nextAllowed && (
                 <>
-                  <select className="w-full rounded-lg border px-3 py-2 text-sm" value={nextStatus} onChange={(e) => setNextStatus(e.target.value as RepairStatus)}>
+                  <select className={selectClassName} value={nextStatus} onChange={(e) => setNextStatus(e.target.value as RepairStatus)}>
                     <option value="">Move to...</option>
                     <option value={nextAllowed}>{formatStatus(nextAllowed)}</option>
                   </select>
@@ -146,7 +148,7 @@ export default function TicketDetailPage() {
             <CardHeader><CardTitle className="text-base">Record Payment</CardTitle></CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               <Input type="number" placeholder="Amount" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="w-32" />
-              <select className="rounded-lg border px-3 py-2 text-sm" value={payMode} onChange={(e) => setPayMode(e.target.value)}>
+              <select className={selectClassName} value={payMode} onChange={(e) => setPayMode(e.target.value)}>
                 <option value="CASH">Cash</option>
                 <option value="UPI">UPI</option>
                 <option value="CARD">Card</option>

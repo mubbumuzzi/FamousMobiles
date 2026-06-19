@@ -17,10 +17,20 @@ export type PhotoType = "FRONT" | "BACK" | "DAMAGE" | "REPAIR";
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  email: string;
+  mobile: string;
   fullName: string;
   role: UserRole;
   mustChangePassword: boolean;
+}
+
+export interface StaffUser {
+  id: string;
+  mobile: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
 }
 
 export interface Customer {
@@ -104,17 +114,6 @@ export interface Technician {
   assignedJobs?: number;
   completedJobs?: number;
   averageRepairTimeHours?: number;
-}
-
-export interface InventoryItem {
-  id: string;
-  partName: string;
-  sku: string;
-  quantity: number;
-  costPrice: number;
-  sellingPrice: number;
-  lowStockThreshold: number;
-  lowStock: boolean;
 }
 
 export interface Payment {

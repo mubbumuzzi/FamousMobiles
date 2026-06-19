@@ -27,7 +27,7 @@ export default function ReportsPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4 max-w-lg">
-        <h1 className="text-2xl font-bold">Reports</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
         <Card>
           <CardHeader><CardTitle className="text-base">Date Range</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
@@ -41,9 +41,6 @@ export default function ReportsPage() {
           </Button>
           <Button variant="outline" className="w-full justify-start" onClick={() => download(`/reports/repairs?from=${from}&to=${to}&format=xlsx`, "repairs.xlsx")}>
             <Download className="h-4 w-4 mr-2" /> Repair Report (Excel)
-          </Button>
-          <Button variant="outline" className="w-full justify-start" onClick={() => download("/reports/inventory?format=xlsx", "inventory.xlsx")}>
-            <Download className="h-4 w-4 mr-2" /> Inventory Report (Excel)
           </Button>
         </div>
       </div>

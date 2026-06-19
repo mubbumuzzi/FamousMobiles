@@ -5,9 +5,9 @@ import jakarta.validation.constraints.NotNull;
 
 import com.famousmobiles.domain.enums.UserRole;
 
-public record CreateUserRequest(
+public record UpdateUserRequest(
         @NotBlank String fullName,
         @NotBlank String mobile,
-        @NotBlank String password,
+        String password,
         @NotNull UserRole role
 ) {}

@@ -32,7 +32,7 @@ export default function SearchPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Search</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Search</h1>
         <Input placeholder="Tracking ID, mobile, name, IMEI, model..." value={query} onChange={(e) => search(e.target.value)} autoFocus />
         {results && (
           <div className="space-y-4">
@@ -41,10 +41,14 @@ export default function SearchPage() {
               {results.tickets.map((t) => (
                 <Link key={t.id} href={`/tickets/${t.id}`}>
                   <Card className="mb-2 hover:border-blue-300">
-                    <CardContent className="flex justify-between p-3 text-sm">
+                    <CardContent className="grid gap-2 p-3 text-sm md:grid-cols-4">
                       <span className="font-medium text-blue-700">{t.trackingNumber}</span>
-                      <span>{t.brand} {t.model}</span>
-                      <span>{formatStatus(t.status)}</span>
+                      <span className="text-slate-900">{t.brand} {t.model}</span>
+                      <span>
+                        <span className="block font-medium text-slate-900">{t.customer.fullName}</span>
+                        <span className="block text-slate-600">{t.customer.mobile}</span>
+                      </span>
+                      <span className="text-slate-900">{formatStatus(t.status)}</span>
                     </CardContent>
                   </Card>
                 </Link>
@@ -56,7 +60,8 @@ export default function SearchPage() {
                 <Link key={c.id} href={`/customers/${c.id}`}>
                   <Card className="mb-2 hover:border-blue-300">
                     <CardContent className="p-3 text-sm">
-                      <span className="font-medium">{c.fullName}</span> · {c.mobile}
+                      <p className="font-medium text-slate-900">{c.fullName}</p>
+                      <p className="text-slate-600">{c.mobile}</p>
                     </CardContent>
                   </Card>
                 </Link>

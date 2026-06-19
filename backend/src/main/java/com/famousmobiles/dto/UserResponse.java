@@ -6,9 +6,10 @@ import com.famousmobiles.domain.enums.UserRole;
 
 public record UserResponse(
         UUID id,
-        String email,
+        String mobile,
         String fullName,
         UserRole role,
         boolean active,
-        boolean mustChangePassword
+        boolean mustChangePassword,
+        String createdAt
 ) {}

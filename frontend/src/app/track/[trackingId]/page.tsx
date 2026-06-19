@@ -22,7 +22,7 @@ export default function TrackByIdPage() {
   }, [trackingId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white text-slate-900">
       <header className="border-b bg-white px-4 py-4">
         <div className="mx-auto flex max-w-lg items-center gap-2 font-bold text-blue-700">
           <Smartphone className="h-5 w-5" />
