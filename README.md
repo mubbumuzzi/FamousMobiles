@@ -9,7 +9,22 @@ A mobile-first PWA for Famous Mobiles repair shop in Hyderabad. Digitizes paper-
 - **Database:** PostgreSQL 16 + Flyway migrations
 - **Deployment:** Docker Compose + Nginx reverse proxy
 
-## Quick Start (Docker)
+## Deployment (Production Server)
+
+See **[DEPLOY.md](DEPLOY.md)** for full server deployment instructions.
+
+Quick version on your VPS:
+
+```bash
+git clone https://github.com/mubbumuzzi/FamousMobiles.git
+cd FamousMobiles
+cp .env.production.example .env
+nano .env   # set domain, secrets, passwords
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+## Quick Start (Docker — local)
 
 ```bash
 cp .env.example .env
