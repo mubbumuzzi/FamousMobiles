@@ -1,0 +1,8 @@
+.env
+data/uploads/*
+!data/uploads/.gitkeep
+node_modules/
+target/
+.next/
+*.log
+.DS_Store

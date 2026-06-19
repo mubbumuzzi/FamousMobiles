@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: famous-mobiles-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/famousmobiles}
+    username: ${DB_USER:famousmobiles}
+    password: ${DB_PASSWORD:famousmobiles}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-jwt-secret-key-min-32-chars-long}
+    refresh-secret: ${JWT_REFRESH_SECRET:change-me-refresh-secret-key-min-32-chars}
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
+  upload-dir: ${UPLOAD_DIR:./data/uploads}
+  public-app-url: ${PUBLIC_APP_URL:http://localhost}
+  admin:
+    email: ${ADMIN_EMAIL:admin@famousmobiles.com}
+    password: ${ADMIN_PASSWORD:Admin@123}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost}
+
+logging:
+  level:
+    com.famousmobiles: INFO
