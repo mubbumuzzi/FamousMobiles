@@ -201,13 +201,16 @@ public class AuthService {
             userRepository.findByEmail(appProperties.admin().email()).ifPresent(admin -> {
                 boolean dirty = false;
                 String configuredMobile = normalizeMobile(appProperties.admin().mobile());
-                if (admin.getMobile() == null || admin.getMobile().isBlank()) {
-                    admin.setMobile(configuredMobile);
-                    dirty = true;
-                }
                 if (appProperties.admin().syncOnStart()) {
+                    if (!configuredMobile.equals(admin.getMobile())) {
+                        admin.setMobile(configuredMobile);
+                        dirty = true;
+                    }
                     admin.setPasswordHash(passwordEncoder.encode(appProperties.admin().password()));
                     admin.setActive(true);
+                    dirty = true;
+                } else if (admin.getMobile() == null || admin.getMobile().isBlank()) {
+                    admin.setMobile(configuredMobile);
                     dirty = true;
                 }
                 if (dirty) {
