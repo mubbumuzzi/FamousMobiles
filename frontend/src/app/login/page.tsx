@@ -101,6 +101,10 @@ export default function LoginPage() {
             <a href="/track" className="font-medium text-blue-600 hover:underline">Track your device</a>
             <span className="text-slate-400"> · no login required</span>
           </p>
+          <p className="mt-3 text-center text-sm text-slate-500">
+            <a href="/install" className="font-medium text-blue-600 hover:underline">Add to Home Screen</a>
+            <span className="text-slate-400"> · use like an app</span>
+          </p>
         </div>
         <ShopTerms className="mt-4" />
       </div>
