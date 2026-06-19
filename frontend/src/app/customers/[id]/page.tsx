@@ -17,9 +17,10 @@ export default function CustomerDetailPage() {
   const [repairs, setRepairs] = useState<Ticket[]>([]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     api<Customer>(`/customers/${id}`).then(setCustomer);
     api<Ticket[]>(`/customers/${id}/repairs`).then(setRepairs);
-  }, [id]);
+  }, [id, authLoading, user]);
 
   if (authLoading || !customer) return null;
 

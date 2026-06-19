@@ -8,7 +8,8 @@ public record AppProperties(
         String uploadDir,
         String publicAppUrl,
         Admin admin,
-        Cors cors
+        Cors cors,
+        Shop shop
 ) {
     public record Jwt(
             String secret,
@@ -17,7 +18,15 @@ public record AppProperties(
             long refreshTokenExpirationMs
     ) {}
 
-    public record Admin(String email, String password, String mobile) {}
+    public record Admin(String email, String password, String mobile, boolean syncOnStart) {}
 
     public record Cors(String allowedOrigins) {}
+
+    public record Shop(
+            String name,
+            String ownerName,
+            String mobile,
+            java.util.List<String> addressLines,
+            java.util.List<String> terms
+    ) {}
 }

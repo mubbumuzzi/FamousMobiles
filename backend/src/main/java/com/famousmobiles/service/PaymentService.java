@@ -40,6 +40,9 @@ public class PaymentService {
             throw new ForbiddenException("Technicians cannot record payments");
         }
         RepairTicket ticket = ticketService.getEntity(ticketId);
+        if (request.amount() == null || request.amount().signum() <= 0) {
+            throw new com.famousmobiles.exception.BadRequestException("Payment amount must be greater than zero");
+        }
         Payment payment = new Payment();
         payment.setTicket(ticket);
         payment.setAmount(request.amount());

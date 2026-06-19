@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
+import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer } from "@/lib/types";
 
@@ -17,8 +18,18 @@ export default function CustomersPage() {
   const [form, setForm] = useState({ fullName: "", mobile: "", alternateMobile: "", address: "" });
   const [showForm, setShowForm] = useState(false);
 
+  const debouncedQuery = useDebounce(query, 350);
+
   const load = (q?: string) => api<Customer[]>(`/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`).then(setCustomers);
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    load();
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    load(debouncedQuery || undefined);
+  }, [debouncedQuery, authLoading, user]);
 
   const create = async () => {
     if (!form.fullName.trim() || !form.mobile.trim()) return;
@@ -37,7 +48,7 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
           {user?.role !== "TECHNICIAN" && <Button size="sm" onClick={() => setShowForm(!showForm)}>Add Customer</Button>}
         </div>
-        <Input placeholder="Search by name or mobile..." value={query} onChange={(e) => { setQuery(e.target.value); load(e.target.value); }} />
+        <Input placeholder="Search by name or mobile..." value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search customers" />
         {showForm && (
           <Card>
             <CardContent className="grid gap-3 p-4 md:grid-cols-2">

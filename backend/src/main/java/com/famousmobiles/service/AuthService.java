@@ -183,7 +183,8 @@ public class AuthService {
         if (user.isActive()) {
             throw new BadRequestException("Remove the staff member first before permanent delete");
         }
-        deactivateTechnicianProfile(user);
+        refreshTokenRepository.deleteByUserId(id);
+        technicianRepository.clearUserReferenceByUserId(id);
         userRepository.delete(user);
     }
 
@@ -198,8 +199,18 @@ public class AuthService {
     public void seedAdmin(AppProperties appProperties) {
         if (userRepository.existsByEmail(appProperties.admin().email())) {
             userRepository.findByEmail(appProperties.admin().email()).ifPresent(admin -> {
+                boolean dirty = false;
+                String configuredMobile = normalizeMobile(appProperties.admin().mobile());
                 if (admin.getMobile() == null || admin.getMobile().isBlank()) {
-                    admin.setMobile(normalizeMobile(appProperties.admin().mobile()));
+                    admin.setMobile(configuredMobile);
+                    dirty = true;
+                }
+                if (appProperties.admin().syncOnStart()) {
+                    admin.setPasswordHash(passwordEncoder.encode(appProperties.admin().password()));
+                    admin.setActive(true);
+                    dirty = true;
+                }
+                if (dirty) {
                     userRepository.save(admin);
                 }
             });

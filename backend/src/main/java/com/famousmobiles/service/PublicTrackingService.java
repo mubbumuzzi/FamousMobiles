@@ -28,7 +28,8 @@ public class PublicTrackingService {
     }
 
     public List<TicketDto.PublicTrackingResponse> trackByMobile(String mobile) {
-        List<RepairTicket> tickets = ticketRepository.findByCustomerMobile(mobile);
+        String normalized = mobile != null ? mobile.trim().replaceAll("\\s+", "") : "";
+        List<RepairTicket> tickets = ticketRepository.findByCustomerMobile(normalized);
         if (tickets.isEmpty()) {
             throw new ResourceNotFoundException("No tickets found for this mobile number");
         }

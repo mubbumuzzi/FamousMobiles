@@ -38,8 +38,20 @@ app:
     email: ${ADMIN_EMAIL:admin@famousmobiles.com}
     password: ${ADMIN_PASSWORD:Admin@123}
     mobile: ${ADMIN_MOBILE:9000000000}
+    sync-on-start: ${ADMIN_SYNC_ON_START:false}
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost}
+  shop:
+    name: Famous Mobiles
+    owner-name: Basheer Uddin
+    mobile: "9063786751"
+    address-lines:
+      - Opp Friends Colony Bus Stop
+      - Shaikpet Main Road, Manikonda
+      - Hyderabad
+    terms:
+      - Delivery should be collected within 2 months; otherwise we are not responsible.
+      - Please bring this bill when collecting your device.
 
 logging:
   level:

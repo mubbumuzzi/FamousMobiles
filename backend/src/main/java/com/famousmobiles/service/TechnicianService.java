@@ -40,11 +40,13 @@ public class TechnicianService {
         return MiscDto.TechnicianResponse.from(technicianRepository.save(technician));
     }
 
+    @Transactional(readOnly = true)
     public List<MiscDto.TechnicianResponse> list() {
         return technicianRepository.findActiveStaffTechnicians().stream()
                 .map(MiscDto.TechnicianResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
     public MiscDto.TechnicianResponse getPerformance(UUID id) {
         Technician technician = getEntity(id);
         var tickets = ticketRepository.findByAssignedTechnicianIdOrderByCreatedAtDesc(id);

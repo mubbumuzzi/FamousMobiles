@@ -33,7 +33,6 @@ public class PaymentController {
     }
 
     @GetMapping("/tickets/{id}/payments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public List<PaymentDto.PaymentResponse> list(@PathVariable UUID id) {
         return paymentService.getByTicket(id);
     }

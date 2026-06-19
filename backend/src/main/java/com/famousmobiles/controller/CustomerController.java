@@ -21,7 +21,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/customers")
-@PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -41,7 +40,6 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public CustomerDto.CustomerResponse create(@Valid @RequestBody CustomerDto.CustomerRequest request) {
         return customerService.create(request);
     }

@@ -12,8 +12,9 @@ export default function TechniciansPage() {
   const [techs, setTechs] = useState<Technician[]>([]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     api<Technician[]>("/technicians").then(setTechs).catch(console.error);
-  }, []);
+  }, [authLoading, user]);
 
   if (authLoading) return null;
 

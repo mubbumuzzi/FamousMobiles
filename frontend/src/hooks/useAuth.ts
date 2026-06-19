@@ -16,6 +16,7 @@ export function useAuthGuard() {
     const stored = localStorage.getItem("fm_user");
     if (!token) {
       router.replace("/login");
+      setLoading(false);
       return;
     }
     if (stored) {

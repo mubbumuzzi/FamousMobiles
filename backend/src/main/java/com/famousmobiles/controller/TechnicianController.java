@@ -26,7 +26,6 @@ public class TechnicianController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public List<MiscDto.TechnicianResponse> list() {
         return technicianService.list();
     }
@@ -44,7 +43,6 @@ public class TechnicianController {
     }
 
     @GetMapping("/{id}/performance")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public MiscDto.TechnicianResponse performance(@PathVariable UUID id) {
         return technicianService.getPerformance(id);
     }

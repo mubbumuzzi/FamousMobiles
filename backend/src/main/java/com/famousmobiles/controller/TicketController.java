@@ -27,7 +27,6 @@ import com.famousmobiles.service.TicketService;
 
 @RestController
 @RequestMapping("/api/tickets")
-@PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
 public class TicketController {
 
     private final TicketService ticketService;
@@ -49,7 +48,6 @@ public class TicketController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public TicketDto.TicketResponse create(@RequestBody TicketDto.CreateTicketRequest request) {
         return ticketService.create(request);
     }
@@ -99,7 +97,6 @@ public class TicketController {
     }
 
     @GetMapping("/{id}/receipt/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public ResponseEntity<byte[]> receipt(@PathVariable UUID id) throws Exception {
         var ticket = ticketService.getEntityWithAccess(id);
         byte[] pdf = pdfReceiptService.generateReceipt(ticket);

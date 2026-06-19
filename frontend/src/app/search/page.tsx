@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+import { PageLoading, Skeleton } from "@/components/ui/skeleton";
 import { useAuthGuard } from "@/hooks/useAuth";
+import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
 import { formatStatus } from "@/lib/utils";
@@ -18,29 +21,50 @@ interface SearchResult {
 export default function SearchPage() {
   const { user, loading: authLoading } = useAuthGuard();
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 350);
   const [results, setResults] = useState<SearchResult | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState("");
 
-  const search = async (q: string) => {
-    setQuery(q);
-    if (q.length < 2) { setResults(null); return; }
-    const data = await api<SearchResult>(`/search?q=${encodeURIComponent(q)}`);
-    setResults(data);
-  };
+  useEffect(() => {
+    if (authLoading || !user) return;
+    if (debouncedQuery.length < 2) {
+      setResults(null);
+      setError("");
+      return;
+    }
+    setSearching(true);
+    setError("");
+    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery)}`)
+      .then(setResults)
+      .catch((err) => setError(err instanceof Error ? err.message : "Search failed"))
+      .finally(() => setSearching(false));
+  }, [debouncedQuery, authLoading, user]);
 
-  if (authLoading) return null;
+  if (authLoading) return <PageLoading />;
+
+  const empty = results && results.tickets.length === 0 && results.customers.length === 0;
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900">Search</h1>
-        <Input placeholder="Tracking ID, mobile, name, IMEI, model..." value={query} onChange={(e) => search(e.target.value)} autoFocus />
-        {results && (
-          <div className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Search</h1>
+        <Input
+          placeholder="Tracking ID, mobile, name, IMEI, model..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search records"
+        />
+        {searching && <Skeleton className="h-20 w-full" />}
+        {error && <Alert variant="error">{error}</Alert>}
+        {empty && <p className="text-sm text-slate-500">No results for &quot;{debouncedQuery}&quot;</p>}
+        {results && !empty && (
+          <div className="space-y-4 animate-fade-in">
             <div>
-              <h2 className="font-semibold mb-2">Tickets ({results.tickets.length})</h2>
+              <h2 className="mb-2 font-semibold">Tickets ({results.tickets.length})</h2>
               {results.tickets.map((t) => (
                 <Link key={t.id} href={`/tickets/${t.id}`}>
-                  <Card className="mb-2 hover:border-blue-300">
+                  <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="grid gap-2 p-3 text-sm md:grid-cols-4">
                       <span className="font-medium text-blue-700">{t.trackingNumber}</span>
                       <span className="text-slate-900">{t.brand} {t.model}</span>
@@ -55,10 +79,10 @@ export default function SearchPage() {
               ))}
             </div>
             <div>
-              <h2 className="font-semibold mb-2">Customers ({results.customers.length})</h2>
+              <h2 className="mb-2 font-semibold">Customers ({results.customers.length})</h2>
               {results.customers.map((c) => (
                 <Link key={c.id} href={`/customers/${c.id}`}>
-                  <Card className="mb-2 hover:border-blue-300">
+                  <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="p-3 text-sm">
                       <p className="font-medium text-slate-900">{c.fullName}</p>
                       <p className="text-slate-600">{c.mobile}</p>

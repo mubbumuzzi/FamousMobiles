@@ -41,30 +41,48 @@ Default admin credentials (change in production):
 
 ## Local Development
 
-### Backend
+You need **two terminals** — backend on `:8080` and frontend on `:3000`.
+
+### 1. Configure environment
 
 ```bash
-# Start PostgreSQL (or use Docker for postgres only)
-docker compose up postgres -d
-
-cd backend
-export DB_URL=jdbc:postgresql://localhost:5432/famousmobiles
-export DB_USER=famousmobiles
-export DB_PASSWORD=famousmobiles
-mvn spring-boot:run
+cp .env.example .env.local   # if you don't have one yet
+# Edit .env.local — set DB_USER, JWT secrets, admin password
 ```
 
-API runs at http://localhost:8080
+Ensure PostgreSQL is running and the `famousmobiles` database exists.
 
-### Frontend
+### 2. Backend (terminal 1 — keep open)
+
+```bash
+./scripts/start-backend.sh          # foreground (recommended for dev)
+# or
+./scripts/start-backend-bg.sh       # background JAR process
+```
+
+Verify: `./scripts/check-backend.sh` → should print `OK`
+
+API: http://localhost:8080/api
+
+### 3. Frontend (terminal 2)
 
 ```bash
 cd frontend
 npm install
-NEXT_PUBLIC_API_URL=http://localhost:8080/api npm run dev
+npm run dev
 ```
 
-App runs at http://localhost:3000
+App: http://localhost:3000/login
+
+Admin credentials: `./scripts/admin-credentials.sh`
+
+### Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `Cannot reach the server at http://localhost:8080/api` | Backend not running — start terminal 1 above |
+| Login fails after backend restart | Use mobile `9000000000` (not email); password from `.env.local` |
+| Port 8080 busy | `./scripts/stop-backend.sh` then restart |
 
 ## Features
 

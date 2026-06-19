@@ -1,6 +1,3 @@
 #!/usr/bin/env bash
-set -a
-source "$(dirname "$0")/../.env.local"
-set +a
-cd "$(dirname "$0")/../backend"
-exec mvn spring-boot:run
+# Start backend in foreground — keep this terminal open while developing
+exec "$(dirname "$0")/run-backend-jar.sh"

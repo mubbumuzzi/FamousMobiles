@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Smartphone } from "lucide-react";
-import { TrackingTimeline } from "@/components/tracking/TrackingTimeline";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CustomerTrackingView } from "@/components/tracking/CustomerTrackingView";
+import { ShopTerms } from "@/components/ShopInfo";
 import { apiPublic } from "@/lib/api";
 import { PublicTracking } from "@/lib/types";
-import { formatCurrency, formatDate, formatStatus } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TrackByIdPage() {
   const { trackingId } = useParams<{ trackingId: string }>();
@@ -22,44 +21,30 @@ export default function TrackByIdPage() {
   }, [trackingId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white text-slate-900">
-      <header className="border-b bg-white px-4 py-4">
-        <div className="mx-auto flex max-w-lg items-center gap-2 font-bold text-blue-700">
-          <Smartphone className="h-5 w-5" />
-          Famous Mobiles — {trackingId}
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-lg items-center gap-2 px-4 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-header text-white">
+            <Smartphone className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Track your repair</p>
+            <p className="font-bold text-slate-900">Famous Mobiles</p>
+          </div>
         </div>
       </header>
-      <div className="mx-auto max-w-lg space-y-4 p-4">
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {data && (
-          <>
-            <Card>
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-blue-700">{data.trackingNumber}</p>
-                  <Badge variant="warning">{formatStatus(data.currentStatus)}</Badge>
-                </div>
-                <p className="text-lg font-semibold">{data.brand} {data.model}</p>
-                {data.imeiMasked && <p className="text-sm text-slate-500">IMEI: {data.imeiMasked}</p>}
-                <p className="text-sm">Estimated Delivery: <strong>{formatDate(data.estimatedDeliveryDate)}</strong></p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Payment Summary</CardTitle></CardHeader>
-              <CardContent className="space-y-1 text-sm">
-                <div className="flex justify-between"><span>Estimated Cost</span><span>{formatCurrency(Number(data.estimatedCost))}</span></div>
-                <div className="flex justify-between"><span>Advance Paid</span><span>{formatCurrency(Number(data.advancePaid))}</span></div>
-                <div className="flex justify-between font-semibold"><span>Balance</span><span>{formatCurrency(Number(data.balanceAmount))}</span></div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Repair Progress</CardTitle></CardHeader>
-              <CardContent><TrackingTimeline currentStatus={data.currentStatus} timeline={data.timeline} /></CardContent>
-            </Card>
-          </>
+      <main className="mx-auto max-w-lg p-4 pb-8">
+        {error && <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {!data && !error && (
+          <div className="space-y-3">
+            <Skeleton className="h-40 w-full rounded-2xl" />
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-48 w-full rounded-2xl" />
+          </div>
         )}
-        {!data && !error && <p className="text-center text-slate-500">Loading...</p>}
-      </div>
+        {data && <CustomerTrackingView data={data} />}
+        <ShopTerms className="mt-6" />
+      </main>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.dto.MiscDto;
@@ -25,6 +26,7 @@ public class DashboardService {
         this.paymentRepository = paymentRepository;
     }
 
+    @Transactional(readOnly = true)
     public MiscDto.DashboardMetrics getMetrics(boolean includeRevenue) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Instant startOfDay = today.atStartOfDay().toInstant(ZoneOffset.UTC);
