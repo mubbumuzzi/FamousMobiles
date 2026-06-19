@@ -17,6 +17,9 @@ set +a
 echo "==> Pulling latest code..."
 git pull origin main
 
+echo "==> Ensuring certbot webroot exists..."
+mkdir -p certbot/www
+
 echo "==> Building and starting services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
