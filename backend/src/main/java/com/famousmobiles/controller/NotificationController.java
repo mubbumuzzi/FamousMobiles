@@ -14,7 +14,7 @@ import com.famousmobiles.service.NotificationService;
 
 @RestController
 @RequestMapping("/api/tickets/{ticketId}/notifications")
-@PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'TECHNICIAN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
 public class NotificationController {
 
     private final NotificationService notificationService;

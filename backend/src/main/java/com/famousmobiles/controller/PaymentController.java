@@ -27,19 +27,19 @@ public class PaymentController {
     }
 
     @PostMapping("/tickets/{id}/payments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
     public PaymentDto.PaymentResponse record(@PathVariable UUID id, @RequestBody PaymentDto.PaymentRequest request) {
         return paymentService.recordPayment(id, request);
     }
 
     @GetMapping("/tickets/{id}/payments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public List<PaymentDto.PaymentResponse> list(@PathVariable UUID id) {
         return paymentService.getByTicket(id);
     }
 
     @GetMapping("/payments/outstanding")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
     public List<TicketDto.TicketResponse> outstanding() {
         return paymentService.getOutstanding();
     }

@@ -17,9 +17,11 @@ import com.famousmobiles.dto.CustomerDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.service.CustomerService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/customers")
-@PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'TECHNICIAN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -39,14 +41,14 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
-    public CustomerDto.CustomerResponse create(@RequestBody CustomerDto.CustomerRequest request) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
+    public CustomerDto.CustomerResponse create(@Valid @RequestBody CustomerDto.CustomerRequest request) {
         return customerService.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
-    public CustomerDto.CustomerResponse update(@PathVariable UUID id, @RequestBody CustomerDto.CustomerRequest request) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
+    public CustomerDto.CustomerResponse update(@PathVariable UUID id, @Valid @RequestBody CustomerDto.CustomerRequest request) {
         return customerService.update(id, request);
     }
 

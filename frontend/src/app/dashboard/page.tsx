@@ -22,6 +22,7 @@ export default function DashboardPage() {
 
   if (authLoading) return <div className="p-8 text-center">Loading...</div>;
 
+  const isAdmin = user?.role === "ADMIN";
   const statusData = metrics
     ? Object.entries(metrics.statusBreakdown).map(([name, value]) => ({ name: formatStatus(name), value }))
     : [];
@@ -31,7 +32,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">Repair & revenue overview</p>
+          <p className="text-sm text-slate-500">{isAdmin ? "Repair & revenue overview" : "Repair overview"}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -50,20 +51,22 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Revenue Today</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueToday ?? 0))}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-base">This Week</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisWeek ?? 0))}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-base">This Month</CardTitle></CardHeader>
-            <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisMonth ?? 0))}</p></CardContent>
-          </Card>
-        </div>
+        {isAdmin && (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Revenue Today</CardTitle></CardHeader>
+              <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueToday ?? 0))}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base">This Week</CardTitle></CardHeader>
+              <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisWeek ?? 0))}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base">This Month</CardTitle></CardHeader>
+              <CardContent><p className="text-xl font-bold text-slate-900">{formatCurrency(Number(metrics?.revenueThisMonth ?? 0))}</p></CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2">
           <Card>

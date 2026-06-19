@@ -4,10 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import com.famousmobiles.domain.InventoryItem;
-import com.famousmobiles.domain.Technician;
-import com.famousmobiles.domain.enums.SkillLevel;
 import com.famousmobiles.repository.InventoryItemRepository;
-import com.famousmobiles.repository.TechnicianRepository;
 import com.famousmobiles.service.AuthService;
 
 import java.math.BigDecimal;
@@ -17,31 +14,19 @@ public class DataInitializer implements CommandLineRunner {
 
     private final AuthService authService;
     private final AppProperties appProperties;
-    private final TechnicianRepository technicianRepository;
     private final InventoryItemRepository inventoryItemRepository;
 
     public DataInitializer(AuthService authService, AppProperties appProperties,
-            TechnicianRepository technicianRepository, InventoryItemRepository inventoryItemRepository) {
+            InventoryItemRepository inventoryItemRepository) {
         this.authService = authService;
         this.appProperties = appProperties;
-        this.technicianRepository = technicianRepository;
         this.inventoryItemRepository = inventoryItemRepository;
     }
 
     @Override
     public void run(String... args) {
         authService.seedAdmin(appProperties);
-        seedTechnician();
         seedInventory();
-    }
-
-    private void seedTechnician() {
-        if (technicianRepository.count() > 0) return;
-        Technician tech = new Technician();
-        tech.setName("Rajesh Kumar");
-        tech.setMobile("9876543210");
-        tech.setSkillLevel(SkillLevel.SENIOR);
-        technicianRepository.save(tech);
     }
 
     private void seedInventory() {

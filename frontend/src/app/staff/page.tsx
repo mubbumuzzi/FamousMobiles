@@ -9,8 +9,15 @@ import { Field, Input, Label, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { StaffUser, UserRole } from "@/lib/types";
+import { formatRole } from "@/lib/utils";
 
-const STAFF_ROLES: UserRole[] = ["RECEPTION", "TECHNICIAN"];
+const STAFF_ROLES: UserRole[] = ["SALESMAN", "TECHNICIAN"];
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: "Admin",
+  SALESMAN: "Salesman",
+  TECHNICIAN: "Technician",
+};
 
 export default function StaffPage() {
   const { user, loading: authLoading } = useAuthGuard();
@@ -21,7 +28,7 @@ export default function StaffPage() {
     fullName: "",
     mobile: "",
     password: "",
-    role: "RECEPTION" as UserRole,
+    role: "SALESMAN" as UserRole,
   });
 
   const load = () => api<StaffUser[]>("/users").then(setStaff).catch(console.error);
@@ -35,7 +42,7 @@ export default function StaffPage() {
     try {
       await api("/users", { method: "POST", body: JSON.stringify(form) });
       setShowForm(false);
-      setForm({ fullName: "", mobile: "", password: "", role: "RECEPTION" });
+      setForm({ fullName: "", mobile: "", password: "", role: "SALESMAN" });
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add staff");
@@ -50,6 +57,17 @@ export default function StaffPage() {
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to remove staff");
+    }
+  };
+
+  const permanentDelete = async (member: StaffUser) => {
+    if (!confirm(`Permanently delete ${member.fullName}? This cannot be undone.`)) return;
+    setError("");
+    try {
+      await api(`/users/${member.id}?permanent=true`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to permanently delete staff");
     }
   };
 
@@ -70,7 +88,10 @@ export default function StaffPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Staff</h1>
-            <p className="text-sm text-slate-600">Add or remove reception and technician accounts. Login is by mobile number; passwords can be the same.</p>
+            <p className="text-sm text-slate-600">
+              Add or remove salesman and technician accounts. Login is by mobile number; passwords can be the same.
+              Technicians added here also appear on the Technicians page for job assignment.
+            </p>
           </div>
           <Button size="sm" onClick={() => setShowForm(!showForm)}>
             {showForm ? "Cancel" : "Add Staff"}
@@ -114,7 +135,7 @@ export default function StaffPage() {
                 >
                   {STAFF_ROLES.map((role) => (
                     <option key={role} value={role}>
-                      {role}
+                      {ROLE_LABELS[role]}
                     </option>
                   ))}
                 </select>
@@ -144,18 +165,25 @@ export default function StaffPage() {
                 <tr key={member.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-slate-900">{member.fullName}</td>
                   <td className="px-4 py-3 text-slate-900">{member.mobile}</td>
-                  <td className="px-4 py-3 text-slate-900">{member.role}</td>
+                  <td className="px-4 py-3 text-slate-900">{formatRole(member.role)}</td>
                   <td className="px-4 py-3">
                     <Badge variant={member.active ? "success" : "destructive"}>
                       {member.active ? "Active" : "Removed"}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    {member.active && (
-                      <Button size="sm" variant="outline" onClick={() => remove(member)}>
-                        Remove
-                      </Button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {member.active && (
+                        <Button size="sm" variant="outline" onClick={() => remove(member)}>
+                          Remove
+                        </Button>
+                      )}
+                      {!member.active && (
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => permanentDelete(member)}>
+                          Permanent Delete
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

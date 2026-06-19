@@ -1,4 +1,6 @@
 .env
+.env.local
+.env.server
 data/uploads/*
 !data/uploads/.gitkeep
 node_modules/

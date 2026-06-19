@@ -41,7 +41,7 @@ public class TechnicianService {
     }
 
     public List<MiscDto.TechnicianResponse> list() {
-        return technicianRepository.findByActiveTrueOrderByNameAsc().stream()
+        return technicianRepository.findActiveStaffTechnicians().stream()
                 .map(MiscDto.TechnicianResponse::from).toList();
     }
 

@@ -14,16 +14,17 @@ export default function CustomersPage() {
   const { user, loading: authLoading } = useAuthGuard();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
-  const [form, setForm] = useState({ fullName: "", mobile: "", address: "", city: "" });
+  const [form, setForm] = useState({ fullName: "", mobile: "", alternateMobile: "", address: "" });
   const [showForm, setShowForm] = useState(false);
 
   const load = (q?: string) => api<Customer[]>(`/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`).then(setCustomers);
   useEffect(() => { load(); }, []);
 
   const create = async () => {
+    if (!form.fullName.trim() || !form.mobile.trim()) return;
     await api("/customers", { method: "POST", body: JSON.stringify(form) });
     setShowForm(false);
-    setForm({ fullName: "", mobile: "", address: "", city: "" });
+    setForm({ fullName: "", mobile: "", alternateMobile: "", address: "" });
     load();
   };
 
@@ -40,10 +41,10 @@ export default function CustomersPage() {
         {showForm && (
           <Card>
             <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-              <div><Label>Name</Label><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></div>
-              <div><Label>Mobile</Label><Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} /></div>
+              <div><Label>Name *</Label><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required /></div>
+              <div><Label>Mobile *</Label><Input type="tel" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} required /></div>
+              <div><Label>Alternate Mobile</Label><Input type="tel" value={form.alternateMobile} onChange={(e) => setForm({ ...form, alternateMobile: e.target.value })} /></div>
               <div><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-              <div><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
               <Button onClick={create} className="md:col-span-2">Save Customer</Button>
             </CardContent>
           </Card>
@@ -54,8 +55,8 @@ export default function CustomersPage() {
               <CardContent className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-medium text-slate-900">{c.fullName}</p>
-                  <p className="text-sm text-slate-600">{c.mobile}</p>
-                  <p className="text-xs text-slate-500">{c.customerCode}{c.city ? ` · ${c.city}` : ""}</p>
+                  <p className="text-sm text-slate-600">{c.mobile}{c.alternateMobile ? ` · Alt: ${c.alternateMobile}` : ""}</p>
+                  <p className="text-xs text-slate-500">{c.customerCode}</p>
                 </div>
                 <Link href={`/customers/${c.id}`} className="text-sm text-blue-600">History</Link>
               </CardContent>

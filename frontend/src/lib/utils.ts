@@ -13,6 +13,13 @@ export function formatStatus(status: string) {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+export function formatRole(role: string) {
+  if (role === "SALESMAN") return "Salesman";
+  if (role === "TECHNICIAN") return "Technician";
+  if (role === "ADMIN") return "Admin";
+  return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function formatDate(date?: string | null) {
   if (!date) return "-";
   return new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });

@@ -1,0 +1,1 @@
+UPDATE users SET role = 'SALESMAN' WHERE role = 'RECEPTION';

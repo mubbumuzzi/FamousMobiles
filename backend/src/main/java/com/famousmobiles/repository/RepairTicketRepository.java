@@ -16,15 +16,24 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
 
     List<RepairTicket> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
 
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.id = :id")
+    Optional<RepairTicket> findByIdWithDetails(@Param("id") UUID id);
+
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician ORDER BY t.createdAt DESC")
+    List<RepairTicket> findAllWithDetailsOrderByCreatedAtDesc();
+
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.assignedTechnician.id = :technicianId ORDER BY t.createdAt DESC")
+    List<RepairTicket> findByAssignedTechnicianIdWithDetailsOrderByCreatedAtDesc(@Param("technicianId") UUID technicianId);
+
     List<RepairTicket> findByAssignedTechnicianIdOrderByCreatedAtDesc(UUID technicianId);
 
-    long countByStatus(RepairStatus status);
-
-    @Query("SELECT t FROM RepairTicket t JOIN t.customer c WHERE c.mobile = :mobile ORDER BY t.createdAt DESC")
-    List<RepairTicket> findByCustomerMobile(@Param("mobile") String mobile);
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer WHERE t.customer.id = :customerId ORDER BY t.createdAt DESC")
+    List<RepairTicket> findByCustomerIdWithDetailsOrderByCreatedAtDesc(@Param("customerId") UUID customerId);
 
     @Query("""
-        SELECT t FROM RepairTicket t JOIN t.customer c
+        SELECT DISTINCT t FROM RepairTicket t
+        JOIN FETCH t.customer c
+        LEFT JOIN FETCH t.assignedTechnician
         WHERE LOWER(t.trackingNumber) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR c.mobile LIKE CONCAT('%', :q, '%')
@@ -32,5 +41,10 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
            OR t.imei LIKE CONCAT('%', :q, '%')
         ORDER BY t.createdAt DESC
         """)
-    List<RepairTicket> search(@Param("q") String query);
+    List<RepairTicket> searchWithDetails(@Param("q") String query);
+
+    long countByStatus(RepairStatus status);
+
+    @Query("SELECT t FROM RepairTicket t JOIN t.customer c WHERE c.mobile = :mobile ORDER BY t.createdAt DESC")
+    List<RepairTicket> findByCustomerMobile(@Param("mobile") String mobile);
 }

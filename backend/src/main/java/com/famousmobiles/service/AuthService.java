@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.famousmobiles.config.AppProperties;
 import com.famousmobiles.domain.RefreshToken;
+import com.famousmobiles.domain.Technician;
 import com.famousmobiles.domain.User;
 import com.famousmobiles.domain.enums.UserRole;
 import com.famousmobiles.dto.AuthResponse;
@@ -27,6 +28,7 @@ import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ForbiddenException;
 import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.RefreshTokenRepository;
+import com.famousmobiles.repository.TechnicianRepository;
 import com.famousmobiles.repository.UserRepository;
 import com.famousmobiles.security.JwtService;
 import com.famousmobiles.security.SecurityUtils;
@@ -36,16 +38,18 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TechnicianRepository technicianRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final SecurityUtils securityUtils;
 
     public AuthService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager,
-            SecurityUtils securityUtils) {
+            TechnicianRepository technicianRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+            AuthenticationManager authenticationManager, SecurityUtils securityUtils) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.technicianRepository = technicianRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
@@ -94,8 +98,21 @@ public class AuthService {
     public UserResponse createUser(CreateUserRequest request) {
         validateStaffRole(request.role());
         String mobile = normalizeMobile(request.mobile());
-        if (userRepository.existsByMobile(mobile)) {
-            throw new BadRequestException("Mobile number already registered");
+        var existing = userRepository.findByMobile(mobile);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (user.isActive()) {
+                throw new BadRequestException("Mobile number already registered");
+            }
+            user.setFullName(request.fullName().trim());
+            user.setPasswordHash(passwordEncoder.encode(request.password()));
+            user.setRole(request.role());
+            user.setEmail(staffEmail(mobile));
+            user.setActive(true);
+            user.setMustChangePassword(false);
+            user = userRepository.save(user);
+            syncTechnicianProfile(user);
+            return toUserResponse(user);
         }
         User user = new User();
         user.setMobile(mobile);
@@ -106,6 +123,7 @@ public class AuthService {
         user.setActive(true);
         user.setMustChangePassword(false);
         user = userRepository.save(user);
+        syncTechnicianProfile(user);
         return toUserResponse(user);
     }
 
@@ -116,7 +134,7 @@ public class AuthService {
         validateStaffRole(request.role());
         String mobile = normalizeMobile(request.mobile());
         userRepository.findByMobile(mobile).ifPresent(existing -> {
-            if (!existing.getId().equals(id)) {
+            if (!existing.getId().equals(id) && existing.isActive()) {
                 throw new BadRequestException("Mobile number already registered");
             }
         });
@@ -127,7 +145,9 @@ public class AuthService {
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
-        return toUserResponse(userRepository.save(user));
+        user = userRepository.save(user);
+        syncTechnicianProfile(user);
+        return toUserResponse(user);
     }
 
     @Transactional
@@ -146,6 +166,25 @@ public class AuthService {
         }
         user.setActive(false);
         userRepository.save(user);
+        syncTechnicianProfile(user);
+    }
+
+    @Transactional
+    public void permanentlyDeleteUser(UUID id) {
+        User current = securityUtils.getCurrentUser();
+        if (current.getId().equals(id)) {
+            throw new BadRequestException("You cannot delete your own account");
+        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new BadRequestException("Admin accounts cannot be permanently deleted");
+        }
+        if (user.isActive()) {
+            throw new BadRequestException("Remove the staff member first before permanent delete");
+        }
+        deactivateTechnicianProfile(user);
+        userRepository.delete(user);
     }
 
     public java.util.List<UserResponse> listUsers() {
@@ -196,9 +235,32 @@ public class AuthService {
     }
 
     private void validateStaffRole(UserRole role) {
-        if (role != UserRole.RECEPTION && role != UserRole.TECHNICIAN) {
-            throw new BadRequestException("Only Reception and Technician roles can be managed here");
+        if (role != UserRole.SALESMAN && role != UserRole.TECHNICIAN) {
+            throw new BadRequestException("Only Salesman and Technician roles can be managed here");
         }
+    }
+
+    private void syncTechnicianProfile(User user) {
+        if (user.getRole() != UserRole.TECHNICIAN) {
+            deactivateTechnicianProfile(user);
+            return;
+        }
+        Technician technician = technicianRepository.findByUserId(user.getId()).orElseGet(() -> {
+            Technician created = new Technician();
+            created.setUser(user);
+            return created;
+        });
+        technician.setName(user.getFullName());
+        technician.setMobile(user.getMobile());
+        technician.setActive(user.isActive());
+        technicianRepository.save(technician);
+    }
+
+    private void deactivateTechnicianProfile(User user) {
+        technicianRepository.findByUserId(user.getId()).ifPresent(technician -> {
+            technician.setActive(false);
+            technicianRepository.save(technician);
+        });
     }
 
     private String normalizeMobile(String mobile) {

@@ -4,13 +4,15 @@ import java.util.UUID;
 
 import com.famousmobiles.domain.Customer;
 
+import jakarta.validation.constraints.NotBlank;
+
 public final class CustomerDto {
 
     private CustomerDto() {}
 
     public record CustomerRequest(
-            String fullName,
-            String mobile,
+            @NotBlank String fullName,
+            @NotBlank String mobile,
             String alternateMobile,
             String address,
             String area,

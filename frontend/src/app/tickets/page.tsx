@@ -33,11 +33,9 @@ export default function TicketsPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">Repair Tickets</h1>
-          {user?.role !== "TECHNICIAN" && (
-            <Link href="/tickets/new">
-              <Button size="sm"><Plus className="h-4 w-4" /> New</Button>
-            </Link>
-          )}
+          <Link href="/tickets/new">
+            <Button size="sm"><Plus className="h-4 w-4" /> New</Button>
+          </Link>
         </div>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full min-w-[640px] text-sm">
@@ -47,6 +45,7 @@ export default function TicketsPage() {
                 <th className="px-4 py-3 font-semibold text-slate-700">Device</th>
                 <th className="px-4 py-3 font-semibold text-slate-700">Customer</th>
                 <th className="px-4 py-3 font-semibold text-slate-700">Status</th>
+                <th className="hidden px-4 py-3 font-semibold text-slate-700 md:table-cell">Technician</th>
                 <th className="hidden px-4 py-3 font-semibold text-slate-700 md:table-cell">Balance</th>
               </tr>
             </thead>
@@ -67,6 +66,9 @@ export default function TicketsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+                  </td>
+                  <td className="hidden px-4 py-3 text-slate-900 md:table-cell">
+                    {t.assignedTechnicianName ?? "—"}
                   </td>
                   <td className="hidden px-4 py-3 text-slate-900 md:table-cell">
                     {formatCurrency(Number(t.balanceAmount))}

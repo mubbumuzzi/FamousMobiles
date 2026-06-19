@@ -23,6 +23,13 @@ export default function ReportsPage() {
   };
 
   if (authLoading) return null;
+  if (user?.role !== "ADMIN") {
+    return (
+      <StaffLayout userName={user?.fullName} role={user?.role}>
+        <p className="text-slate-600">Only admins can access reports.</p>
+      </StaffLayout>
+    );
+  }
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>

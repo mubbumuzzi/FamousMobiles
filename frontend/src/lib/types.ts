@@ -1,4 +1,4 @@
-export type UserRole = "ADMIN" | "RECEPTION" | "TECHNICIAN";
+export type UserRole = "ADMIN" | "SALESMAN" | "TECHNICIAN";
 
 export type RepairStatus =
   | "DEVICE_RECEIVED"
@@ -99,9 +99,9 @@ export interface DashboardMetrics {
   waitingForParts: number;
   readyForPickup: number;
   deliveredToday: number;
-  revenueToday: number;
-  revenueThisWeek: number;
-  revenueThisMonth: number;
+  revenueToday?: number;
+  revenueThisWeek?: number;
+  revenueThisMonth?: number;
   statusBreakdown: Record<string, number>;
 }
 

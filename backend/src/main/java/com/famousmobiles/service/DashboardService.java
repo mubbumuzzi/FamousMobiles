@@ -25,7 +25,7 @@ public class DashboardService {
         this.paymentRepository = paymentRepository;
     }
 
-    public MiscDto.DashboardMetrics getMetrics() {
+    public MiscDto.DashboardMetrics getMetrics(boolean includeRevenue) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Instant startOfDay = today.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant startOfWeek = today.minusDays(today.getDayOfWeek().getValue() - 1L).atStartOfDay().toInstant(ZoneOffset.UTC);
@@ -41,9 +41,9 @@ public class DashboardService {
         long deliveredToday = ticketRepository.findAll().stream()
                 .filter(t -> t.getDeliveredAt() != null && !t.getDeliveredAt().isBefore(startOfDay)).count();
 
-        BigDecimal revenueToday = sumPaymentsSince(startOfDay);
-        BigDecimal revenueWeek = sumPaymentsSince(startOfWeek);
-        BigDecimal revenueMonth = sumPaymentsSince(startOfMonth);
+        BigDecimal revenueToday = includeRevenue ? sumPaymentsSince(startOfDay) : null;
+        BigDecimal revenueWeek = includeRevenue ? sumPaymentsSince(startOfWeek) : null;
+        BigDecimal revenueMonth = includeRevenue ? sumPaymentsSince(startOfMonth) : null;
 
         Map<String, Long> breakdown = new LinkedHashMap<>();
         for (RepairStatus status : RepairStatus.values()) {

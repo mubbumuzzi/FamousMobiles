@@ -23,9 +23,6 @@ public enum RepairStatus {
         if (this == target) {
             return false;
         }
-        if (this == DELIVERED) {
-            return false;
-        }
-        return target.ordinal() == ordinal() + 1;
+        return this != DELIVERED;
     }
 }

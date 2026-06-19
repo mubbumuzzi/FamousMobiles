@@ -5,10 +5,12 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.famousmobiles.domain.Customer;
 import com.famousmobiles.dto.CustomerDto;
 import com.famousmobiles.dto.TicketDto;
+import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.CustomerRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
@@ -42,10 +44,12 @@ public class CustomerService {
         return CustomerDto.CustomerResponse.from(customerRepository.save(customer));
     }
 
+    @Transactional(readOnly = true)
     public CustomerDto.CustomerResponse get(UUID id) {
         return CustomerDto.CustomerResponse.from(getEntity(id));
     }
 
+    @Transactional(readOnly = true)
     public List<CustomerDto.CustomerResponse> search(String query) {
         if (query == null || query.isBlank()) {
             return customerRepository.findAll().stream().map(CustomerDto.CustomerResponse::from).toList();
@@ -53,9 +57,10 @@ public class CustomerService {
         return customerRepository.search(query.trim()).stream().map(CustomerDto.CustomerResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> getRepairHistory(UUID id) {
         getEntity(id);
-        return ticketRepository.findByCustomerIdOrderByCreatedAtDesc(id).stream()
+        return ticketRepository.findByCustomerIdWithDetailsOrderByCreatedAtDesc(id).stream()
                 .map(TicketDto.TicketResponse::from).toList();
     }
 
@@ -64,12 +69,30 @@ public class CustomerService {
     }
 
     private void apply(Customer customer, CustomerDto.CustomerRequest request) {
-        customer.setFullName(request.fullName());
-        customer.setMobile(request.mobile());
-        customer.setAlternateMobile(request.alternateMobile());
-        customer.setAddress(request.address());
-        customer.setArea(request.area());
-        customer.setCity(request.city());
-        customer.setNotes(request.notes());
+        String mobile = normalizeMobile(request.mobile());
+        if (mobile.isBlank()) {
+            throw new BadRequestException("Mobile number is required");
+        }
+        customer.setFullName(request.fullName().trim());
+        customer.setMobile(mobile);
+        customer.setAlternateMobile(normalizeOptionalMobile(request.alternateMobile()));
+        customer.setAddress(trimOrNull(request.address()));
+        customer.setArea(trimOrNull(request.area()));
+        customer.setCity(trimOrNull(request.city()));
+        customer.setNotes(trimOrNull(request.notes()));
+    }
+
+    private String normalizeMobile(String mobile) {
+        return mobile == null ? "" : mobile.trim().replaceAll("\\s+", "");
+    }
+
+    private String normalizeOptionalMobile(String mobile) {
+        if (mobile == null || mobile.isBlank()) return null;
+        return normalizeMobile(mobile);
+    }
+
+    private String trimOrNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 }

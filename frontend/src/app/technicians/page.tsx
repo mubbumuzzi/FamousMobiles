@@ -21,7 +21,13 @@ export default function TechniciansPage() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-slate-900">Technicians</h1>
+        <p className="text-sm text-slate-600">
+          Technicians are added from Staff with the Technician role. They can log in and be assigned to repair jobs.
+        </p>
         <div className="grid gap-3 md:grid-cols-2">
+          {techs.length === 0 && (
+            <p className="text-sm text-slate-500 md:col-span-2">No technicians yet. Add one from the Staff page.</p>
+          )}
           {techs.map((t) => (
             <Card key={t.id}>
               <CardContent className="p-4">

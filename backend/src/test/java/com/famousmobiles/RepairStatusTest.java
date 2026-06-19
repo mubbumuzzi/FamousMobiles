@@ -10,10 +10,11 @@ import com.famousmobiles.domain.enums.RepairStatus;
 class RepairStatusTest {
 
     @Test
-    void allowsSequentialTransition() {
+    void allowsAnyTransitionExceptSameOrFromDelivered() {
         assertTrue(RepairStatus.DEVICE_RECEIVED.canTransitionTo(RepairStatus.UNDER_DIAGNOSIS));
-        assertTrue(RepairStatus.UNDER_DIAGNOSIS.canTransitionTo(RepairStatus.WAITING_FOR_APPROVAL));
-        assertFalse(RepairStatus.DEVICE_RECEIVED.canTransitionTo(RepairStatus.REPAIR_IN_PROGRESS));
+        assertTrue(RepairStatus.DEVICE_RECEIVED.canTransitionTo(RepairStatus.REPAIR_IN_PROGRESS));
+        assertTrue(RepairStatus.UNDER_DIAGNOSIS.canTransitionTo(RepairStatus.READY_FOR_PICKUP));
+        assertFalse(RepairStatus.UNDER_DIAGNOSIS.canTransitionTo(RepairStatus.UNDER_DIAGNOSIS));
         assertFalse(RepairStatus.DELIVERED.canTransitionTo(RepairStatus.READY_FOR_PICKUP));
     }
 }

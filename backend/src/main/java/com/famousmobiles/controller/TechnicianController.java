@@ -17,7 +17,6 @@ import com.famousmobiles.service.TechnicianService;
 
 @RestController
 @RequestMapping("/api/technicians")
-@PreAuthorize("hasRole('ADMIN')")
 public class TechnicianController {
 
     private final TechnicianService technicianService;
@@ -27,21 +26,25 @@ public class TechnicianController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public List<MiscDto.TechnicianResponse> list() {
         return technicianService.list();
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public MiscDto.TechnicianResponse create(@RequestBody MiscDto.TechnicianRequest request) {
         return technicianService.create(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public MiscDto.TechnicianResponse update(@PathVariable UUID id, @RequestBody MiscDto.TechnicianRequest request) {
         return technicianService.update(id, request);
     }
 
     @GetMapping("/{id}/performance")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public MiscDto.TechnicianResponse performance(@PathVariable UUID id) {
         return technicianService.getPerformance(id);
     }

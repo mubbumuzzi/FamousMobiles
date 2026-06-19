@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Textarea, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { API_URL, api, getAccessToken } from "@/lib/api";
-import { Payment, REPAIR_STATUSES, RepairStatus, Ticket, TimelineEntry } from "@/lib/types";
+import { Payment, REPAIR_STATUSES, RepairStatus, Technician, Ticket, TimelineEntry } from "@/lib/types";
 import { formatCurrency, formatDate, formatStatus } from "@/lib/utils";
 
 export default function TicketDetailPage() {
@@ -25,6 +25,8 @@ export default function TicketDetailPage() {
   const [remarks, setRemarks] = useState("");
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("CASH");
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [assignId, setAssignId] = useState("");
 
   const load = () => {
     api<Ticket>(`/tickets/${id}`).then(setTicket).catch(console.error);
@@ -33,6 +35,12 @@ export default function TicketDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (user?.role === "ADMIN") {
+      api<Technician[]>("/technicians").then(setTechnicians).catch(console.error);
+    }
+  }, [user?.role]);
 
   const updateStatus = async () => {
     if (!nextStatus) return;
@@ -49,6 +57,17 @@ export default function TicketDetailPage() {
   const recordPayment = async () => {
     await api(`/tickets/${id}/payments`, { method: "POST", body: JSON.stringify({ amount: Number(payAmount), paymentMode: payMode }) });
     setPayAmount(""); load();
+  };
+
+  const assignSelf = async () => {
+    await api(`/tickets/${id}/assign-me`, { method: "POST" });
+    load();
+  };
+
+  const assignTechnician = async () => {
+    if (!assignId) return;
+    await api(`/tickets/${id}/assign`, { method: "POST", body: JSON.stringify({ technicianId: assignId }) });
+    setAssignId(""); load();
   };
 
   const downloadReceipt = async () => {
@@ -71,8 +90,8 @@ export default function TicketDetailPage() {
 
   if (authLoading || !ticket) return <div className="p-8">Loading...</div>;
 
-  const currentIdx = REPAIR_STATUSES.indexOf(ticket.status);
-  const nextAllowed = currentIdx < REPAIR_STATUSES.length - 1 ? REPAIR_STATUSES[currentIdx + 1] : null;
+  const selectableStatuses = REPAIR_STATUSES.filter((s) => s !== ticket.status);
+  const canUpdateStatus = ticket.status !== "DELIVERED" && selectableStatuses.length > 0;
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
@@ -83,6 +102,9 @@ export default function TicketDetailPage() {
             <p className="text-slate-600">{ticket.brand} {ticket.model}</p>
             <p className="font-medium text-slate-900">{ticket.customer.fullName}</p>
             <p className="text-slate-600">{ticket.customer.mobile}</p>
+            <p className="text-sm text-slate-600">
+              Technician: {ticket.assignedTechnicianName ?? "Unassigned"}
+            </p>
           </div>
           <Badge>{formatStatus(ticket.status)}</Badge>
         </div>
@@ -94,32 +116,64 @@ export default function TicketDetailPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
-            <CardHeader><CardTitle className="text-base">Device & Payment</CardTitle></CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p>IMEI: {ticket.imei || "-"}</p>
-              <p>Problem: {ticket.problemDescription || "-"}</p>
-              <p>Estimated: {formatCurrency(Number(ticket.estimatedCost))}</p>
-              <p>Advance: {formatCurrency(Number(ticket.advancePaid))}</p>
-              <p>Balance: {formatCurrency(Number(ticket.balanceAmount))}</p>
-              <p>EDD: {formatDate(ticket.estimatedDeliveryDate)}</p>
+            <CardHeader><CardTitle className="text-base">Assignment</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {user?.role === "TECHNICIAN" && !ticket.assignedTechnicianName && (
+                <Button size="sm" onClick={assignSelf}>I'm repairing this device</Button>
+              )}
+              {user?.role === "ADMIN" && (
+                <>
+                  <select className={selectClassName} value={assignId} onChange={(e) => setAssignId(e.target.value)}>
+                    <option value="">Select technician...</option>
+                    {technicians.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" onClick={assignTechnician} disabled={!assignId}>Assign technician</Button>
+                </>
+              )}
+              {(user?.role === "SALESMAN" || (user?.role === "TECHNICIAN" && ticket.assignedTechnicianName)) && (
+                <p className="text-sm text-slate-600">
+                  {ticket.assignedTechnicianName
+                    ? `${ticket.assignedTechnicianName} is assigned to this repair.`
+                    : "No technician assigned yet."}
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle className="text-base">Update Status</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {nextAllowed && (
+              {canUpdateStatus && (
                 <>
                   <select className={selectClassName} value={nextStatus} onChange={(e) => setNextStatus(e.target.value as RepairStatus)}>
-                    <option value="">Move to...</option>
-                    <option value={nextAllowed}>{formatStatus(nextAllowed)}</option>
+                    <option value="">Select status...</option>
+                    {selectableStatuses.map((s) => (
+                      <option key={s} value={s}>{formatStatus(s)}</option>
+                    ))}
                   </select>
                   <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-                  <Button size="sm" onClick={updateStatus}>Update Status</Button>
+                  <Button size="sm" onClick={updateStatus} disabled={!nextStatus}>Update Status</Button>
                 </>
+              )}
+              {ticket.status === "DELIVERED" && (
+                <p className="text-sm text-slate-500">This repair is delivered and cannot be updated.</p>
               )}
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Device & Payment</CardTitle></CardHeader>
+          <CardContent className="space-y-1 text-sm md:grid md:grid-cols-2 md:gap-x-6">
+            <p>IMEI: {ticket.imei || "-"}</p>
+            <p>Problem: {ticket.problemDescription || "-"}</p>
+            <p>Estimated: {formatCurrency(Number(ticket.estimatedCost))}</p>
+            <p>Advance: {formatCurrency(Number(ticket.advancePaid))}</p>
+            <p>Balance: {formatCurrency(Number(ticket.balanceAmount))}</p>
+            <p>EDD: {formatDate(ticket.estimatedDeliveryDate)}</p>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Tracking Timeline</CardTitle></CardHeader>

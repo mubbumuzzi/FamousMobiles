@@ -27,7 +27,7 @@ import com.famousmobiles.service.TicketService;
 
 @RestController
 @RequestMapping("/api/tickets")
-@PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'TECHNICIAN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
 public class TicketController {
 
     private final TicketService ticketService;
@@ -49,7 +49,7 @@ public class TicketController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public TicketDto.TicketResponse create(@RequestBody TicketDto.CreateTicketRequest request) {
         return ticketService.create(request);
     }
@@ -68,6 +68,12 @@ public class TicketController {
     @PreAuthorize("hasRole('ADMIN')")
     public TicketDto.TicketResponse assign(@PathVariable UUID id, @RequestBody TicketDto.AssignTechnicianRequest request) {
         return ticketService.assignTechnician(id, request);
+    }
+
+    @PostMapping("/{id}/assign-me")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public TicketDto.TicketResponse assignSelf(@PathVariable UUID id) {
+        return ticketService.assignSelf(id);
     }
 
     @PostMapping("/{id}/notes")
@@ -93,9 +99,9 @@ public class TicketController {
     }
 
     @GetMapping("/{id}/receipt/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public ResponseEntity<byte[]> receipt(@PathVariable UUID id) throws Exception {
-        var ticket = ticketService.getEntity(id);
+        var ticket = ticketService.getEntityWithAccess(id);
         byte[] pdf = pdfReceiptService.generateReceipt(ticket);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + ticket.getTrackingNumber() + ".pdf")

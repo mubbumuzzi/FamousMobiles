@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, Wrench, BarChart3, Search, LogOut, Smartphone, UserCog } from "lucide-react";
 import { clearTokens } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, formatRole } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/technicians", label: "Technicians", icon: Users },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
   { href: "/search", label: "Search", icon: Search },
   { href: "/staff", label: "Staff", icon: UserCog, adminOnly: true },
 ];
@@ -35,7 +35,7 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
             Famous Mobiles
           </Link>
           <div className="hidden items-center gap-3 md:flex">
-            <span className="text-sm text-slate-600">{userName} ({role})</span>
+            <span className="text-sm text-slate-600">{userName} ({formatRole(role ?? "")})</span>
             <button onClick={logout} className="text-sm text-slate-500 hover:text-red-600">
               <LogOut className="h-4 w-4" />
             </button>

@@ -67,9 +67,6 @@ public class TicketService {
     @Transactional
     public TicketDto.TicketResponse create(TicketDto.CreateTicketRequest request) {
         User user = securityUtils.getCurrentUser();
-        if (user.getRole() == UserRole.TECHNICIAN) {
-            throw new ForbiddenException("Technicians cannot create tickets");
-        }
 
         RepairTicket ticket = new RepairTicket();
         ticket.setTrackingNumber(trackingNumberService.generateTrackingNumber());
@@ -84,25 +81,26 @@ public class TicketService {
             ticket.setEstimatedDeliveryDate(LocalDate.parse(request.estimatedDeliveryDate()));
         }
         ticket = ticketRepository.save(ticket);
+        if (user.getRole() == UserRole.TECHNICIAN) {
+            var tech = technicianRepository.findByUserId(user.getId());
+            if (tech.isPresent()) {
+                ticket.setAssignedTechnician(tech.get());
+                ticket = ticketRepository.save(ticket);
+            }
+        }
         recordStatusHistory(ticket, null, RepairStatus.DEVICE_RECEIVED, user, "Device received", null);
         notificationService.onStatusChange(ticket, RepairStatus.DEVICE_RECEIVED);
         return TicketDto.TicketResponse.from(ticket);
     }
 
+    @Transactional(readOnly = true)
     public TicketDto.TicketResponse get(UUID id) {
         return TicketDto.TicketResponse.from(getEntityWithAccess(id));
     }
 
+    @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> list() {
-        User user = securityUtils.getCurrentUser();
-        if (user.getRole() == UserRole.TECHNICIAN) {
-            return technicianRepository.findByUserId(user.getId())
-                    .map(t -> ticketRepository.findByAssignedTechnicianIdOrderByCreatedAtDesc(t.getId()))
-                    .orElse(List.of())
-                    .stream().map(TicketDto.TicketResponse::from).toList();
-        }
-        return ticketRepository.findAll().stream()
-                .sorted(Comparator.comparing(RepairTicket::getCreatedAt).reversed())
+        return ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream()
                 .map(TicketDto.TicketResponse::from).toList();
     }
 
@@ -157,6 +155,26 @@ public class TicketService {
     }
 
     @Transactional
+    public TicketDto.TicketResponse assignSelf(UUID id) {
+        RepairTicket ticket = getEntityWithAccess(id);
+        if (ticket.getAssignedTechnician() != null) {
+            throw new BadRequestException("This ticket is already assigned to " + ticket.getAssignedTechnician().getName());
+        }
+        ticket.setAssignedTechnician(requireTechnicianProfile());
+        return TicketDto.TicketResponse.from(ticketRepository.save(ticket));
+    }
+
+    private com.famousmobiles.domain.Technician requireTechnicianProfile() {
+        User user = securityUtils.getCurrentUser();
+        if (user.getRole() != UserRole.TECHNICIAN) {
+            throw new ForbiddenException("Only technicians can assign themselves");
+        }
+        return technicianRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BadRequestException(
+                        "Technician profile not found. Ask admin to add you in Staff with the Technician role."));
+    }
+
+    @Transactional
     public TicketDto.TimelineEntry addNote(UUID id, String content) {
         RepairTicket ticket = getEntityWithAccess(id);
         TicketNote note = new TicketNote();
@@ -168,14 +186,15 @@ public class TicketService {
                 note.getAuthor().getFullName(), note.getCreatedAt().toString());
     }
 
+    @Transactional(readOnly = true)
     public List<TicketDto.TimelineEntry> getTimeline(UUID id) {
         getEntityWithAccess(id);
         List<TicketDto.TimelineEntry> entries = new ArrayList<>();
-        historyRepository.findByTicketIdOrderByCreatedAtAsc(id).forEach(h -> entries.add(
+        historyRepository.findByTicketIdWithChangedByOrderByCreatedAtAsc(id).forEach(h -> entries.add(
                 new TicketDto.TimelineEntry(h.getId(), "STATUS", formatStatus(h.getToStatus()),
                         combineHistoryText(h), h.getChangedBy() != null ? h.getChangedBy().getFullName() : "System",
                         h.getCreatedAt().toString())));
-        noteRepository.findByTicketIdOrderByCreatedAtAsc(id).forEach(n -> entries.add(
+        noteRepository.findByTicketIdWithAuthorOrderByCreatedAtAsc(id).forEach(n -> entries.add(
                 new TicketDto.TimelineEntry(n.getId(), "NOTE", "Note", n.getContent(),
                         n.getAuthor() != null ? n.getAuthor().getFullName() : "System", n.getCreatedAt().toString())));
         entries.sort(Comparator.comparing(TicketDto.TimelineEntry::createdAt));
@@ -203,20 +222,12 @@ public class TicketService {
     }
 
     public RepairTicket getEntity(UUID id) {
-        return ticketRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        return ticketRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
     }
 
-    private RepairTicket getEntityWithAccess(UUID id) {
-        RepairTicket ticket = getEntity(id);
-        User user = securityUtils.getCurrentUser();
-        if (user.getRole() == UserRole.TECHNICIAN) {
-            var tech = technicianRepository.findByUserId(user.getId());
-            if (tech.isEmpty() || ticket.getAssignedTechnician() == null
-                    || !ticket.getAssignedTechnician().getId().equals(tech.get().getId())) {
-                throw new ForbiddenException("Not assigned to this ticket");
-            }
-        }
-        return ticket;
+    public RepairTicket getEntityWithAccess(UUID id) {
+        return getEntity(id);
     }
 
     private void applyDeviceDetails(RepairTicket ticket, TicketDto.CreateTicketRequest request) {

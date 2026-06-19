@@ -1,6 +1,7 @@
 package com.famousmobiles.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.famousmobiles.dto.CustomerDto;
 import com.famousmobiles.dto.MiscDto;
@@ -19,12 +20,13 @@ public class SearchService {
         this.customerRepository = customerRepository;
     }
 
+    @Transactional(readOnly = true)
     public MiscDto.SearchResult search(String query) {
         if (query == null || query.isBlank()) {
             return new MiscDto.SearchResult(java.util.List.of(), java.util.List.of());
         }
         String q = query.trim();
-        var tickets = ticketRepository.search(q).stream().map(TicketDto.TicketResponse::from).toList();
+        var tickets = ticketRepository.searchWithDetails(q).stream().map(TicketDto.TicketResponse::from).toList();
         var customers = customerRepository.search(q).stream().map(CustomerDto.CustomerResponse::from).toList();
         return new MiscDto.SearchResult(tickets, customers);
     }

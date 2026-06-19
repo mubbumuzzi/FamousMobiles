@@ -55,13 +55,15 @@ public class PaymentService {
         return PaymentDto.PaymentResponse.from(payment);
     }
 
+    @Transactional(readOnly = true)
     public List<PaymentDto.PaymentResponse> getByTicket(UUID ticketId) {
-        return paymentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
+        return paymentRepository.findByTicketIdWithDetailsOrderByCreatedAtAsc(ticketId).stream()
                 .map(PaymentDto.PaymentResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> getOutstanding() {
-        return ticketRepository.findAll().stream()
+        return ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream()
                 .filter(t -> t.getBalanceAmount().compareTo(BigDecimal.ZERO) > 0)
                 .map(TicketDto.TicketResponse::from).toList();
     }

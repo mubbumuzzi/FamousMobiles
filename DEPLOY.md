@@ -125,10 +125,10 @@ Uncomment the SSL lines in `nginx/nginx.prod.conf`, then redeploy:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Renewal (add to crontab):
+Renewal (add to crontab — replace `/home/ubuntu` with your deploy user's home directory):
 
 ```bash
-0 3 * * * certbot renew --quiet && docker compose -f ~/FamousMobiles/docker-compose.yml restart nginx
+0 3 * * * certbot renew --quiet && cd /home/ubuntu/FamousMobiles && docker compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx
 ```
 
 ---

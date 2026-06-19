@@ -47,7 +47,12 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        authService.deleteUser(id);
+    public void delete(@PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean permanent) {
+        if (permanent) {
+            authService.permanentlyDeleteUser(id);
+        } else {
+            authService.deleteUser(id);
+        }
     }
 }
