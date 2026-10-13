@@ -34,9 +34,11 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
         SELECT DISTINCT t FROM RepairTicket t
         JOIN FETCH t.customer c
         LEFT JOIN FETCH t.assignedTechnician
+        LEFT JOIN c.phones p
         WHERE LOWER(t.trackingNumber) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR c.mobile LIKE CONCAT('%', :q, '%')
+           OR p.mobile LIKE CONCAT('%', :q, '%')
            OR LOWER(t.model) LIKE LOWER(CONCAT('%', :q, '%'))
            OR t.imei LIKE CONCAT('%', :q, '%')
         ORDER BY t.createdAt DESC
@@ -45,6 +47,12 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
 
     long countByStatus(RepairStatus status);
 
-    @Query("SELECT t FROM RepairTicket t JOIN t.customer c WHERE c.mobile = :mobile ORDER BY t.createdAt DESC")
+    @Query("""
+        SELECT DISTINCT t FROM RepairTicket t
+        JOIN t.customer c
+        LEFT JOIN c.phones p
+        WHERE c.mobile = :mobile OR p.mobile = :mobile
+        ORDER BY t.createdAt DESC
+        """)
     List<RepairTicket> findByCustomerMobile(@Param("mobile") String mobile);
 }

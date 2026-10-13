@@ -33,17 +33,25 @@ export interface StaffUser {
   createdAt: string;
 }
 
+export interface CustomerMobile {
+  number: string;
+  label?: string;
+  isPrimary?: boolean;
+}
+
 export interface Customer {
   id: string;
   customerCode: string;
   fullName: string;
   mobile: string;
   alternateMobile?: string;
+  mobiles?: CustomerMobile[];
+  matchedMobile?: string;
   address?: string;
   area?: string;
   city?: string;
   notes?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface Ticket {

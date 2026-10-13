@@ -160,3 +160,10 @@
   background: #cbd5e1;
   border-radius: 999px;
 }
+
+@media print {
+  @page {
+    size: A5;
+    margin: 8mm;
+  }
+}

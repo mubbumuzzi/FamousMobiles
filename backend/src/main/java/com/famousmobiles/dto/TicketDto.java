@@ -89,7 +89,7 @@ public final class TicketDto {
                     t.getAdvancePaid(),
                     t.getBalanceAmount(),
                     t.getEstimatedDeliveryDate() != null ? t.getEstimatedDeliveryDate().toString() : null,
-                    t.getCreatedAt().toString(),
+                    t.getCreatedAt() != null ? t.getCreatedAt().toString() : java.time.Instant.now().toString(),
                     t.getDeliveredAt() != null ? t.getDeliveredAt().toString() : null
             );
         }

@@ -34,6 +34,11 @@ public class CustomerController {
         return customerService.search(q);
     }
 
+    @GetMapping("/lookup")
+    public CustomerDto.CustomerResponse lookup(@RequestParam String mobile) {
+        return customerService.lookupByMobile(mobile);
+    }
+
     @GetMapping("/{id}")
     public CustomerDto.CustomerResponse get(@PathVariable UUID id) {
         return customerService.get(id);

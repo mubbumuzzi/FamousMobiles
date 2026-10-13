@@ -106,6 +106,13 @@ if [[ -f .env.local ]]; then
       check "GET /$ep" "$ep_ok"
     done
 
+    # Customer validation: full name < 4 characters rejected
+    short_name_code=$(curl -s -o /dev/null -w "%{http_code}" "$API/customers" -X POST -H "$auth" \
+      -H "Content-Type: application/json" \
+      -d "{\"fullName\":\"Bob\",\"mobile\":\"9000000001\"}" || true)
+    [[ "$short_name_code" == "400" ]] && short_name_rejected=1 || short_name_rejected=0
+    check "Customer full name validation (< 4 chars rejected with 400)" "$short_name_rejected"
+
     # Create customer + ticket flow
     test_mobile="9$(date +%s | tail -c 10)"
     cust_resp=$(curl -s -w "\n%{http_code}" "$API/customers" -X POST -H "$auth" \
@@ -118,6 +125,27 @@ if [[ -f .env.local ]]; then
     check "Create customer" "$cust_ok"
 
     if [[ "$cust_ok" == "1" ]]; then
+      # Exact 10-digit mobile lookup
+      lookup_resp=$(curl -s -w "\n%{http_code}" "$API/customers/lookup?mobile=$test_mobile" -H "$auth")
+      lookup_code=$(echo "$lookup_resp" | tail -n1)
+      lookup_body=$(echo "$lookup_resp" | sed '$d')
+      lookup_found_id=$(echo "$lookup_body" | json_field id)
+      [[ "$lookup_code" == "200" && "$lookup_found_id" == "$cust_id" ]] && lookup_ok=1 || lookup_ok=0
+      check "Lookup customer by exact 10-digit mobile" "$lookup_ok"
+
+      # Non-existent mobile lookup returns 404
+      missing_code=$(curl -s -o /dev/null -w "%{http_code}" "$API/customers/lookup?mobile=9999999999" -H "$auth" || true)
+      [[ "$missing_code" == "404" ]] && missing_ok=1 || missing_ok=0
+      check "Lookup non-existent mobile returns 404" "$missing_ok"
+
+      # Search customer by mobile query
+      search_resp=$(curl -s -w "\n%{http_code}" "$API/customers?q=$test_mobile" -H "$auth")
+      search_code=$(echo "$search_resp" | tail -n1)
+      search_body=$(echo "$search_resp" | sed '$d')
+      search_found=$(echo "$search_body" | python3 -c "import json,sys; l=json.load(sys.stdin); print(any(c.get('id')=='$cust_id' for c in l))" 2>/dev/null || echo "False")
+      [[ "$search_code" == "200" && "$search_found" == "True" ]] && search_ok=1 || search_ok=0
+      check "Search customer by 10-digit mobile query" "$search_ok"
+
       ticket_resp=$(curl -s -w "\n%{http_code}" "$API/tickets" -X POST -H "$auth" \
         -H "Content-Type: application/json" \
         -d "{\"customerId\":\"$cust_id\",\"deviceType\":\"MOBILE\",\"brand\":\"Samsung\",\"model\":\"A14\",\"color\":\"Black\",\"problemDescription\":\"Smoke test\",\"estimatedCost\":0,\"advancePaid\":0}")
@@ -129,6 +157,14 @@ if [[ -f .env.local ]]; then
       check "Create repair ticket" "$ticket_ok"
 
       if [[ "$ticket_ok" == "1" ]]; then
+        # Customer repair history for re-repair dropdown
+        history_resp=$(curl -s -w "\n%{http_code}" "$API/customers/$cust_id/repairs" -H "$auth")
+        history_code=$(echo "$history_resp" | tail -n1)
+        history_body=$(echo "$history_resp" | sed '$d')
+        history_count=$(echo "$history_body" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+        [[ "$history_code" == "200" && "$history_count" -ge 1 ]] && history_ok=1 || history_ok=0
+        check "Customer repair history for re-repair dropdown" "$history_ok"
+
         status_resp=$(curl -s -o /dev/null -w "%{http_code}" "$API/tickets/$TEST_TICKET_ID/status" -X PATCH \
           -H "$auth" -H "Content-Type: application/json" \
           -d '{"status":"UNDER_DIAGNOSIS","remarks":"Smoke test status change"}' || true)

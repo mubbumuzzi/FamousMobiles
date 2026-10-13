@@ -1,7 +1,14 @@
 package com.famousmobiles.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 @Entity
@@ -14,11 +21,13 @@ public class Customer extends BaseEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    /** Denormalized primary mobile for receipts, notifications, and legacy queries. */
     @Column(nullable = false)
     private String mobile;
 
-    @Column(name = "alternate_mobile")
-    private String alternateMobile;
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("isPrimary DESC, createdAt ASC")
+    private List<CustomerPhone> phones = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String address;
@@ -54,12 +63,20 @@ public class Customer extends BaseEntity {
         this.mobile = mobile;
     }
 
-    public String getAlternateMobile() {
-        return alternateMobile;
+    public List<CustomerPhone> getPhones() {
+        return phones;
     }
 
-    public void setAlternateMobile(String alternateMobile) {
-        this.alternateMobile = alternateMobile;
+    public void setPhones(List<CustomerPhone> phones) {
+        this.phones = phones;
+    }
+
+    public void replacePhones(List<CustomerPhone> newPhones) {
+        phones.clear();
+        for (CustomerPhone phone : newPhones) {
+            phone.setCustomer(this);
+            phones.add(phone);
+        }
     }
 
     public String getAddress() {

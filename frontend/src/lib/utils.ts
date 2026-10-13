@@ -24,3 +24,25 @@ export function formatDate(date?: string | null) {
   if (!date) return "-";
   return new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+export function formatCustomerMobiles(customer: {
+  mobile: string;
+  mobiles?: { number: string; label?: string; isPrimary?: boolean }[];
+}) {
+  if (customer.mobiles && customer.mobiles.length > 0) {
+    return customer.mobiles
+      .map((m) => (m.label ? `${m.number} (${m.label})` : m.number))
+      .join(" · ");
+  }
+  return customer.mobile;
+}
+
+export function customerPhoneList(customer: {
+  mobile: string;
+  mobiles?: { number: string; label?: string; isPrimary?: boolean }[];
+}) {
+  if (customer.mobiles && customer.mobiles.length > 0) {
+    return customer.mobiles.map((m) => m.number);
+  }
+  return customer.mobile ? [customer.mobile] : [];
+}

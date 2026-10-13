@@ -93,10 +93,42 @@ export default function TicketDetailPage() {
   };
 
   const printReceipt = async () => {
-    const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, { headers: { Authorization: `Bearer ${getAccessToken()}` } });
-    const blob = await res.blob();
-    const w = window.open(URL.createObjectURL(blob));
-    w?.print();
+    try {
+      const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, {
+        headers: { Authorization: `Bearer ${getAccessToken()}` },
+      });
+      if (!res.ok) throw new Error("Failed to load receipt PDF");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        }, 300);
+      };
+    } catch {
+      const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, {
+        headers: { Authorization: `Bearer ${getAccessToken()}` },
+      });
+      const blob = await res.blob();
+      const w = window.open(URL.createObjectURL(blob));
+      w?.print();
+    }
   };
 
   if (authLoading || loading) return <PageLoading label="Loading ticket..." />;

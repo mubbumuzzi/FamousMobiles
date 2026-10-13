@@ -1,13 +1,16 @@
 package com.famousmobiles.service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.famousmobiles.domain.Customer;
+import com.famousmobiles.domain.CustomerPhone;
 import com.famousmobiles.dto.CustomerDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.exception.BadRequestException;
@@ -32,7 +35,7 @@ public class CustomerService {
     @Transactional
     public CustomerDto.CustomerResponse create(CustomerDto.CustomerRequest request) {
         Customer customer = new Customer();
-        apply(customer, request);
+        apply(customer, request, null);
         customer.setCustomerCode(trackingNumberService.generateCustomerCode());
         return CustomerDto.CustomerResponse.from(customerRepository.save(customer));
     }
@@ -40,13 +43,24 @@ public class CustomerService {
     @Transactional
     public CustomerDto.CustomerResponse update(UUID id, CustomerDto.CustomerRequest request) {
         Customer customer = getEntity(id);
-        apply(customer, request);
+        apply(customer, request, id);
         return CustomerDto.CustomerResponse.from(customerRepository.save(customer));
     }
 
     @Transactional(readOnly = true)
     public CustomerDto.CustomerResponse get(UUID id) {
         return CustomerDto.CustomerResponse.from(getEntity(id));
+    }
+
+    @Transactional(readOnly = true)
+    public CustomerDto.CustomerResponse lookupByMobile(String mobile) {
+        String normalized = normalizeMobile(mobile);
+        if (normalized.isBlank()) {
+            throw new BadRequestException("Mobile number is required");
+        }
+        CustomerPhone phone = customerRepository.findPhoneByMobile(normalized)
+                .orElseThrow(() -> new ResourceNotFoundException("No customer found for this mobile number"));
+        return CustomerDto.CustomerResponse.from(phone.getCustomer(), phone.getMobile());
     }
 
     @Transactional(readOnly = true)
@@ -68,31 +82,97 @@ public class CustomerService {
         return customerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
-    private void apply(Customer customer, CustomerDto.CustomerRequest request) {
-        String mobile = normalizeMobile(request.mobile());
-        if (mobile.isBlank()) {
-            throw new BadRequestException("Mobile number is required");
+    private void apply(Customer customer, CustomerDto.CustomerRequest request, UUID currentCustomerId) {
+        if (request.fullName() == null || request.fullName().trim().length() < 4) {
+            throw new BadRequestException("Full name must be at least 4 characters");
         }
+
+        List<CustomerDto.MobileEntry> requestMobiles = request.resolveMobiles();
+        if (requestMobiles == null || requestMobiles.isEmpty()) {
+            throw new BadRequestException("At least one mobile number is required");
+        }
+
+        List<NormalizedMobile> normalized = new ArrayList<>();
+        Set<String> seenInRequest = new HashSet<>();
+        for (CustomerDto.MobileEntry entry : requestMobiles) {
+            String number = normalizeMobile(entry.number());
+            if (number.isBlank()) {
+                continue;
+            }
+            if (!seenInRequest.add(number)) {
+                throw new BadRequestException("Duplicate mobile in request: " + number);
+            }
+            String label = trimOrNull(entry.label());
+            boolean isPrimary = Boolean.TRUE.equals(entry.isPrimary());
+            normalized.add(new NormalizedMobile(number, label, isPrimary));
+        }
+
+        if (normalized.isEmpty()) {
+            throw new BadRequestException("At least one mobile number is required");
+        }
+
+        boolean hasPrimary = normalized.stream().anyMatch(NormalizedMobile::isPrimary);
+        if (!hasPrimary) {
+            NormalizedMobile first = normalized.get(0);
+            normalized.set(0, new NormalizedMobile(first.number(), first.label() != null ? first.label() : "Primary", true));
+        } else {
+            // Ensure only one primary
+            boolean primarySeen = false;
+            for (int i = 0; i < normalized.size(); i++) {
+                NormalizedMobile m = normalized.get(i);
+                if (m.isPrimary()) {
+                    if (primarySeen) {
+                        normalized.set(i, new NormalizedMobile(m.number(), m.label(), false));
+                    } else {
+                        primarySeen = true;
+                    }
+                }
+            }
+        }
+
+        for (NormalizedMobile m : normalized) {
+            customerRepository.findPhoneByMobile(m.number()).ifPresent(existing -> {
+                UUID ownerId = existing.getCustomer().getId();
+                if (currentCustomerId == null || !ownerId.equals(currentCustomerId)) {
+                    throw new BadRequestException(
+                            "Mobile " + m.number() + " already belongs to " + existing.getCustomer().getFullName()
+                                    + " (" + existing.getCustomer().getCustomerCode() + ")");
+                }
+            });
+        }
+
+        String primaryNumber = normalized.stream()
+                .filter(NormalizedMobile::isPrimary)
+                .map(NormalizedMobile::number)
+                .findFirst()
+                .orElse(normalized.get(0).number());
+
         customer.setFullName(request.fullName().trim());
-        customer.setMobile(mobile);
-        customer.setAlternateMobile(normalizeOptionalMobile(request.alternateMobile()));
+        customer.setMobile(primaryNumber);
         customer.setAddress(trimOrNull(request.address()));
         customer.setArea(trimOrNull(request.area()));
         customer.setCity(trimOrNull(request.city()));
         customer.setNotes(trimOrNull(request.notes()));
+
+        List<CustomerPhone> phones = new ArrayList<>();
+        for (NormalizedMobile m : normalized) {
+            CustomerPhone phone = new CustomerPhone();
+            phone.setMobile(m.number());
+            phone.setLabel(m.label() != null ? m.label() : (m.isPrimary() ? "Primary" : null));
+            phone.setPrimary(m.isPrimary());
+            phones.add(phone);
+        }
+        customer.replacePhones(phones);
     }
 
     private String normalizeMobile(String mobile) {
         return mobile == null ? "" : mobile.trim().replaceAll("\\s+", "");
     }
 
-    private String normalizeOptionalMobile(String mobile) {
-        if (mobile == null || mobile.isBlank()) return null;
-        return normalizeMobile(mobile);
-    }
-
     private String trimOrNull(String value) {
         if (value == null || value.isBlank()) return null;
         return value.trim();
     }
+
+    private record NormalizedMobile(String number, String label, boolean isPrimary) {}
 }

@@ -97,9 +97,11 @@ public class TicketController {
     }
 
     @GetMapping("/{id}/receipt/pdf")
-    public ResponseEntity<byte[]> receipt(@PathVariable UUID id) throws Exception {
+    public ResponseEntity<byte[]> receipt(
+            @PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "false") boolean duplicate) throws Exception {
         var ticket = ticketService.getEntityWithAccess(id);
-        byte[] pdf = pdfReceiptService.generateReceipt(ticket);
+        byte[] pdf = pdfReceiptService.generateReceipt(ticket, duplicate);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + ticket.getTrackingNumber() + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
