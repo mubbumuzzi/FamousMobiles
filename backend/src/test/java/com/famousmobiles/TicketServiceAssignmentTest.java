@@ -217,6 +217,36 @@ class TicketServiceAssignmentTest {
         assertNull(response.assignedTechnicianName());
     }
 
+    @Test
+    void updateStatusToDelivered_withPendingBalance_throwsBadRequestException() {
+        RepairTicket t = sampleTicket();
+        t.setStatus(RepairStatus.READY_FOR_PICKUP);
+        t.setBalanceAmount(new BigDecimal("500.00"));
+        when(ticketRepository.findByIdWithDetails(ticketId)).thenReturn(Optional.of(t));
+
+        var request = new TicketDto.StatusUpdateRequest(RepairStatus.DELIVERED, "Delivering device", null);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> ticketService.updateStatus(ticketId, request));
+        assertEquals("Cannot deliver device with pending balance of ₹500.00. Please record payment first.", ex.getMessage());
+    }
+
+    @Test
+    void updateStatusToDelivered_withZeroBalance_succeeds() {
+        RepairTicket t = sampleTicket();
+        t.setStatus(RepairStatus.READY_FOR_PICKUP);
+        t.setBalanceAmount(BigDecimal.ZERO);
+        when(ticketRepository.findByIdWithDetails(ticketId)).thenReturn(Optional.of(t));
+        when(securityUtils.getCurrentUser()).thenReturn(technicianUser);
+        when(ticketRepository.save(any(RepairTicket.class))).thenReturn(t);
+
+        var request = new TicketDto.StatusUpdateRequest(RepairStatus.DELIVERED, "Delivered and paid", null);
+
+        var response = ticketService.updateStatus(ticketId, request);
+        assertEquals(RepairStatus.DELIVERED, response.status());
+        verify(ticketRepository).save(t);
+    }
+
     private RepairTicket sampleTicket() {
         Customer customer = new Customer();
         customer.setId(UUID.randomUUID());

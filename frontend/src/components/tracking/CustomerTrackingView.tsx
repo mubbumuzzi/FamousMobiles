@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Phone } from "lucide-react";
+import { Calendar, MessageCircle, Phone } from "lucide-react";
 import { PublicTracking } from "@/lib/types";
 import { cn, formatCurrency, formatDate, formatStatus } from "@/lib/utils";
 import { getCustomerStatusMessage } from "@/lib/status-messages";
@@ -73,9 +73,27 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
       <div className="premium-card p-4">
         <h3 className="mb-2 font-semibold text-slate-900">Visit Us</h3>
         <ShopContact className="text-sm" showName={false} />
-        <a href={`tel:${SHOP.mobile}`} className="mt-3 flex touch-target items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md">
-          <Phone className="h-4 w-4" /> Call Shop ({SHOP.mobile})
-        </a>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <a
+            href={`https://wa.me/91${SHOP.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(
+              `Hi Famous Mobiles, I have an inquiry about my repair:\n\n` +
+              `📱 Device: ${data.brand} ${data.model}\n` +
+              `🔖 Ticket ID: ${data.trackingNumber}\n` +
+              `⚡ Status: ${formatStatus(data.currentStatus)}`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex touch-target items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-sm font-semibold text-white shadow-md transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" /> Chat on WhatsApp
+          </a>
+          <a
+            href={`tel:${SHOP.mobile}`}
+            className="flex touch-target items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-sm font-semibold text-white shadow-md transition-colors"
+          >
+            <Phone className="h-4 w-4" /> Call Shop ({SHOP.mobile})
+          </a>
+        </div>
       </div>
     </div>
   );

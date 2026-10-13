@@ -135,6 +135,9 @@ public class TicketService {
         User user = securityUtils.getCurrentUser();
         ticket.setStatus(target);
         if (target == RepairStatus.DELIVERED) {
+            if (ticket.getBalanceAmount() != null && ticket.getBalanceAmount().compareTo(BigDecimal.ZERO) > 0) {
+                throw new BadRequestException("Cannot deliver device with pending balance of ₹" + ticket.getBalanceAmount() + ". Please record payment first.");
+            }
             ticket.setDeliveredAt(Instant.now());
         }
         ticketRepository.save(ticket);
