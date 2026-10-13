@@ -16,7 +16,8 @@ CREATE INDEX idx_customer_phones_mobile ON customer_phones(mobile);
 INSERT INTO customer_phones (id, customer_id, mobile, label, is_primary, created_at)
 SELECT gen_random_uuid(), id, mobile, 'Primary', TRUE, created_at
 FROM customers
-WHERE mobile IS NOT NULL AND TRIM(mobile) <> '';
+WHERE mobile IS NOT NULL AND TRIM(mobile) <> ''
+ON CONFLICT (mobile) DO NOTHING;
 
 -- Migrate alternate numbers (skip blanks, duplicates of primary, or numbers already owned)
 INSERT INTO customer_phones (id, customer_id, mobile, label, is_primary, created_at)
@@ -25,8 +26,6 @@ FROM customers c
 WHERE c.alternate_mobile IS NOT NULL
   AND TRIM(c.alternate_mobile) <> ''
   AND TRIM(c.alternate_mobile) <> TRIM(c.mobile)
-  AND NOT EXISTS (
-      SELECT 1 FROM customer_phones p WHERE p.mobile = TRIM(c.alternate_mobile)
-  );
+ON CONFLICT (mobile) DO NOTHING;
 
 ALTER TABLE customers DROP COLUMN alternate_mobile;

@@ -10,6 +10,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer } from "@/lib/types";
+import { formatCustomerMobiles } from "@/lib/utils";
 
 export default function CustomersPage() {
   const { user, loading: authLoading } = useAuthGuard();
@@ -118,7 +119,7 @@ export default function CustomersPage() {
               <CardContent className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-medium text-slate-900">{c.fullName}</p>
-                  <p className="text-sm text-slate-600">{c.mobile}{c.alternateMobile ? ` · Alt: ${c.alternateMobile}` : ""}</p>
+                  <p className="text-sm text-slate-600">{formatCustomerMobiles(c)}</p>
                   <p className="text-xs text-slate-500">{c.customerCode}</p>
                 </div>
                 <Link href={`/customers/${c.id}`} className="text-sm text-blue-600">History</Link>

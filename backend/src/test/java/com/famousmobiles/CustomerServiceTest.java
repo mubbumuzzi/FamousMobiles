@@ -252,4 +252,42 @@ class CustomerServiceTest {
         assertEquals("Apple", history.get(0).brand());
         assertEquals("iPhone 13", history.get(0).model());
     }
+
+    @Test
+    void update_existingCustomer_synchronizesPhonesInPlace() {
+        Customer customer = new Customer();
+        customer.setId(customerId);
+        customer.setCustomerCode("CUST-1001");
+        customer.setFullName("Alice Original");
+        customer.setMobile("9876543210");
+        customer.setCreatedAt(Instant.now());
+
+        CustomerPhone phone1 = new CustomerPhone();
+        phone1.setCustomer(customer);
+        phone1.setMobile("9876543210");
+        phone1.setPrimary(true);
+        customer.getPhones().add(phone1);
+
+        when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
+        when(customerRepository.findPhoneByMobile("9876543210")).thenReturn(Optional.of(phone1));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerDto.CustomerRequest request = new CustomerDto.CustomerRequest(
+                "Alice Updated",
+                List.of(new CustomerDto.MobileEntry("9876543210", "Personal", true)),
+                null,
+                null,
+                "New Address",
+                null,
+                null,
+                null
+        );
+
+        CustomerDto.CustomerResponse res = customerService.update(customerId, request);
+
+        assertEquals("Alice Updated", res.fullName());
+        assertEquals(1, customer.getPhones().size());
+        assertEquals("Personal", customer.getPhones().get(0).getLabel());
+        assertEquals(phone1, customer.getPhones().get(0), "Existing phone instance should be updated in-place");
+    }
 }

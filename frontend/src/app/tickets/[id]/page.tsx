@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Calendar, Download, Phone, Printer, User, Wrench } from "lucide-react";
+import { Calendar, Download, MessageCircle, Phone, Printer, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Textarea, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { API_URL, api, getAccessToken } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Payment, REPAIR_STATUSES, RepairStatus, Technician, Ticket, TimelineEntry } from "@/lib/types";
-import { formatCurrency, formatDate, formatStatus } from "@/lib/utils";
+import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { Alert } from "@/components/ui/alert";
 import { PageLoading } from "@/components/ui/skeleton";
@@ -83,22 +83,21 @@ export default function TicketDetailPage() {
   };
 
   const downloadReceipt = async () => {
-    const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, { headers: { Authorization: `Bearer ${getAccessToken()}` } });
-    if (!res.ok) throw new Error("Failed to download receipt");
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${ticket?.trackingNumber}.pdf`;
-    a.click();
+    try {
+      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${ticket?.trackingNumber}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to download receipt");
+    }
   };
 
   const printReceipt = async () => {
     try {
-      const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, {
-        headers: { Authorization: `Bearer ${getAccessToken()}` },
-      });
-      if (!res.ok) throw new Error("Failed to load receipt PDF");
-      const blob = await res.blob();
+      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
       const blobUrl = URL.createObjectURL(blob);
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
@@ -122,13 +121,34 @@ export default function TicketDetailPage() {
         }, 300);
       };
     } catch {
-      const res = await fetch(`${API_URL}/tickets/${id}/receipt/pdf`, {
-        headers: { Authorization: `Bearer ${getAccessToken()}` },
-      });
-      const blob = await res.blob();
-      const w = window.open(URL.createObjectURL(blob));
-      w?.print();
+      try {
+        const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
+        const w = window.open(URL.createObjectURL(blob));
+        w?.print();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to load receipt PDF");
+      }
     }
+  };
+
+  const openWhatsApp = () => {
+    if (!ticket) return;
+    const cleanMobile = ticket.customer.mobile.replace(/\D/g, "");
+    const phoneWithCountry = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const trackUrl = `${origin}/track/${ticket.trackingNumber}`;
+
+    const text = encodeURIComponent(
+      `Hello ${ticket.customer.fullName},\n\n` +
+      `Here is an update on your repair from Famous Mobiles:\n` +
+      `📱 Device: ${ticket.brand} ${ticket.model}\n` +
+      `🔖 Ticket: ${ticket.trackingNumber}\n` +
+      `⚡ Status: ${formatStatus(ticket.status)}\n` +
+      `💰 Est. Cost: ₹${ticket.estimatedCost} (Balance: ₹${ticket.balanceAmount})\n\n` +
+      `Track your repair status live here:\n${trackUrl}\n\n` +
+      `Thank you!`
+    );
+    window.open(`https://wa.me/${phoneWithCountry}?text=${text}`, "_blank");
   };
 
   if (authLoading || loading) return <PageLoading label="Loading ticket..." />;
@@ -159,7 +179,7 @@ export default function TicketDetailPage() {
           </div>
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
             <span className="flex items-center gap-2"><User className="h-4 w-4 opacity-70" />{ticket.customer.fullName}</span>
-            <a href={`tel:${ticket.customer.mobile}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4 opacity-70" />{ticket.customer.mobile}</a>
+            <a href={`tel:${ticket.customer.mobile}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4 opacity-70" />{formatCustomerMobiles(ticket.customer)}</a>
             <span className="flex items-center gap-2"><Wrench className="h-4 w-4 opacity-70" />{ticket.assignedTechnicianName ?? "Unassigned"}</span>
             <span className="flex items-center gap-2"><Calendar className="h-4 w-4 opacity-70" />EDD: {formatDate(ticket.estimatedDeliveryDate)}</span>
           </div>
@@ -168,6 +188,9 @@ export default function TicketDetailPage() {
             <StatusProgress status={ticket.status} compact />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" className="border-emerald-400/50 bg-emerald-600/30 text-white hover:bg-emerald-600/50 font-medium" onClick={openWhatsApp}>
+              <MessageCircle className="h-4 w-4 text-emerald-300" /> WhatsApp Update
+            </Button>
             <Button size="sm" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={downloadReceipt}><Download className="h-4 w-4" /> PDF</Button>
             <Button size="sm" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={printReceipt}><Printer className="h-4 w-4" /> Print</Button>
           </div>

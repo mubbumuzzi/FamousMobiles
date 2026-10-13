@@ -17,7 +17,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { ACCESSORIES, CONDITIONS, Customer, DeviceType, Ticket } from "@/lib/types";
-import { formatCurrency, formatDate, formatStatus } from "@/lib/utils";
+import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles } from "@/lib/utils";
 import { SHOP } from "@/lib/shop";
 import {
   cleanMobileInput,
@@ -315,7 +315,7 @@ export default function NewTicketPage() {
                       <p className="font-bold text-slate-900">{selectedCustomer.fullName}</p>
                       <Badge variant="default" className="bg-white border border-slate-200">{selectedCustomer.customerCode}</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mt-0.5">{selectedCustomer.mobile}</p>
+                    <p className="text-sm text-slate-600 mt-0.5">{formatCustomerMobiles(selectedCustomer)}</p>
                     {repairHistory.length > 0 && (
                       <p className="mt-2 text-xs font-semibold text-blue-700">
                         {repairHistory.length} previous repair(s) found in system
@@ -613,9 +613,16 @@ export default function NewTicketPage() {
               <Field><Label>Estimated Cost (₹)</Label><Input type="number" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)} /></Field>
               <Field><Label>Advance Paid (₹)</Label><Input type="number" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} /></Field>
               <Field><Label>Delivery Date</Label><Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} /></Field>
-              <p className="sm:col-span-3 text-sm text-slate-500">
-                Balance: {formatCurrency(Math.max(0, Number(estimatedCost) - Number(advancePaid)))}
-              </p>
+              <div className="sm:col-span-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-slate-600">
+                  Balance to pay: <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost) - Number(advancePaid)))}</span>
+                </p>
+                {Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0 && (
+                  <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                    ⚠ Warning: Advance paid (₹{advancePaid}) exceeds estimated cost (₹{estimatedCost})
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -627,7 +634,7 @@ export default function NewTicketPage() {
                   <span className="font-bold">{SHOP.name}</span>
                 </div>
                 <p className="mt-2 text-lg font-bold">{brand} {model}</p>
-                <p className="opacity-90">{customerDisplay?.fullName} · {customerDisplay?.mobile}</p>
+                <p className="opacity-90">{customerDisplay?.fullName} · {customerDisplay ? formatCustomerMobiles(customerDisplay) : ""}</p>
               </div>
               <div className="grid gap-2 rounded-xl bg-slate-50 p-4">
                 <Row label="Problem" value={problem} />

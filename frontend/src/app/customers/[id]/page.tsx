@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, formatCustomerMobiles } from "@/lib/utils";
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +28,7 @@ export default function CustomerDetailPage() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-slate-900">{customer.fullName}</h1>
-        <p className="text-slate-600">{customer.mobile}{customer.alternateMobile ? ` · Alt: ${customer.alternateMobile}` : ""} · {customer.customerCode}</p>
+        <p className="text-slate-600">{formatCustomerMobiles(customer)} · {customer.customerCode}</p>
         <h2 className="font-semibold">Repair History</h2>
         {repairs.map((t) => (
           <Link key={t.id} href={`/tickets/${t.id}`}>

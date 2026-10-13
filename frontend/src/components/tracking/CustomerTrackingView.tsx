@@ -8,6 +8,7 @@ import { getCustomerStatusMessage } from "@/lib/status-messages";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
 import { ShopContact } from "@/components/ShopInfo";
+import { SHOP } from "@/lib/shop";
 
 export function CustomerTrackingView({ data }: { data: PublicTracking }) {
   const message = getCustomerStatusMessage(data.currentStatus);
@@ -72,8 +73,8 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
       <div className="premium-card p-4">
         <h3 className="mb-2 font-semibold text-slate-900">Visit Us</h3>
         <ShopContact className="text-sm" showName={false} />
-        <a href="tel:9063786751" className="mt-3 flex touch-target items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md">
-          <Phone className="h-4 w-4" /> Call Shop
+        <a href={`tel:${SHOP.mobile}`} className="mt-3 flex touch-target items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md">
+          <Phone className="h-4 w-4" /> Call Shop ({SHOP.mobile})
         </a>
       </div>
     </div>

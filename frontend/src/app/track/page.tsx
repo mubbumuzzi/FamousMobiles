@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { Smartphone, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Field } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { CustomerTrackingView } from "@/components/tracking/CustomerTrackingView";
 import { ShopContact, ShopTerms } from "@/components/ShopInfo";
 import { apiPublic } from "@/lib/api";
 import { PublicTracking } from "@/lib/types";
+import { formatDate, formatStatus } from "@/lib/utils";
 
 export default function TrackPage() {
   const router = useRouter();
   const [trackingId, setTrackingId] = useState("");
   const [mobile, setMobile] = useState("");
   const [data, setData] = useState<PublicTracking | null>(null);
+  const [multiTickets, setMultiTickets] = useState<PublicTracking[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +27,7 @@ export default function TrackPage() {
     setLoading(true);
     setError("");
     setData(null);
+    setMultiTickets([]);
     try {
       const result = await apiPublic<PublicTracking>(`/public/track/${encodeURIComponent(num.trim())}`);
       setData(result);
@@ -40,10 +44,16 @@ export default function TrackPage() {
     setLoading(true);
     setError("");
     setData(null);
+    setMultiTickets([]);
     try {
       const results = await apiPublic<PublicTracking[]>(`/public/track?mobile=${encodeURIComponent(mobile.trim())}`);
-      if (results.length === 1) setData(results[0]);
-      else setError(`${results.length} tickets found. Enter tracking ID for a specific device.`);
+      if (results.length === 1) {
+        setData(results[0]);
+      } else if (results.length > 1) {
+        setMultiTickets(results);
+      } else {
+        setError("No repair tickets found for this mobile number");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Not found");
     } finally {
@@ -93,9 +103,61 @@ export default function TrackPage() {
           </div>
         )}
 
+        {multiTickets.length > 1 && !data && (
+          <div className="space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-800">
+                Select your device ({multiTickets.length} repairs found):
+              </p>
+              <button
+                type="button"
+                onClick={() => setMultiTickets([])}
+                className="text-xs text-slate-500 hover:text-slate-700"
+              >
+                Clear
+              </button>
+            </div>
+            <div className="space-y-2">
+              {multiTickets.map((t) => (
+                <button
+                  key={t.trackingNumber}
+                  type="button"
+                  onClick={() => {
+                    setData(t);
+                    router.replace(`/track/${t.trackingNumber}`);
+                  }}
+                  className="w-full text-left premium-card p-4 hover:border-blue-400 hover:shadow-md transition-all flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {t.brand} {t.model} {t.color ? `(${t.color})` : ""}
+                    </p>
+                    <p className="text-xs font-mono text-blue-600 mt-0.5">{t.trackingNumber}</p>
+                    {t.estimatedDeliveryDate && (
+                      <p className="text-xs text-slate-500 mt-1">Expected: {formatDate(t.estimatedDeliveryDate)}</p>
+                    )}
+                  </div>
+                  <Badge variant="default" className="text-xs">
+                    {formatStatus(t.currentStatus)}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {data && (
           <>
-            <Button variant="outline" className="w-full" onClick={() => { setData(null); setError(""); }}>← Track another device</Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setData(null);
+                setError("");
+              }}
+            >
+              ← Track another device
+            </Button>
             <CustomerTrackingView data={data} />
           </>
         )}

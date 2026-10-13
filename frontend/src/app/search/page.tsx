@@ -11,7 +11,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, formatCustomerMobiles } from "@/lib/utils";
 
 interface SearchResult {
   tickets: Ticket[];
@@ -85,7 +85,7 @@ export default function SearchPage() {
                   <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="p-3 text-sm">
                       <p className="font-medium text-slate-900">{c.fullName}</p>
-                      <p className="text-slate-600">{c.mobile}</p>
+                      <p className="text-slate-600">{formatCustomerMobiles(c)}</p>
                     </CardContent>
                   </Card>
                 </Link>

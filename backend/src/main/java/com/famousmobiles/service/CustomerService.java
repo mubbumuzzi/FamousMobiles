@@ -3,8 +3,11 @@ package com.famousmobiles.service;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -154,15 +157,27 @@ public class CustomerService {
         customer.setCity(trimOrNull(request.city()));
         customer.setNotes(trimOrNull(request.notes()));
 
-        List<CustomerPhone> phones = new ArrayList<>();
+        // In-place phone synchronization: preserve existing phone IDs, update labels/primary status,
+        // remove phones no longer present, and append genuinely new numbers.
+        Map<String, CustomerPhone> existingByNumber = customer.getPhones().stream()
+                .collect(Collectors.toMap(CustomerPhone::getMobile, Function.identity(), (a, b) -> a));
+
+        customer.getPhones().removeIf(p -> normalized.stream().noneMatch(n -> n.number().equals(p.getMobile())));
+
         for (NormalizedMobile m : normalized) {
-            CustomerPhone phone = new CustomerPhone();
-            phone.setMobile(m.number());
-            phone.setLabel(m.label() != null ? m.label() : (m.isPrimary() ? "Primary" : null));
-            phone.setPrimary(m.isPrimary());
-            phones.add(phone);
+            CustomerPhone existing = existingByNumber.get(m.number());
+            if (existing != null) {
+                existing.setLabel(m.label() != null ? m.label() : (m.isPrimary() ? "Primary" : null));
+                existing.setPrimary(m.isPrimary());
+            } else {
+                CustomerPhone newPhone = new CustomerPhone();
+                newPhone.setCustomer(customer);
+                newPhone.setMobile(m.number());
+                newPhone.setLabel(m.label() != null ? m.label() : (m.isPrimary() ? "Primary" : null));
+                newPhone.setPrimary(m.isPrimary());
+                customer.getPhones().add(newPhone);
+            }
         }
-        customer.replacePhones(phones);
     }
 
     private String normalizeMobile(String mobile) {

@@ -17,17 +17,22 @@ fi
 echo "==> Pushing latest code to GitHub..."
 git push origin main
 
+echo "==> Ensuring repository exists on server..."
+ssh "$SERVER" bash -s <<REMOTE
+set -euo pipefail
+mkdir -p "$REMOTE_DIR"
+if [[ ! -d "$REMOTE_DIR/.git" ]]; then
+  git clone https://github.com/mubbumuzzi/FamousMobiles.git "$REMOTE_DIR"
+fi
+REMOTE
+
 echo "==> Copying .env to ${SERVER}:${REMOTE_DIR}/.env"
-ssh "$SERVER" "mkdir -p '$REMOTE_DIR'"
 scp .env "${SERVER}:${REMOTE_DIR}/.env"
 
 echo "==> Deploying on server..."
 ssh "$SERVER" bash -s <<REMOTE
 set -euo pipefail
 cd "$REMOTE_DIR"
-if [[ ! -d .git ]]; then
-  git clone https://github.com/mubbumuzzi/FamousMobiles.git .
-fi
 git pull origin main
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
