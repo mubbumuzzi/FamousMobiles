@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Phone, Printer, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Phone, Printer, Share2, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -39,6 +39,7 @@ export default function TicketDetailPage() {
   const [highlightPayment, setHighlightPayment] = useState(false);
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
   const [cancelReason, setCancelReason] = useState("Customer changed mind / Cancelled");
+  const [sharingReceipt, setSharingReceipt] = useState(false);
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -155,6 +156,64 @@ export default function TicketDetailPage() {
     if (!assignId) return;
     await api(`/tickets/${id}/assign`, { method: "POST", body: JSON.stringify({ technicianId: assignId }) });
     setAssignId(""); load();
+  };
+
+  const shareReceiptOnWhatsApp = async () => {
+    if (!ticket) return;
+    setSharingReceipt(true);
+    const cleanMobile = ticket.customer.mobile.replace(/\D/g, "");
+    const phoneWithCountry = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const pdfUrl = `${origin}/api/public/track/${ticket.trackingNumber}/receipt/pdf`;
+    const trackUrl = `${origin}/track/${ticket.trackingNumber}`;
+
+    const receiptText =
+      `Hello ${ticket.customer.fullName},\n\n` +
+      `Here is your official repair receipt from Famous Mobiles:\n\n` +
+      `📱 Device: ${ticket.brand} ${ticket.model}\n` +
+      `🔖 Ticket: ${ticket.trackingNumber}\n` +
+      `⚡ Status: ${formatStatus(ticket.status)}\n` +
+      `💰 Est. Cost: ${formatCurrency(Number(ticket.estimatedCost))}\n` +
+      `💵 Advance Paid: ${formatCurrency(Number(ticket.advancePaid))}\n` +
+      `⏳ Balance: ${formatCurrency(Number(ticket.balanceAmount))}\n\n` +
+      `📄 View/Download PDF Receipt:\n${pdfUrl}\n\n` +
+      `🔍 Live Tracking:\n${trackUrl}\n\n` +
+      `📍 Famous Mobiles\nOpp Friends Colony Bus Stop, Manikonda, Hyderabad\n📞 ${SHOP.mobile}`;
+
+    try {
+      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
+      const file = new File([blob], `${ticket.trackingNumber}-receipt.pdf`, { type: "application/pdf" });
+
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Receipt - ${ticket.trackingNumber}`,
+          text: receiptText,
+          files: [file],
+        });
+        setSharingReceipt(false);
+        return;
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        setSharingReceipt(false);
+        return;
+      }
+    }
+
+    // Desktop / unsupported fallback: auto-download PDF and open WhatsApp Web with receipt details + link
+    try {
+      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${ticket.trackingNumber}-receipt.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (downloadErr) {
+      console.error("PDF download fallback error:", downloadErr);
+    }
+
+    window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(receiptText)}`, "_blank");
+    setSharingReceipt(false);
   };
 
   const downloadReceipt = async () => {
@@ -305,7 +364,17 @@ export default function TicketDetailPage() {
             <Button
               size="sm"
               variant="outline"
-              className="border-emerald-400/50 bg-emerald-600/30 text-white hover:bg-emerald-600/50 font-medium"
+              className="border-emerald-400/60 bg-emerald-600/40 text-white hover:bg-emerald-600/60 font-semibold shadow-sm"
+              onClick={shareReceiptOnWhatsApp}
+              disabled={sharingReceipt}
+            >
+              <Share2 className="h-4 w-4 text-emerald-200" />
+              {sharingReceipt ? "Preparing..." : "WhatsApp PDF Receipt 📲"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-emerald-400/40 bg-emerald-700/20 text-white hover:bg-emerald-700/40 font-medium"
               onClick={() => openWhatsApp("auto")}
             >
               <MessageCircle className="h-4 w-4 text-emerald-300" />
@@ -584,24 +653,37 @@ export default function TicketDetailPage() {
                 )}
 
                 {paymentSuccessMsg && (
-                  <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-2.5 text-xs text-emerald-900 flex items-center justify-between">
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-2.5 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 font-medium">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                       {paymentSuccessMsg}
                     </span>
-                    {Number(ticket.balanceAmount) <= 0 && (
+                    <div className="flex items-center gap-2">
                       <Button
                         type="button"
                         size="sm"
-                        className="h-7 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold cursor-pointer"
-                        onClick={() => {
-                          setNextStatus("DELIVERED");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
+                        variant="outline"
+                        className="h-7 text-xs border-emerald-600 text-emerald-800 hover:bg-emerald-100 font-semibold cursor-pointer"
+                        onClick={shareReceiptOnWhatsApp}
+                        disabled={sharingReceipt}
                       >
-                        Mark as Delivered ↑
+                        <Share2 className="h-3 w-3 mr-1" />
+                        Send Receipt via WhatsApp
                       </Button>
-                    )}
+                      {Number(ticket.balanceAmount) <= 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold cursor-pointer"
+                          onClick={() => {
+                            setNextStatus("DELIVERED");
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          Mark as Delivered ↑
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
 

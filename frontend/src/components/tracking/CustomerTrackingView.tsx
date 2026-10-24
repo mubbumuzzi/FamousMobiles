@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, MessageCircle, Phone } from "lucide-react";
+import { Calendar, Download, MessageCircle, Phone } from "lucide-react";
 import { PublicTracking } from "@/lib/types";
 import { cn, formatCurrency, formatDate, formatStatus } from "@/lib/utils";
 import { getCustomerStatusMessage } from "@/lib/status-messages";
@@ -52,7 +52,17 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
 
       {/* Payment summary */}
       <div className="premium-card p-4">
-        <h3 className="mb-3 font-semibold text-slate-900">Payment Summary</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900">Payment Summary</h3>
+          <a
+            href={`/api/public/track/${data.trackingNumber}/receipt/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" /> PDF Receipt
+          </a>
+        </div>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-slate-500">Estimated</span><span>{formatCurrency(Number(data.estimatedCost))}</span></div>
           <div className="flex justify-between"><span className="text-slate-500">Advance Paid</span><span className="text-emerald-600">{formatCurrency(Number(data.advancePaid))}</span></div>

@@ -14,6 +14,9 @@ import com.famousmobiles.domain.enums.RepairStatus;
 public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID> {
     Optional<RepairTicket> findByTrackingNumber(String trackingNumber);
 
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.trackingNumber = :trackingNumber")
+    Optional<RepairTicket> findByTrackingNumberWithDetails(@Param("trackingNumber") String trackingNumber);
+
     List<RepairTicket> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
 
     @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.id = :id")
