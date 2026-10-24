@@ -134,14 +134,25 @@ public class TicketService {
         }
         User user = securityUtils.getCurrentUser();
         ticket.setStatus(target);
+        String finalRemarks = request.remarks();
         if (target == RepairStatus.DELIVERED) {
             if (ticket.getBalanceAmount() != null && ticket.getBalanceAmount().compareTo(BigDecimal.ZERO) > 0) {
                 throw new BadRequestException("Cannot deliver device with pending balance of ₹" + ticket.getBalanceAmount() + ". Please record payment first.");
             }
             ticket.setDeliveredAt(Instant.now());
+        } else if (target == RepairStatus.RETURNED_UNREPAIRED) {
+            ticket.setDeliveredAt(Instant.now());
+            BigDecimal refundAdvance = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;
+            ticket.setEstimatedCost(BigDecimal.ZERO);
+            ticket.setAdvancePaid(BigDecimal.ZERO);
+            ticket.setBalanceAmount(BigDecimal.ZERO);
+            if (refundAdvance.compareTo(BigDecimal.ZERO) > 0) {
+                finalRemarks = (finalRemarks != null && !finalRemarks.isBlank() ? finalRemarks + " · " : "") +
+                        "Total cost set to ₹0. Advance of ₹" + refundAdvance + " refunded to customer.";
+            }
         }
         ticketRepository.save(ticket);
-        recordStatusHistory(ticket, current, target, user, request.remarks(), request.technicianNotes());
+        recordStatusHistory(ticket, current, target, user, finalRemarks, request.technicianNotes());
         notificationService.onStatusChange(ticket, target);
         return TicketDto.TicketResponse.from(ticket);
     }

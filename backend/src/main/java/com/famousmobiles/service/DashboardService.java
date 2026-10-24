@@ -36,7 +36,7 @@ public class DashboardService {
         long receivedToday = ticketRepository.findAll().stream()
                 .filter(t -> !t.getCreatedAt().isBefore(startOfDay)).count();
         long underRepair = ticketRepository.findAll().stream()
-                .filter(t -> t.getStatus() != RepairStatus.DELIVERED && t.getStatus() != RepairStatus.READY_FOR_PICKUP)
+                .filter(t -> t.getStatus() != RepairStatus.DELIVERED && t.getStatus() != RepairStatus.READY_FOR_PICKUP && t.getStatus() != RepairStatus.RETURNED_UNREPAIRED)
                 .filter(t -> t.getStatus().ordinal() >= RepairStatus.REPAIR_IN_PROGRESS.ordinal()).count();
         long waitingParts = ticketRepository.countByStatus(RepairStatus.WAITING_FOR_PARTS);
         long readyPickup = ticketRepository.countByStatus(RepairStatus.READY_FOR_PICKUP);

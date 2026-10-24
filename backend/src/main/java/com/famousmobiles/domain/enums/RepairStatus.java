@@ -8,7 +8,8 @@ public enum RepairStatus {
     REPAIR_IN_PROGRESS,
     QUALITY_CHECK,
     READY_FOR_PICKUP,
-    DELIVERED;
+    DELIVERED,
+    RETURNED_UNREPAIRED;
 
     public RepairStatus next() {
         RepairStatus[] values = values();
@@ -23,6 +24,6 @@ public enum RepairStatus {
         if (this == target) {
             return false;
         }
-        return this != DELIVERED;
+        return this != DELIVERED && this != RETURNED_UNREPAIRED;
     }
 }

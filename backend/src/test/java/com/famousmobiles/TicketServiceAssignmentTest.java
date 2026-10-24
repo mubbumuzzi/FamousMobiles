@@ -247,6 +247,28 @@ class TicketServiceAssignmentTest {
         verify(ticketRepository).save(t);
     }
 
+    @Test
+    void updateStatusToReturnedUnrepaired_resetsCostAndAdvance() {
+        RepairTicket t = sampleTicket();
+        t.setStatus(RepairStatus.UNDER_DIAGNOSIS);
+        t.setEstimatedCost(new BigDecimal("1500.00"));
+        t.setAdvancePaid(new BigDecimal("300.00"));
+        t.setBalanceAmount(new BigDecimal("1200.00"));
+        when(ticketRepository.findByIdWithDetails(ticketId)).thenReturn(Optional.of(t));
+        when(securityUtils.getCurrentUser()).thenReturn(technicianUser);
+        when(ticketRepository.save(any(RepairTicket.class))).thenReturn(t);
+
+        var request = new TicketDto.StatusUpdateRequest(
+                RepairStatus.RETURNED_UNREPAIRED, "Customer changed mind - cancel repair", null);
+
+        var response = ticketService.updateStatus(ticketId, request);
+        assertEquals(RepairStatus.RETURNED_UNREPAIRED, response.status());
+        assertEquals(BigDecimal.ZERO, t.getEstimatedCost());
+        assertEquals(BigDecimal.ZERO, t.getAdvancePaid());
+        assertEquals(BigDecimal.ZERO, t.getBalanceAmount());
+        verify(ticketRepository).save(t);
+    }
+
     private RepairTicket sampleTicket() {
         Customer customer = new Customer();
         customer.setId(UUID.randomUUID());

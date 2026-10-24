@@ -38,6 +38,7 @@ export default function TicketDetailPage() {
   const [paymentWarning, setPaymentWarning] = useState("");
   const [highlightPayment, setHighlightPayment] = useState(false);
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
+  const [cancelReason, setCancelReason] = useState("Customer changed mind / Cancelled");
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -104,7 +105,15 @@ export default function TicketDetailPage() {
 
     setPaymentWarning("");
     try {
-      await api(`/tickets/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, remarks, technicianNotes: remarks }) });
+      const finalRemarks =
+        targetStatus === "RETURNED_UNREPAIRED"
+          ? `${cancelReason}${remarks.trim() ? " · " + remarks.trim() : ""}`
+          : remarks;
+
+      await api(`/tickets/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus, remarks: finalRemarks, technicianNotes: finalRemarks }),
+      });
       setNextStatus("");
       setRemarks("");
       setJustUpdatedStatus(targetStatus);
@@ -231,6 +240,16 @@ export default function TicketDetailPage() {
         `⏳ Balance on Delivery: ₹${ticket.balanceAmount}\n\n` +
         `Track details: ${trackUrl}\n\n` +
         `Please reply to this message to APPROVE the repair so our technician can begin. Thank you!`;
+    } else if (ticket.status === "RETURNED_UNREPAIRED") {
+      text =
+        `Hello ${ticket.customer.fullName},\n\n` +
+        `Your device ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been returned unrepaired at Famous Mobiles.\n\n` +
+        `🔖 Status: Returned Unrepaired\n` +
+        `💰 Repair Cost: ₹0 (Any advance paid has been refunded)\n` +
+        `📍 Shop: Opp Friends Colony Bus Stop, Manikonda, Hyderabad\n` +
+        `📞 Call: ${SHOP.mobile}\n\n` +
+        `Track details: ${trackUrl}\n\n` +
+        `Thank you for visiting Famous Mobiles!`;
     } else {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
@@ -256,7 +275,7 @@ export default function TicketDetailPage() {
   }
 
   const selectableStatuses = REPAIR_STATUSES.filter((s) => s !== ticket.status);
-  const canUpdateStatus = ticket.status !== "DELIVERED" && selectableStatuses.length > 0;
+  const canUpdateStatus = ticket.status !== "DELIVERED" && ticket.status !== "RETURNED_UNREPAIRED" && selectableStatuses.length > 0;
   const overdue = isOverdue(ticket.estimatedDeliveryDate, ticket.status);
 
   return (
@@ -294,6 +313,8 @@ export default function TicketDetailPage() {
                 ? "WhatsApp: Ready for Pickup 🚀"
                 : ticket.status === "WAITING_FOR_APPROVAL"
                 ? "WhatsApp: Request Approval 💬"
+                : ticket.status === "RETURNED_UNREPAIRED"
+                ? "WhatsApp: Return Notice 📦"
                 : "WhatsApp Update"}
             </Button>
             <Button size="sm" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={downloadReceipt}><Download className="h-4 w-4" /> PDF</Button>
@@ -427,6 +448,34 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
+                  {nextStatus === "RETURNED_UNREPAIRED" && (
+                    <div className="space-y-2 rounded-lg bg-slate-50 border border-slate-300 p-3 text-xs text-slate-800 animate-fade-in">
+                      <label className="font-semibold text-slate-900 block">Reason for returning unrepaired:</label>
+                      <select
+                        className={selectClassName}
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                      >
+                        <option value="Customer changed mind / Cancelled">Customer changed mind / Cancelled</option>
+                        <option value="Device unrepairable (Motherboard / CPU / corrosion)">Device unrepairable (Motherboard / CPU / corrosion)</option>
+                        <option value="Customer rejected revised estimate">Customer rejected revised estimate</option>
+                        <option value="Spare parts unavailable">Spare parts unavailable</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <div className="rounded bg-amber-50 border border-amber-200 p-2 text-amber-900 space-y-0.5">
+                        <p className="font-semibold text-amber-950">⚠️ Cost & Advance Settlement:</p>
+                        <p className="text-amber-800">
+                          Total repair cost will be set to ₹0.
+                          {Number(ticket.advancePaid) > 0 ? (
+                            <strong className="text-amber-950"> Advance of {formatCurrency(Number(ticket.advancePaid))} will be marked as refunded to customer.</strong>
+                          ) : (
+                            " No advance was collected."
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <Button className="w-full" onClick={updateStatus} disabled={!nextStatus}>Update Status</Button>
 
                   {justUpdatedStatus === "READY_FOR_PICKUP" && (
@@ -451,6 +500,19 @@ export default function TicketDetailPage() {
                         className="font-bold bg-amber-600 text-white px-2.5 py-1 rounded hover:bg-amber-700 flex items-center gap-1 shadow-sm"
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> Send Estimate to Customer
+                      </button>
+                    </div>
+                  )}
+
+                  {justUpdatedStatus === "RETURNED_UNREPAIRED" && (
+                    <div className="rounded-lg bg-slate-100 border border-slate-300 p-2.5 text-xs flex items-center justify-between text-slate-900 animate-fade-in">
+                      <span>Device marked as Returned Unrepaired. Cost set to ₹0.</span>
+                      <button
+                        type="button"
+                        onClick={() => { openWhatsApp("auto"); setJustUpdatedStatus(""); }}
+                        className="font-bold bg-slate-700 text-white px-2.5 py-1 rounded hover:bg-slate-800 flex items-center gap-1 shadow-sm"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> Send Return Notice
                       </button>
                     </div>
                   )}

@@ -4,9 +4,30 @@ import { RepairStatus, REPAIR_STATUSES } from "@/lib/types";
 import { cn, formatStatus } from "@/lib/utils";
 import { getProgressPercent } from "@/lib/status-messages";
 
+const PIPELINE_STATUSES: RepairStatus[] = [
+  "DEVICE_RECEIVED",
+  "UNDER_DIAGNOSIS",
+  "WAITING_FOR_APPROVAL",
+  "WAITING_FOR_PARTS",
+  "REPAIR_IN_PROGRESS",
+  "QUALITY_CHECK",
+  "READY_FOR_PICKUP",
+];
+
 export function StatusProgress({ status, compact }: { status: RepairStatus; compact?: boolean }) {
+  if (status === "RETURNED_UNREPAIRED") {
+    return (
+      <div className="rounded-lg bg-slate-100/90 border border-slate-300 p-2 text-xs text-slate-800 flex items-center justify-between">
+        <span className="font-semibold flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-slate-500" /> Returned Unrepaired
+        </span>
+        <span className="text-slate-500 font-medium">Repair Cancelled · Cost ₹0</span>
+      </div>
+    );
+  }
+
   const percent = getProgressPercent(status);
-  const currentIndex = REPAIR_STATUSES.indexOf(status);
+  const currentIndex = PIPELINE_STATUSES.indexOf(status);
 
   if (compact) {
     return (
@@ -34,7 +55,7 @@ export function StatusProgress({ status, compact }: { status: RepairStatus; comp
         />
       </div>
       <div className="flex justify-between gap-1 overflow-x-auto pb-1">
-        {REPAIR_STATUSES.slice(0, -1).map((s, i) => (
+        {PIPELINE_STATUSES.map((s, i) => (
           <div key={s} className="flex min-w-0 flex-1 flex-col items-center gap-1">
             <div
               className={cn(

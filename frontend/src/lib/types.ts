@@ -8,7 +8,8 @@ export type RepairStatus =
   | "REPAIR_IN_PROGRESS"
   | "QUALITY_CHECK"
   | "READY_FOR_PICKUP"
-  | "DELIVERED";
+  | "DELIVERED"
+  | "RETURNED_UNREPAIRED";
 
 export type DeviceType = "MOBILE" | "TABLET" | "SMART_WATCH" | "LAPTOP" | "OTHER";
 export type PaymentMode = "CASH" | "UPI" | "CARD";
@@ -143,6 +144,7 @@ export const REPAIR_STATUSES: RepairStatus[] = [
   "QUALITY_CHECK",
   "READY_FOR_PICKUP",
   "DELIVERED",
+  "RETURNED_UNREPAIRED",
 ];
 
 export const ACCESSORIES = ["Battery", "SIM Card", "Memory Card", "Charger", "Earphones", "Box", "Stylus", "Other"];

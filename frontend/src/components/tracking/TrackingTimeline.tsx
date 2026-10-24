@@ -5,11 +5,25 @@ import { REPAIR_STATUSES, RepairStatus } from "@/lib/types";
 import { cn, formatStatus } from "@/lib/utils";
 
 export function TrackingTimeline({ currentStatus, timeline }: { currentStatus: RepairStatus; timeline?: { title: string; createdAt: string }[] }) {
-  const currentIndex = REPAIR_STATUSES.indexOf(currentStatus);
+  if (currentStatus === "RETURNED_UNREPAIRED") {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-center">
+          <p className="text-base font-bold text-slate-800">Device Returned Unrepaired</p>
+          <p className="mt-1 text-xs text-slate-600">
+            This repair was cancelled and the device has been returned to the customer. Any advance paid was fully refunded.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const standardStatuses = REPAIR_STATUSES.filter((s) => s !== "RETURNED_UNREPAIRED");
+  const currentIndex = standardStatuses.indexOf(currentStatus);
 
   return (
     <div className="space-y-0">
-      {REPAIR_STATUSES.map((status, index) => {
+      {standardStatuses.map((status, index) => {
         const isComplete = index < currentIndex || currentStatus === "DELIVERED";
         const isCurrent = index === currentIndex && currentStatus !== "DELIVERED";
         const isPending = index > currentIndex;
@@ -29,7 +43,7 @@ export function TrackingTimeline({ currentStatus, timeline }: { currentStatus: R
               >
                 {isComplete ? <Check className="h-4 w-4" /> : isCurrent ? <Clock className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
               </div>
-              {index < REPAIR_STATUSES.length - 1 && (
+              {index < standardStatuses.length - 1 && (
                 <div className={cn("w-0.5 flex-1 min-h-8", isComplete ? "bg-green-500" : "bg-slate-200")} />
               )}
             </div>
