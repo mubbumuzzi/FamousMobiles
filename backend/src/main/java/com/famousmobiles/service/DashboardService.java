@@ -3,7 +3,7 @@ package com.famousmobiles.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -18,6 +18,8 @@ import com.famousmobiles.repository.RepairTicketRepository;
 @Service
 public class DashboardService {
 
+    public static final ZoneId SHOP_ZONE = ZoneId.of("Asia/Kolkata");
+
     private final RepairTicketRepository ticketRepository;
     private final PaymentRepository paymentRepository;
 
@@ -28,10 +30,10 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public MiscDto.DashboardMetrics getMetrics(boolean includeRevenue) {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        Instant startOfDay = today.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant startOfWeek = today.minusDays(today.getDayOfWeek().getValue() - 1L).atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant startOfMonth = today.withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        LocalDate today = LocalDate.now(SHOP_ZONE);
+        Instant startOfDay = today.atStartOfDay(SHOP_ZONE).toInstant();
+        Instant startOfWeek = today.minusDays(today.getDayOfWeek().getValue() - 1L).atStartOfDay(SHOP_ZONE).toInstant();
+        Instant startOfMonth = today.withDayOfMonth(1).atStartOfDay(SHOP_ZONE).toInstant();
 
         long receivedToday = ticketRepository.findAll().stream()
                 .filter(t -> !t.getCreatedAt().isBefore(startOfDay)).count();

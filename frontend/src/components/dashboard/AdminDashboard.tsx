@@ -78,10 +78,11 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
           isSelected={activeMetric === "activeRepairs"}
         />
         <KpiCard
-          label="Delivered"
+          label="Total Delivered"
           value={loading ? null : delivered}
           icon={Package}
           tone="secondary"
+          subtitle="All-time completed"
           onClick={() => setActiveMetric("deliveredAll")}
           isSelected={activeMetric === "deliveredAll"}
         />
@@ -113,6 +114,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
           label="Delivered Today"
           value={loading ? null : metrics?.deliveredToday ?? 0}
           tone="primary"
+          subtitle="Delivered today"
           onClick={() => setActiveMetric("deliveredToday")}
           isSelected={activeMetric === "deliveredToday"}
         />

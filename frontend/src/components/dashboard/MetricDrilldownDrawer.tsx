@@ -67,6 +67,7 @@ const METRIC_TABS: { key: MetricDrilldownType; label: string; adminOnly?: boolea
   { key: "readyPickup", label: "Ready Pickup" },
   { key: "receivedToday", label: "Received Today" },
   { key: "deliveredToday", label: "Delivered Today" },
+  { key: "deliveredAll", label: "All Delivered", adminOnly: true },
   { key: "waitingParts", label: "Waiting Parts" },
   { key: "revenueToday", label: "Revenue Today", adminOnly: true },
 ];
@@ -315,6 +316,7 @@ export function MetricDrilldownDrawer({
                 {metric === "readyPickup" && <PackageCheck className="h-4 w-4" />}
                 {metric === "receivedToday" && <Package className="h-4 w-4" />}
                 {metric === "deliveredToday" && <Truck className="h-4 w-4" />}
+                {metric === "deliveredAll" && <PackageCheck className="h-4 w-4" />}
                 {metric === "waitingParts" && <Clock className="h-4 w-4" />}
                 {metric === "overdue" && <AlertTriangle className="h-4 w-4" />}
               </span>
@@ -325,6 +327,7 @@ export function MetricDrilldownDrawer({
                   {metric === "readyPickup" && `Ready for Pickup (${filteredTickets.length})`}
                   {metric === "receivedToday" && `Received Today (${filteredTickets.length})`}
                   {metric === "deliveredToday" && `Delivered Today (${filteredTickets.length})`}
+                  {metric === "deliveredAll" && `All Delivered Tickets (${filteredTickets.length})`}
                   {metric === "waitingParts" && `Waiting for Parts (${filteredTickets.length})`}
                   {metric === "overdue" && `Overdue Repairs (${filteredTickets.length})`}
                 </h2>
