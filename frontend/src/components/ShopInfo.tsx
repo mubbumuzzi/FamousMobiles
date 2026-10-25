@@ -4,7 +4,7 @@ export function ShopContact({ className = "", showName = true }: { className?: s
   return (
     <div className={`text-sm text-slate-600 ${className}`}>
       {showName && <p className="font-medium text-slate-800">{SHOP.name}</p>}
-      <p>Owner: {SHOP.ownerName}</p>
+      <p>Prop: {SHOP.ownerName}</p>
       <p>Shop: {SHOP.mobile}</p>
       {SHOP.addressLines.map((line) => (
         <p key={line}>{line}</p>

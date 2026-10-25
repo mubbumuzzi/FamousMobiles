@@ -21,7 +21,7 @@ import { Alert } from "@/components/ui/alert";
 import { PageLoading } from "@/components/ui/skeleton";
 
 const WARRANTY_OPTIONS = [
-  { days: 0, label: "Testing Only (0d)" },
+  { days: 0, label: "No Warranty (0d)" },
   { days: 15, label: "15 Days" },
   { days: 30, label: "30 Days (Standard)" },
   { days: 60, label: "60 Days" },
@@ -282,7 +282,7 @@ export default function TicketDetailPage() {
 
     let text = "";
     const wDays = ticket.warrantyDays ?? 0;
-    const warrantyText = wDays > 0 ? `${wDays} Days Warranty` : "Testing Warranty";
+    const warrantyText = wDays > 0 ? `${wDays} Days Warranty` : "No Warranty";
     const balNum = Number(ticket.balanceAmount || 0);
     const estNum = Number(ticket.estimatedCost || 0);
     const isSettled = estNum > 0 && balNum <= 0;
@@ -729,7 +729,7 @@ export default function TicketDetailPage() {
                             🛡️ Warranty Period to Offer Customer:
                           </label>
                           <span className="text-xs font-semibold text-amber-900">
-                            {approvalWarrantyDays > 0 ? `${approvalWarrantyDays} Days` : "Testing Only"}
+                            {approvalWarrantyDays > 0 ? `${approvalWarrantyDays} Days` : "No Warranty"}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">

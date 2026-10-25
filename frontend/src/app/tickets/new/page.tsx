@@ -811,7 +811,7 @@ export default function NewTicketPage() {
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { days: 0, label: "Testing Only (0d)" },
+                      { days: 0, label: "No Warranty (0d)" },
                       { days: 15, label: "15 Days" },
                       { days: 30, label: "30 Days (Standard)" },
                       { days: 60, label: "60 Days" },
@@ -864,7 +864,7 @@ export default function NewTicketPage() {
                 />
                 <Row label="Advance" value={formatCurrency(Number(advancePaid || 0))} />
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
-                <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "Testing Only (No Warranty)"} />
+                <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "No Warranty"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
               </div>
             </div>

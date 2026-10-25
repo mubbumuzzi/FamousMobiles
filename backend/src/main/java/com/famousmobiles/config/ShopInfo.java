@@ -13,7 +13,7 @@ public final class ShopInfo {
             "Shaikpet Main Road, Manikonda",
             "Hyderabad");
     public static final List<String> TERMS = List.of(
-            "Delivery should be collected within 2 months; otherwise we are not responsible.",
+            "Delivery should be collected within 21 days; otherwise we are not responsible.",
             "Please bring this bill when collecting your device.");
 
     private ShopInfo() {}

@@ -72,7 +72,7 @@ export function isSameDay(isoString?: string | null, targetDate = new Date()): b
 export function getWarrantyStatus(ticket: { warrantyDays?: number; deliveredAt?: string }) {
   const days = ticket.warrantyDays ?? 0;
   if (!days || days <= 0) {
-    return { status: "NONE" as const, label: "Testing Warranty Only", daysRemaining: 0, tone: "secondary" as const };
+    return { status: "NONE" as const, label: "No Warranty", daysRemaining: 0, tone: "secondary" as const };
   }
 
   if (!ticket.deliveredAt) {

@@ -119,7 +119,7 @@ public class PdfReceiptService {
         for (String line : shop.addressLines()) {
             shopCell.addElement(new Paragraph(line, smallFont));
         }
-        shopCell.addElement(new Paragraph("Owner: " + shop.ownerName() + " | Phone: " + shop.mobile(), smallFont));
+        shopCell.addElement(new Paragraph("Prop: " + shop.ownerName() + " | Phone: " + shop.mobile(), smallFont));
         headerTable.addCell(shopCell);
 
         // Right Header: Receipt metadata & badge
@@ -220,28 +220,26 @@ public class PdfReceiptService {
             addCell(table, "₹" + ticket.getBalanceAmount(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(180, 83, 9)), true, false);
         }
 
-        // Row 7: Warranty Period spanning across
+        // Row 7: Warranty Period spanning across (only rendered when warranty is explicitly given)
         int warrantyDays = ticket.getWarrantyDays() != null ? ticket.getWarrantyDays() : 0;
-        addCell(table, "Warranty", labelFont, false, true);
-        String warrantyVal;
         if (warrantyDays > 0) {
+            addCell(table, "Warranty", labelFont, false, true);
+            String warrantyVal;
             if (ticket.getDeliveredAt() != null) {
                 Instant expiry = ticket.getDeliveredAt().plus(warrantyDays, ChronoUnit.DAYS);
                 warrantyVal = warrantyDays + " Days (Valid till " + DATE_ONLY.format(expiry) + ")";
             } else {
                 warrantyVal = warrantyDays + " Days (From delivery date)";
             }
-        } else {
-            warrantyVal = "Testing Warranty Only (0d)";
+            PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
+            warrantyCell.setColspan(3);
+            warrantyCell.setPaddingTop(2.5f);
+            warrantyCell.setPaddingBottom(2.5f);
+            warrantyCell.setPaddingLeft(5f);
+            warrantyCell.setPaddingRight(5f);
+            warrantyCell.setBorderColor(new Color(226, 232, 240));
+            table.addCell(warrantyCell);
         }
-        PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
-        warrantyCell.setColspan(3);
-        warrantyCell.setPaddingTop(2.5f);
-        warrantyCell.setPaddingBottom(2.5f);
-        warrantyCell.setPaddingLeft(5f);
-        warrantyCell.setPaddingRight(5f);
-        warrantyCell.setBorderColor(new Color(226, 232, 240));
-        table.addCell(warrantyCell);
 
         document.add(table);
 
@@ -264,8 +262,6 @@ public class PdfReceiptService {
             } else {
                 termsCell.addElement(new Paragraph("• Warranty: " + warrantyDays + " Days from collection/delivery date.", noteFont));
             }
-        } else {
-            termsCell.addElement(new Paragraph("• Warranty: Testing warranty only at counter collection.", noteFont));
         }
         for (String term : shop.terms()) {
             termsCell.addElement(new Paragraph("• " + term, noteFont));
