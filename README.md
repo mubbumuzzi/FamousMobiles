@@ -2,6 +2,8 @@
 
 A mobile-first PWA for Famous Mobiles repair shop in Hyderabad. Digitizes paper-based repair booking with courier-style device tracking.
 
+> 📖 **Architecture & Complete Workflow Guide:** See **[APP_FLOW.md](APP_FLOW.md)** for a complete breakdown of all user roles, state machines, business logic, entity models, API endpoints, and developer cheat sheet.
+
 ## Stack
 
 - **Frontend:** Next.js 15+, React, TypeScript, TailwindCSS, PWA

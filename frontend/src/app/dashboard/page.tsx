@@ -44,7 +44,7 @@ export default function DashboardPage() {
   return (
     <StaffLayout userName={user?.fullName} role={role}>
       {role === "ADMIN" && (
-        <AdminDashboard metrics={metrics} tickets={tickets} loading={loading} error={error} />
+        <AdminDashboard metrics={metrics} tickets={tickets} loading={loading} error={error} onRefresh={load} />
       )}
       {role === "TECHNICIAN" && (
         <TechnicianHome tickets={tickets} userName={user?.fullName} loading={loading} onRefresh={load} />
@@ -56,6 +56,7 @@ export default function DashboardPage() {
           loading={loading}
           error={error}
           showRevenue={false}
+          onRefresh={load}
         />
       )}
     </StaffLayout>

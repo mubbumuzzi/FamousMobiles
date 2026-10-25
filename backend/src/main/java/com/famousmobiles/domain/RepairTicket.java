@@ -82,6 +82,9 @@ public class RepairTicket extends BaseEntity {
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 
+    @Column(name = "warranty_days", nullable = false)
+    private Integer warrantyDays = 0;
+
     public String getTrackingNumber() {
         return trackingNumber;
     }
@@ -224,5 +227,13 @@ public class RepairTicket extends BaseEntity {
 
     public void setDeliveredAt(Instant deliveredAt) {
         this.deliveredAt = deliveredAt;
+    }
+
+    public Integer getWarrantyDays() {
+        return warrantyDays != null ? warrantyDays : 0;
+    }
+
+    public void setWarrantyDays(Integer warrantyDays) {
+        this.warrantyDays = warrantyDays != null ? warrantyDays : 0;
     }
 }

@@ -44,6 +44,11 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
           </span>
         </div>
         {data.imeiMasked && <p className="mt-2 text-sm text-slate-500">IMEI: {data.imeiMasked}</p>}
+        {data.warrantyDays && data.warrantyDays > 0 ? (
+          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200">
+            🛡️ {data.warrantyDays} Days Service Warranty Included
+          </div>
+        ) : null}
         <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
           <Calendar className="h-4 w-4 text-cyan-600" />
           <span>Expected by <strong>{formatDate(data.estimatedDeliveryDate)}</strong></span>
@@ -79,10 +84,18 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
             <span className="text-emerald-600 font-semibold">{formatCurrency(Number(data.advancePaid))}</span>
           </div>
           <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-base font-bold">
-            <span>Balance Due</span>
+            <span>
+              {Number(data.estimatedCost) > 0 && Number(data.balanceAmount) <= 0
+                ? "Payment Status"
+                : "Balance Due"}
+            </span>
             {Number(data.estimatedCost) === 0 && data.currentStatus !== "DELIVERED" && data.currentStatus !== "RETURNED_UNREPAIRED" ? (
               <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                 To be determined
+              </span>
+            ) : Number(data.balanceAmount) <= 0 ? (
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-md">
+                Paid in Full ✓
               </span>
             ) : (
               <span>{formatCurrency(Number(data.balanceAmount))}</span>

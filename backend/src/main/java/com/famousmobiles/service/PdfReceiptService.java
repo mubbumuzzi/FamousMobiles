@@ -3,10 +3,13 @@ package com.famousmobiles.service;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 
 import org.springframework.stereotype.Service;
@@ -37,6 +40,13 @@ public class PdfReceiptService {
     private static final DateTimeFormatter RECEIPT_DATE = DateTimeFormatter
             .ofPattern("dd MMM yyyy, hh:mm a", Locale.ENGLISH)
             .withZone(ZoneId.of("Asia/Kolkata"));
+
+    private static final DateTimeFormatter DATE_ONLY = DateTimeFormatter
+            .ofPattern("dd MMM yyyy", Locale.ENGLISH)
+            .withZone(ZoneId.of("Asia/Kolkata"));
+
+    private static final DateTimeFormatter LOCAL_DATE_FMT = DateTimeFormatter
+            .ofPattern("dd MMM yyyy", Locale.ENGLISH);
 
     private final AppProperties appProperties;
     private final FileStorageService fileStorageService;
@@ -174,12 +184,64 @@ public class PdfReceiptService {
         addCell(table, "Advance Paid", labelFont, false, true);
         addCell(table, "₹" + ticket.getAdvancePaid(), valueFont, false, false);
 
-        // Row 6
-        String edd = ticket.getEstimatedDeliveryDate() != null ? ticket.getEstimatedDeliveryDate().toString() : "TBD";
-        addCell(table, "Est. Delivery", labelFont, false, true);
-        addCell(table, edd, valueFont, false, false);
-        addCell(table, "Balance to Pay", labelFont, true, true);
-        addCell(table, "₹" + ticket.getBalanceAmount(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(180, 83, 9)), true, false);
+        // Row 6: Delivery Date & Balance/Payment Status
+        if (ticket.getDeliveredAt() != null) {
+            addCell(table, "Delivery Date", labelFont, false, true);
+            addCell(table, DATE_ONLY.format(ticket.getDeliveredAt()), boldFont, false, false);
+        } else {
+            String edd = ticket.getEstimatedDeliveryDate() != null
+                    ? LOCAL_DATE_FMT.format(ticket.getEstimatedDeliveryDate())
+                    : "Upon Completion";
+            addCell(table, "Est. Delivery", labelFont, false, true);
+            addCell(table, edd, valueFont, false, false);
+        }
+
+        boolean isSettled = ticket.getEstimatedCost() != null
+                && ticket.getEstimatedCost().compareTo(BigDecimal.ZERO) > 0
+                && ticket.getBalanceAmount().compareTo(BigDecimal.ZERO) <= 0;
+        boolean isUnquoted = ticket.getEstimatedCost() == null
+                || ticket.getEstimatedCost().compareTo(BigDecimal.ZERO) == 0;
+
+        if (isSettled) {
+            addCell(table, "Payment Status", labelFont, false, true);
+            PdfPCell paidCell = new PdfPCell(new Phrase("PAID IN FULL ✓", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(21, 128, 61))));
+            paidCell.setBackgroundColor(new Color(240, 253, 244));
+            paidCell.setPaddingTop(2.5f);
+            paidCell.setPaddingBottom(2.5f);
+            paidCell.setPaddingLeft(5f);
+            paidCell.setPaddingRight(5f);
+            paidCell.setBorderColor(new Color(187, 247, 208));
+            table.addCell(paidCell);
+        } else if (isUnquoted) {
+            addCell(table, "Payment Status", labelFont, false, true);
+            addCell(table, "Pending Diagnosis", valueFont, false, false);
+        } else {
+            addCell(table, "Balance to Pay", labelFont, true, true);
+            addCell(table, "₹" + ticket.getBalanceAmount(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(180, 83, 9)), true, false);
+        }
+
+        // Row 7: Warranty Period spanning across
+        int warrantyDays = ticket.getWarrantyDays() != null ? ticket.getWarrantyDays() : 0;
+        addCell(table, "Warranty", labelFont, false, true);
+        String warrantyVal;
+        if (warrantyDays > 0) {
+            if (ticket.getDeliveredAt() != null) {
+                Instant expiry = ticket.getDeliveredAt().plus(warrantyDays, ChronoUnit.DAYS);
+                warrantyVal = warrantyDays + " Days (Valid till " + DATE_ONLY.format(expiry) + ")";
+            } else {
+                warrantyVal = warrantyDays + " Days (From delivery date)";
+            }
+        } else {
+            warrantyVal = "Testing Warranty Only (0d)";
+        }
+        PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
+        warrantyCell.setColspan(3);
+        warrantyCell.setPaddingTop(2.5f);
+        warrantyCell.setPaddingBottom(2.5f);
+        warrantyCell.setPaddingLeft(5f);
+        warrantyCell.setPaddingRight(5f);
+        warrantyCell.setBorderColor(new Color(226, 232, 240));
+        table.addCell(warrantyCell);
 
         document.add(table);
 
@@ -195,6 +257,16 @@ public class PdfReceiptService {
         Paragraph termsHeader = new Paragraph("Important Terms:", labelFont);
         termsHeader.setSpacingAfter(1f);
         termsCell.addElement(termsHeader);
+        if (warrantyDays > 0) {
+            if (ticket.getDeliveredAt() != null) {
+                Instant expiry = ticket.getDeliveredAt().plus(warrantyDays, ChronoUnit.DAYS);
+                termsCell.addElement(new Paragraph("• Warranty: " + warrantyDays + " Days (Delivered: " + DATE_ONLY.format(ticket.getDeliveredAt()) + " · Valid till: " + DATE_ONLY.format(expiry) + ").", noteFont));
+            } else {
+                termsCell.addElement(new Paragraph("• Warranty: " + warrantyDays + " Days from collection/delivery date.", noteFont));
+            }
+        } else {
+            termsCell.addElement(new Paragraph("• Warranty: Testing warranty only at counter collection.", noteFont));
+        }
         for (String term : shop.terms()) {
             termsCell.addElement(new Paragraph("• " + term, noteFont));
         }

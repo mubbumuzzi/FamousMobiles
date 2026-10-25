@@ -14,10 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.famousmobiles.domain.DevicePhoto;
+import com.famousmobiles.domain.Payment;
 import com.famousmobiles.domain.RepairTicket;
 import com.famousmobiles.domain.TicketNote;
 import com.famousmobiles.domain.TicketStatusHistory;
 import com.famousmobiles.domain.User;
+import com.famousmobiles.domain.enums.PaymentMode;
 import com.famousmobiles.domain.enums.PhotoType;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.domain.enums.UserRole;
@@ -26,6 +28,7 @@ import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ForbiddenException;
 import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.DevicePhotoRepository;
+import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
 import com.famousmobiles.repository.TicketNoteRepository;
 import com.famousmobiles.repository.TicketStatusHistoryRepository;
@@ -44,6 +47,7 @@ public class TicketService {
     private final TrackingNumberService trackingNumberService;
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
+    private final PaymentRepository paymentRepository;
     private final SecurityUtils securityUtils;
 
     public TicketService(RepairTicketRepository ticketRepository,
@@ -51,7 +55,7 @@ public class TicketService {
             DevicePhotoRepository photoRepository, CustomerService customerService,
             TechnicianRepository technicianRepository, TrackingNumberService trackingNumberService,
             NotificationService notificationService, FileStorageService fileStorageService,
-            SecurityUtils securityUtils) {
+            PaymentRepository paymentRepository, SecurityUtils securityUtils) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.noteRepository = noteRepository;
@@ -61,6 +65,7 @@ public class TicketService {
         this.trackingNumberService = trackingNumberService;
         this.notificationService = notificationService;
         this.fileStorageService = fileStorageService;
+        this.paymentRepository = paymentRepository;
         this.securityUtils = securityUtils;
     }
 
@@ -68,15 +73,30 @@ public class TicketService {
     public TicketDto.TicketResponse create(TicketDto.CreateTicketRequest request) {
         User user = securityUtils.getCurrentUser();
 
+        BigDecimal estCost = defaultZero(request.estimatedCost());
+        BigDecimal advPaid = defaultZero(request.advancePaid());
+        if (estCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Estimated cost cannot be negative");
+        }
+        if (advPaid.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Advance payment cannot be negative");
+        }
+        if (advPaid.compareTo(estCost) > 0) {
+            throw new BadRequestException("Advance payment (₹" + advPaid + ") cannot exceed estimated cost (₹" + estCost + ")");
+        }
+
         RepairTicket ticket = new RepairTicket();
         ticket.setTrackingNumber(trackingNumberService.generateTrackingNumber());
         ticket.setCustomer(customerService.getEntity(request.customerId()));
         ticket.setCreatedBy(user);
         ticket.setStatus(RepairStatus.DEVICE_RECEIVED);
         applyDeviceDetails(ticket, request);
-        ticket.setEstimatedCost(defaultZero(request.estimatedCost()));
-        ticket.setAdvancePaid(defaultZero(request.advancePaid()));
+        ticket.setEstimatedCost(estCost);
+        ticket.setAdvancePaid(advPaid);
         recalculateBalance(ticket);
+        if (request.warrantyDays() != null) {
+            ticket.setWarrantyDays(request.warrantyDays());
+        }
         if (request.estimatedDeliveryDate() != null && !request.estimatedDeliveryDate().isBlank()) {
             ticket.setEstimatedDeliveryDate(LocalDate.parse(request.estimatedDeliveryDate()));
         }
@@ -88,7 +108,20 @@ public class TicketService {
                 ticket = ticketRepository.save(ticket);
             }
         }
-        recordStatusHistory(ticket, null, RepairStatus.DEVICE_RECEIVED, user, "Device received", null);
+        if (advPaid.compareTo(BigDecimal.ZERO) > 0) {
+            Payment payment = new Payment();
+            payment.setTicket(ticket);
+            payment.setAmount(advPaid);
+            payment.setPaymentMode(PaymentMode.CASH);
+            payment.setNotes("Advance collected at device intake");
+            payment.setRecordedBy(user);
+            paymentRepository.save(payment);
+        }
+        String initialRemarks = "Device received";
+        if (advPaid.compareTo(BigDecimal.ZERO) > 0) {
+            initialRemarks += " · Advance of ₹" + advPaid + " (CASH) collected by " + user.getFullName();
+        }
+        recordStatusHistory(ticket, null, RepairStatus.DEVICE_RECEIVED, user, initialRemarks, null);
         notificationService.onStatusChange(ticket, RepairStatus.DEVICE_RECEIVED);
         return TicketDto.TicketResponse.from(ticket);
     }
@@ -115,17 +148,35 @@ public class TicketService {
         if (request.deviceCondition() != null) ticket.setDeviceCondition(request.deviceCondition());
         if (request.problemDescription() != null) ticket.setProblemDescription(request.problemDescription());
         if (request.estimatedCost() != null) {
+            BigDecimal newCost = request.estimatedCost();
+            if (newCost.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BadRequestException("Estimated cost cannot be negative");
+            }
+            BigDecimal adv = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;
+            if (newCost.compareTo(adv) < 0) {
+                throw new BadRequestException("Estimated cost (₹" + newCost + ") cannot be less than advance already collected (₹" + adv + ")");
+            }
             BigDecimal oldCost = ticket.getEstimatedCost() != null ? ticket.getEstimatedCost() : BigDecimal.ZERO;
-            ticket.setEstimatedCost(request.estimatedCost());
+            ticket.setEstimatedCost(newCost);
             recalculateBalance(ticket);
-            if (request.estimatedCost().compareTo(oldCost) != 0) {
+            if (newCost.compareTo(oldCost) != 0) {
                 User user = securityUtils.getCurrentUser();
-                String note = "Estimated cost updated from ₹" + oldCost + " to ₹" + request.estimatedCost() + " (Balance: ₹" + ticket.getBalanceAmount() + ")";
+                String note = "Estimated cost updated from ₹" + oldCost + " to ₹" + newCost + " (Balance: ₹" + ticket.getBalanceAmount() + ")";
                 recordStatusHistory(ticket, ticket.getStatus(), ticket.getStatus(), user, note, null);
             }
         }
+        if (request.warrantyDays() != null) {
+            ticket.setWarrantyDays(request.warrantyDays());
+        }
         if (request.estimatedDeliveryDate() != null && !request.estimatedDeliveryDate().isBlank()) {
-            ticket.setEstimatedDeliveryDate(LocalDate.parse(request.estimatedDeliveryDate()));
+            LocalDate newDate = LocalDate.parse(request.estimatedDeliveryDate());
+            if (!newDate.equals(ticket.getEstimatedDeliveryDate())) {
+                LocalDate oldDate = ticket.getEstimatedDeliveryDate();
+                ticket.setEstimatedDeliveryDate(newDate);
+                User user = securityUtils.getCurrentUser();
+                String note = "Delivery date rescheduled" + (oldDate != null ? " from " + oldDate : "") + " to " + newDate;
+                recordStatusHistory(ticket, ticket.getStatus(), ticket.getStatus(), user, note, null);
+            }
         }
         return TicketDto.TicketResponse.from(ticketRepository.save(ticket));
     }
@@ -141,13 +192,23 @@ public class TicketService {
         if (newCost.compareTo(BigDecimal.ZERO) < 0) {
             throw new BadRequestException("Estimated cost cannot be negative");
         }
+        BigDecimal adv = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;
+        if (newCost.compareTo(adv) < 0) {
+            throw new BadRequestException("Estimated cost (₹" + newCost + ") cannot be less than advance already collected (₹" + adv + ")");
+        }
         ticket.setEstimatedCost(newCost);
+        if (request.warrantyDays() != null) {
+            ticket.setWarrantyDays(request.warrantyDays());
+        }
         recalculateBalance(ticket);
         ticket = ticketRepository.save(ticket);
 
         User user = securityUtils.getCurrentUser();
         String timelineNote = "Estimated repair cost updated from ₹" + oldCost + " to ₹" + newCost +
                 " (Balance: ₹" + ticket.getBalanceAmount() + ")";
+        if (request.warrantyDays() != null) {
+            timelineNote += " · Warranty: " + (request.warrantyDays() > 0 ? request.warrantyDays() + " Days" : "Testing Only");
+        }
         if (request.remarks() != null && !request.remarks().isBlank()) {
             timelineNote += " · " + request.remarks().trim();
         }
@@ -299,7 +360,9 @@ public class TicketService {
     }
 
     private void recalculateBalance(RepairTicket ticket) {
-        ticket.setBalanceAmount(ticket.getEstimatedCost().subtract(ticket.getAdvancePaid()));
+        BigDecimal est = ticket.getEstimatedCost() != null ? ticket.getEstimatedCost() : BigDecimal.ZERO;
+        BigDecimal adv = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;
+        ticket.setBalanceAmount(est.subtract(adv).max(BigDecimal.ZERO));
     }
 
     private BigDecimal defaultZero(BigDecimal value) {

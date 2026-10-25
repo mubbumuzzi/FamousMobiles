@@ -27,7 +27,7 @@ public class PaymentController {
     }
 
     @PostMapping("/tickets/{id}/payments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public PaymentDto.PaymentResponse record(@PathVariable UUID id, @RequestBody PaymentDto.PaymentRequest request) {
         return paymentService.recordPayment(id, request);
     }
@@ -38,8 +38,14 @@ public class PaymentController {
     }
 
     @GetMapping("/payments/outstanding")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public List<TicketDto.TicketResponse> outstanding() {
         return paymentService.getOutstanding();
+    }
+
+    @GetMapping("/payments/today")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PaymentDto.TodayRevenueSummary paymentsToday() {
+        return paymentService.getTodayRevenueSummary();
     }
 }

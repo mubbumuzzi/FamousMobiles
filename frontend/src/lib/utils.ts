@@ -25,6 +25,18 @@ export function formatDate(date?: string | null) {
   return new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+export function formatDateTime(date?: string | null) {
+  if (!date) return "-";
+  return new Date(date).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export function formatCustomerMobiles(customer: {
   mobile: string;
   mobiles?: { number: string; label?: string; isPrimary?: boolean }[];
@@ -45,4 +57,81 @@ export function customerPhoneList(customer: {
     return customer.mobiles.map((m) => m.number);
   }
   return customer.mobile ? [customer.mobile] : [];
+}
+
+export function isSameDay(isoString?: string | null, targetDate = new Date()): boolean {
+  if (!isoString) return false;
+  const d = new Date(isoString);
+  return (
+    d.getFullYear() === targetDate.getFullYear() &&
+    d.getMonth() === targetDate.getMonth() &&
+    d.getDate() === targetDate.getDate()
+  );
+}
+
+export function getWarrantyStatus(ticket: { warrantyDays?: number; deliveredAt?: string }) {
+  const days = ticket.warrantyDays ?? 0;
+  if (!days || days <= 0) {
+    return { status: "NONE" as const, label: "Testing Warranty Only", daysRemaining: 0, tone: "secondary" as const };
+  }
+
+  if (!ticket.deliveredAt) {
+    return {
+      status: "PENDING" as const,
+      label: `${days} Days Warranty (Starts upon delivery)`,
+      daysRemaining: days,
+      tone: "primary" as const,
+    };
+  }
+
+  const deliveredDate = new Date(ticket.deliveredAt);
+  const expiryDate = new Date(deliveredDate);
+  expiryDate.setDate(expiryDate.getDate() + days);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = expiryDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return {
+      status: "EXPIRED" as const,
+      label: `Warranty Expired (${formatDate(expiryDate.toISOString())})`,
+      daysRemaining: 0,
+      tone: "destructive" as const,
+    };
+  }
+
+  return {
+    status: "ACTIVE" as const,
+    label: `🛡️ ${diffDays}d left · Valid till ${formatDate(expiryDate.toISOString())}`,
+    daysRemaining: diffDays,
+    tone: "success" as const,
+  };
+}
+
+export function getVipStatus(repairCount = 0) {
+  if (repairCount >= 5) {
+    return {
+      isVip: true,
+      isRepeat: true,
+      label: `👑 VIP Customer (${repairCount} repairs)`,
+      badgeClass: "bg-amber-100 text-amber-900 border-amber-300 font-semibold shadow-xs",
+    };
+  }
+  if (repairCount >= 2) {
+    return {
+      isVip: false,
+      isRepeat: true,
+      label: `⭐ Repeat Customer (${repairCount} repairs)`,
+      badgeClass: "bg-blue-50 text-blue-800 border-blue-200 font-medium",
+    };
+  }
+  return {
+    isVip: false,
+    isRepeat: false,
+    label: "",
+    badgeClass: "",
+  };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, Share2, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -13,11 +13,21 @@ import { Input, Textarea, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Payment, REPAIR_STATUSES, RepairStatus, Technician, Ticket, TimelineEntry } from "@/lib/types";
-import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, formatStatus, formatCustomerMobiles, getWarrantyStatus, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { SHOP } from "@/lib/shop";
 import { Alert } from "@/components/ui/alert";
 import { PageLoading } from "@/components/ui/skeleton";
+
+const WARRANTY_OPTIONS = [
+  { days: 0, label: "Testing Only (0d)" },
+  { days: 15, label: "15 Days" },
+  { days: 30, label: "30 Days (Standard)" },
+  { days: 60, label: "60 Days" },
+  { days: 90, label: "90 Days" },
+  { days: 180, label: "6 Months (180d)" },
+  { days: 365, label: "1 Year" },
+];
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,15 +49,17 @@ export default function TicketDetailPage() {
   const [highlightPayment, setHighlightPayment] = useState(false);
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
   const [cancelReason, setCancelReason] = useState("Customer changed mind / Cancelled");
-  const [sharingReceipt, setSharingReceipt] = useState(false);
   const [editingEstimate, setEditingEstimate] = useState(false);
   const [newEstimateCost, setNewEstimateCost] = useState("");
   const [newEstimateRemarks, setNewEstimateRemarks] = useState("");
+  const [newEstimateWarrantyDays, setNewEstimateWarrantyDays] = useState<number>(30);
   const [savingEstimate, setSavingEstimate] = useState(false);
   const [approvalEstimateCost, setApprovalEstimateCost] = useState("");
+  const [approvalWarrantyDays, setApprovalWarrantyDays] = useState<number>(30);
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
+  const estimateSectionRef = useRef<HTMLDivElement>(null);
 
   const load = () => {
     setLoading(true);
@@ -95,6 +107,11 @@ export default function TicketDetailPage() {
       alert("Please enter a valid estimated cost (₹)");
       return;
     }
+    const currentAdvance = Number(ticket?.advancePaid ?? 0);
+    if (cost < currentAdvance) {
+      alert(`Estimated cost cannot be less than advance already paid (${formatCurrency(currentAdvance)}).`);
+      return;
+    }
     setSavingEstimate(true);
     try {
       await api(`/tickets/${id}/estimation`, {
@@ -102,6 +119,7 @@ export default function TicketDetailPage() {
         body: JSON.stringify({
           estimatedCost: cost,
           remarks: newEstimateRemarks.trim() || undefined,
+          warrantyDays: newEstimateWarrantyDays,
         }),
       });
       setEditingEstimate(false);
@@ -115,6 +133,35 @@ export default function TicketDetailPage() {
     }
   };
 
+  const quickUpdateStatus = async (targetStatus: RepairStatus) => {
+    const balance = Number(ticket?.balanceAmount ?? 0);
+    if (targetStatus === "DELIVERED" && balance > 0) {
+      setPaymentWarning(
+        `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking as Delivered.`
+      );
+      scrollToPaymentSection(true);
+      return;
+    }
+    setPaymentWarning("");
+    try {
+      await api(`/tickets/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: targetStatus,
+          remarks: `Updated on bench to ${formatStatus(targetStatus)}`,
+          technicianNotes: `Updated on bench to ${formatStatus(targetStatus)}`,
+        }),
+      });
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(25); } catch (_) {}
+      }
+      setJustUpdatedStatus(targetStatus);
+      load();
+    } catch (err) {
+      setPaymentWarning(err instanceof Error ? err.message : "Failed to update status");
+    }
+  };
+
   const updateStatus = async () => {
     if (!nextStatus) return;
     const targetStatus = nextStatus;
@@ -122,16 +169,10 @@ export default function TicketDetailPage() {
 
     // Guard: delivered status requires full payment
     if (targetStatus === "DELIVERED" && balance > 0) {
-      if (user?.role === "TECHNICIAN") {
-        setPaymentWarning(
-          `Payment is pending (${formatCurrency(balance)}). Technicians cannot collect payments. Please have front-desk staff or admin record the balance first.`
-        );
-      } else {
-        setPaymentWarning(
-          `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking this ticket as Delivered.`
-        );
-        scrollToPaymentSection(true);
-      }
+      setPaymentWarning(
+        `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking this ticket as Delivered.`
+      );
+      scrollToPaymentSection(true);
       return;
     }
 
@@ -139,12 +180,18 @@ export default function TicketDetailPage() {
     try {
       if (targetStatus === "WAITING_FOR_APPROVAL" && approvalEstimateCost.trim()) {
         const cost = Number(approvalEstimateCost);
+        const currentAdvance = Number(ticket?.advancePaid ?? 0);
+        if (!isNaN(cost) && cost < currentAdvance) {
+          setPaymentWarning(`Estimated cost cannot be less than advance already paid (${formatCurrency(currentAdvance)}).`);
+          return;
+        }
         if (!isNaN(cost) && cost >= 0) {
           await api(`/tickets/${id}/estimation`, {
             method: "PATCH",
             body: JSON.stringify({
               estimatedCost: cost,
               remarks: "Estimate determined for customer approval",
+              warrantyDays: approvalWarrantyDays,
             }),
           });
         }
@@ -178,6 +225,11 @@ export default function TicketDetailPage() {
   const recordPayment = async () => {
     const amount = Number(payAmount);
     if (!amount || amount <= 0) return;
+    const currentBalance = Number(ticket?.balanceAmount ?? 0);
+    if (amount > currentBalance) {
+      alert(`Payment amount (${formatCurrency(amount)}) cannot exceed remaining balance of ${formatCurrency(currentBalance)}.`);
+      return;
+    }
     try {
       await api(`/tickets/${id}/payments`, { method: "POST", body: JSON.stringify({ amount, paymentMode: payMode }) });
       setPayAmount("");
@@ -201,64 +253,6 @@ export default function TicketDetailPage() {
     if (!assignId) return;
     await api(`/tickets/${id}/assign`, { method: "POST", body: JSON.stringify({ technicianId: assignId }) });
     setAssignId(""); load();
-  };
-
-  const shareReceiptOnWhatsApp = async () => {
-    if (!ticket) return;
-    setSharingReceipt(true);
-    const cleanMobile = ticket.customer.mobile.replace(/\D/g, "");
-    const phoneWithCountry = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const pdfUrl = `${origin}/api/public/track/${ticket.trackingNumber}/receipt/pdf`;
-    const trackUrl = `${origin}/track/${ticket.trackingNumber}`;
-
-    const receiptText =
-      `Hello ${ticket.customer.fullName},\n\n` +
-      `Here is your official repair receipt from Famous Mobiles:\n\n` +
-      `📱 Device: ${ticket.brand} ${ticket.model}\n` +
-      `🔖 Ticket: ${ticket.trackingNumber}\n` +
-      `⚡ Status: ${formatStatus(ticket.status)}\n` +
-      `💰 Est. Cost: ${formatCurrency(Number(ticket.estimatedCost))}\n` +
-      `💵 Advance Paid: ${formatCurrency(Number(ticket.advancePaid))}\n` +
-      `⏳ Balance: ${formatCurrency(Number(ticket.balanceAmount))}\n\n` +
-      `📄 View/Download PDF Receipt:\n${pdfUrl}\n\n` +
-      `🔍 Live Tracking:\n${trackUrl}\n\n` +
-      `📍 Famous Mobiles\nOpp Friends Colony Bus Stop, Manikonda, Hyderabad\n📞 ${SHOP.mobile}`;
-
-    try {
-      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
-      const file = new File([blob], `${ticket.trackingNumber}-receipt.pdf`, { type: "application/pdf" });
-
-      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `Receipt - ${ticket.trackingNumber}`,
-          text: receiptText,
-          files: [file],
-        });
-        setSharingReceipt(false);
-        return;
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        setSharingReceipt(false);
-        return;
-      }
-    }
-
-    // Desktop / unsupported fallback: auto-download PDF and open WhatsApp Web with receipt details + link
-    try {
-      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${ticket.trackingNumber}-receipt.pdf`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    } catch (downloadErr) {
-      console.error("PDF download fallback error:", downloadErr);
-    }
-
-    window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(receiptText)}`, "_blank");
-    setSharingReceipt(false);
   };
 
   const downloadReceipt = async () => {
@@ -325,11 +319,21 @@ export default function TicketDetailPage() {
     }
 
     let text = "";
+    const wDays = ticket.warrantyDays ?? 0;
+    const warrantyText = wDays > 0 ? `${wDays} Days Warranty` : "Testing Warranty";
+    const balNum = Number(ticket.balanceAmount || 0);
+    const estNum = Number(ticket.estimatedCost || 0);
+    const isSettled = estNum > 0 && balNum <= 0;
+    const paymentLine = isSettled
+      ? "💰 Payment: PAID IN FULL ✓ (No balance to pay)"
+      : `💰 Balance to Pay: ₹${ticket.balanceAmount}`;
+
     if (resolvedType === "pickup") {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
         `Great news! Your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been repaired and is READY FOR PICKUP at Famous Mobiles.\n\n` +
-        `💰 Balance to Pay: ₹${ticket.balanceAmount}\n` +
+        `${paymentLine}\n` +
+        `🛡️ Warranty: ${warrantyText} (from collection date)\n` +
         `📍 Shop: Opp Friends Colony Bus Stop, Manikonda, Hyderabad\n` +
         `📞 Call: ${SHOP.mobile}\n\n` +
         `Track details: ${trackUrl}\n\n` +
@@ -341,7 +345,8 @@ export default function TicketDetailPage() {
         `📋 Issue: ${ticket.problemDescription || "Device inspection"}\n` +
         `💰 Estimated Repair Cost: ₹${ticket.estimatedCost}\n` +
         `💵 Advance Paid: ₹${ticket.advancePaid}\n` +
-        `⏳ Balance on Delivery: ₹${ticket.balanceAmount}\n\n` +
+        `⏳ Balance on Delivery: ₹${ticket.balanceAmount}\n` +
+        `🛡️ Warranty Offered: ${warrantyText}\n\n` +
         `Track details: ${trackUrl}\n\n` +
         `Please reply to this message to APPROVE the repair so our technician can begin. Thank you!`;
     } else if (ticket.status === "RETURNED_UNREPAIRED") {
@@ -361,7 +366,12 @@ export default function TicketDetailPage() {
         `📱 Device: ${ticket.brand} ${ticket.model}\n` +
         `🔖 Ticket: ${ticket.trackingNumber}\n` +
         `⚡ Status: ${formatStatus(ticket.status)}\n` +
-        `💰 Est. Cost: ₹${ticket.estimatedCost} (Balance: ₹${ticket.balanceAmount})\n\n` +
+        (estNum === 0
+          ? "💰 Estimate: Pending Diagnosis\n"
+          : isSettled
+          ? `💰 Repair Cost: ₹${ticket.estimatedCost} (PAID IN FULL ✓)\n`
+          : `💰 Est. Cost: ₹${ticket.estimatedCost} (Balance: ₹${ticket.balanceAmount})\n`) +
+        `🛡️ Warranty: ${warrantyText}\n\n` +
         `Track your repair status live here:\n${trackUrl}\n\n` +
         `Thank you!`;
     }
@@ -384,7 +394,7 @@ export default function TicketDetailPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="mx-auto max-w-3xl space-y-5 animate-fade-in">
+      <div className="mx-auto max-w-3xl space-y-5 animate-fade-in pb-36 md:pb-8">
         {/* Hero */}
         <div className="overflow-hidden rounded-2xl gradient-hero p-5 text-white shadow-lg">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -393,7 +403,14 @@ export default function TicketDetailPage() {
               <h1 className="text-2xl font-bold">{ticket.brand} {ticket.model}</h1>
               <p className="mt-1 font-mono text-sm opacity-90">{ticket.trackingNumber}</p>
             </div>
-            <Badge className="bg-white/20 text-white border-0 text-sm">{formatStatus(ticket.status)}</Badge>
+            <div className="flex flex-col items-end gap-1.5">
+              <Badge className="bg-white/20 text-white border-0 text-sm">{formatStatus(ticket.status)}</Badge>
+              {getWarrantyStatus(ticket).status !== "NONE" && (
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                  {getWarrantyStatus(ticket).label}
+                </span>
+              )}
+            </div>
           </div>
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
             <span className="flex items-center gap-2"><User className="h-4 w-4 opacity-70" />{ticket.customer.fullName}</span>
@@ -408,21 +425,10 @@ export default function TicketDetailPage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               size="sm"
-              variant="outline"
-              className="border-emerald-400/60 bg-emerald-600/40 text-white hover:bg-emerald-600/60 font-semibold shadow-sm"
-              onClick={shareReceiptOnWhatsApp}
-              disabled={sharingReceipt}
-            >
-              <Share2 className="h-4 w-4 text-emerald-200" />
-              {sharingReceipt ? "Preparing..." : "WhatsApp PDF Receipt 📲"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-emerald-400/40 bg-emerald-700/20 text-white hover:bg-emerald-700/40 font-medium"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm flex items-center gap-1.5"
               onClick={() => openWhatsApp("auto")}
             >
-              <MessageCircle className="h-4 w-4 text-emerald-300" />
+              <MessageCircle className="h-4 w-4" />
               {ticket.status === "READY_FOR_PICKUP"
                 ? "WhatsApp: Ready for Pickup 🚀"
                 : ticket.status === "WAITING_FOR_APPROVAL"
@@ -437,7 +443,7 @@ export default function TicketDetailPage() {
         </div>
 
         {/* Cost summary */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
+        <div ref={estimateSectionRef} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Repair Cost & Balance</h3>
             {canUpdateStatus && !editingEstimate && (
@@ -446,12 +452,13 @@ export default function TicketDetailPage() {
                 onClick={() => {
                   setNewEstimateCost(ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "");
                   setNewEstimateRemarks("");
+                  setNewEstimateWarrantyDays(ticket.warrantyDays ?? 30);
                   setEditingEstimate(true);
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 <Pencil className="h-3 w-3" />
-                {Number(ticket.estimatedCost) === 0 ? "Add Estimate +" : "Edit Estimate"}
+                {Number(ticket.estimatedCost) === 0 ? "Add Estimate & Warranty +" : "Edit Estimate & Warranty"}
               </button>
             )}
           </div>
@@ -474,11 +481,21 @@ export default function TicketDetailPage() {
               <p className="text-lg font-bold text-emerald-700">{formatCurrency(Number(ticket.advancePaid))}</p>
             </div>
             <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
-              <p className="text-xs text-slate-500">Balance Due</p>
+              <p className="text-xs text-slate-500">
+                {Number(ticket.estimatedCost) > 0 && Number(ticket.balanceAmount) <= 0
+                  ? "Payment Status"
+                  : "Balance Due"}
+              </p>
               {Number(ticket.estimatedCost) === 0 ? (
                 <div className="mt-1">
                   <span className="inline-block rounded bg-slate-100 text-slate-600 text-xs font-medium px-2 py-0.5">
                     To be quoted
+                  </span>
+                </div>
+              ) : Number(ticket.balanceAmount) <= 0 ? (
+                <div className="mt-1">
+                  <span className="inline-block rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 border border-emerald-300">
+                    Paid in Full ✓
                   </span>
                 </div>
               ) : (
@@ -503,8 +520,10 @@ export default function TicketDetailPage() {
                   <label className="text-xs font-semibold text-slate-700 block">Estimated Cost (₹) *</label>
                   <Input
                     type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
-                    placeholder="e.g. 2500"
+                    placeholder="e.g. 1000"
                     value={newEstimateCost}
                     onChange={(e) => setNewEstimateCost(e.target.value)}
                     autoFocus
@@ -513,11 +532,43 @@ export default function TicketDetailPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 block">Remarks / Reason (Optional)</label>
                   <Input
-                    placeholder="e.g. Screen replacement + frame fix"
+                    placeholder="e.g. Battery replaced + frame fix"
                     value={newEstimateRemarks}
                     onChange={(e) => setNewEstimateRemarks(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-blue-200/70">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    🛡️ Service Warranty Period
+                  </label>
+                  <span className="text-xs font-semibold text-emerald-700">
+                    {newEstimateWarrantyDays > 0 ? `${newEstimateWarrantyDays} Days Selected` : "No Warranty"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {WARRANTY_OPTIONS.map((w) => (
+                    <button
+                      key={w.days}
+                      type="button"
+                      onClick={() => setNewEstimateWarrantyDays(w.days)}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                        newEstimateWarrantyDays === w.days
+                          ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+                      }`}
+                    >
+                      {w.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  {newEstimateWarrantyDays > 0
+                    ? `Customer will receive ${newEstimateWarrantyDays} days warranty from delivery date (printed on receipt & tracking).`
+                    : "Counter testing warranty only; no post-collection warranty coverage."}
+                </p>
               </div>
 
               {newEstimateCost && !isNaN(Number(newEstimateCost)) && (
@@ -528,8 +579,10 @@ export default function TicketDetailPage() {
                       {formatCurrency(Math.max(0, Number(newEstimateCost) - Number(ticket.advancePaid)))}
                     </strong>
                   </span>
-                  {Number(ticket.advancePaid) > Number(newEstimateCost) && Number(newEstimateCost) > 0 && (
-                    <span className="text-amber-700 font-medium">⚠ Advance exceeds estimate</span>
+                  {Number(ticket.advancePaid) > Number(newEstimateCost) && (
+                    <span className="text-red-700 font-semibold">
+                      ❌ Cannot be less than advance ({formatCurrency(Number(ticket.advancePaid))})
+                    </span>
                   )}
                 </div>
               )}
@@ -549,9 +602,14 @@ export default function TicketDetailPage() {
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={saveEstimation}
-                  disabled={savingEstimate || !newEstimateCost || isNaN(Number(newEstimateCost)) || Number(newEstimateCost) < 0}
+                  disabled={
+                    savingEstimate ||
+                    !newEstimateCost ||
+                    isNaN(Number(newEstimateCost)) ||
+                    Number(newEstimateCost) < Number(ticket.advancePaid)
+                  }
                 >
-                  {savingEstimate ? "Saving..." : "Save Estimate"}
+                  {savingEstimate ? "Saving..." : "Save Estimate & Warranty"}
                 </Button>
               </div>
             </div>
@@ -563,7 +621,7 @@ export default function TicketDetailPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Assignment</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {user?.role === "TECHNICIAN" && !ticket.assignedTechnicianName && (
+              {!ticket.assignedTechnicianName && (
                 <Button className="w-full" onClick={assignSelf}>I&apos;m repairing this device</Button>
               )}
               {user?.role === "ADMIN" && (
@@ -681,6 +739,8 @@ export default function TicketDetailPage() {
                         </label>
                         <Input
                           type="number"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           min="0"
                           placeholder={ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "e.g. 2500"}
                           value={approvalEstimateCost}
@@ -688,10 +748,44 @@ export default function TicketDetailPage() {
                           className="bg-white border-amber-300"
                         />
                         {approvalEstimateCost && !isNaN(Number(approvalEstimateCost)) && (
-                          <p className="text-[11px] text-amber-800">
-                            New balance will be: <strong>{formatCurrency(Math.max(0, Number(approvalEstimateCost) - Number(ticket.advancePaid)))}</strong>
-                          </p>
+                          <div className="text-[11px] space-y-0.5">
+                            <p className="text-amber-800">
+                              New balance will be: <strong>{formatCurrency(Math.max(0, Number(approvalEstimateCost) - Number(ticket.advancePaid)))}</strong>
+                            </p>
+                            {Number(approvalEstimateCost) < Number(ticket.advancePaid) && (
+                              <p className="text-red-700 font-semibold">
+                                ❌ Cannot be less than advance already paid ({formatCurrency(Number(ticket.advancePaid))})
+                              </p>
+                            )}
+                          </div>
                         )}
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-amber-200">
+                        <div className="flex items-center justify-between">
+                          <label className="font-semibold text-amber-950 text-xs block">
+                            🛡️ Warranty Period to Offer Customer:
+                          </label>
+                          <span className="text-xs font-semibold text-amber-900">
+                            {approvalWarrantyDays > 0 ? `${approvalWarrantyDays} Days` : "Testing Only"}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {WARRANTY_OPTIONS.map((w) => (
+                            <button
+                              key={w.days}
+                              type="button"
+                              onClick={() => setApprovalWarrantyDays(w.days)}
+                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                                approvalWarrantyDays === w.days
+                                  ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
+                                  : "border-amber-300 bg-white text-slate-700 hover:border-emerald-400"
+                              }`}
+                            >
+                              {w.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -724,7 +818,18 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
-                  <Button className="w-full" onClick={updateStatus} disabled={!nextStatus}>Update Status</Button>
+                  <Button
+                    className="w-full"
+                    onClick={updateStatus}
+                    disabled={
+                      !nextStatus ||
+                      (nextStatus === "WAITING_FOR_APPROVAL" &&
+                        Boolean(approvalEstimateCost) &&
+                        Number(approvalEstimateCost) < Number(ticket.advancePaid))
+                    }
+                  >
+                    Update Status
+                  </Button>
 
                   {justUpdatedStatus === "READY_FOR_PICKUP" && (
                     <div className="rounded-lg bg-emerald-100 border border-emerald-300 p-2.5 text-xs flex items-center justify-between text-emerald-900 animate-fade-in">
@@ -843,11 +948,10 @@ export default function TicketDetailPage() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-emerald-600 text-emerald-800 hover:bg-emerald-100 font-semibold cursor-pointer"
-                        onClick={shareReceiptOnWhatsApp}
-                        disabled={sharingReceipt}
+                        onClick={() => openWhatsApp("general")}
                       >
-                        <Share2 className="h-3 w-3 mr-1" />
-                        Send Receipt via WhatsApp
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        Send WhatsApp Update
                       </Button>
                       {Number(ticket.balanceAmount) <= 0 && (
                         <Button
@@ -870,6 +974,8 @@ export default function TicketDetailPage() {
                   <Input
                     ref={payAmountInputRef}
                     type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="Amount"
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
@@ -880,7 +986,14 @@ export default function TicketDetailPage() {
                     <option value="UPI">UPI</option>
                     <option value="CARD">Card</option>
                   </select>
-                  <Button onClick={recordPayment} disabled={!payAmount || Number(payAmount) <= 0}>
+                  <Button
+                    onClick={recordPayment}
+                    disabled={
+                      !payAmount ||
+                      Number(payAmount) <= 0 ||
+                      Number(payAmount) > Number(ticket.balanceAmount)
+                    }
+                  >
                     Record Payment
                   </Button>
                   {Number(ticket.balanceAmount) > 0 && Number(payAmount) !== Number(ticket.balanceAmount) && (
@@ -895,15 +1008,227 @@ export default function TicketDetailPage() {
                     </Button>
                   )}
                 </div>
-                {payments.map((p) => (
-                  <p key={p.id} className="text-sm text-slate-600">
-                    {formatCurrency(Number(p.amount))} via {p.paymentMode} · {new Date(p.createdAt).toLocaleDateString("en-IN")}
+                {Number(payAmount) > Number(ticket.balanceAmount) && (
+                  <p className="text-xs text-red-600 font-medium">
+                    ❌ Payment amount cannot exceed remaining balance of {formatCurrency(Number(ticket.balanceAmount))}
                   </p>
-                ))}
+                )}
+                <div className="space-y-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Recorded Transactions ({payments.length})
+                    </p>
+                    {ticket && Number(ticket.advancePaid) > 0 && (
+                      <span className="text-[11px] font-semibold text-emerald-700">
+                        Total Collected: {formatCurrency(Number(ticket.advancePaid))}
+                      </span>
+                    )}
+                  </div>
+
+                  {payments.length === 0 ? (
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center text-xs text-slate-500">
+                      {Number(ticket.advancePaid) > 0 ? (
+                        <p>
+                          Advance payment of <strong className="text-slate-800">{formatCurrency(Number(ticket.advancePaid))}</strong> was recorded for this ticket.
+                        </p>
+                      ) : (
+                        <p>No payments recorded yet for this repair.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {payments.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs hover:border-slate-300 transition-colors"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-slate-900">
+                                {formatCurrency(Number(p.amount))}
+                              </span>
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider">
+                                {p.paymentMode}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-600 flex items-center gap-1.5">
+                              <span className="text-slate-400">👤</span>
+                              <span>
+                                Recorded by <strong className="text-slate-800 font-semibold">{p.recordedByName || "Staff"}</strong>
+                              </span>
+                              {p.notes && (
+                                <span className="text-slate-500 italic">· &quot;{p.notes}&quot;</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-semibold text-slate-700">
+                              {formatDateTime(p.createdAt)}
+                            </p>
+                            <span className="text-[10px] text-emerald-600 font-medium">
+                              Verified Receipt ✓
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
+
+        {/* Mobile Bench Sticky Action Dock (Option A) */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/90 bg-white/95 px-3 py-2 pb-[max(0.6rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md shadow-[0_-8px_25px_rgb(0,0,0,0.1)] md:hidden">
+          {/* Row 1: Instant 1-Tap Status Advancement Stepper */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 kanban-scroll">
+            {!ticket.assignedTechnicianName && (
+              <button
+                type="button"
+                onClick={assignSelf}
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+              >
+                <User className="h-3.5 w-3.5" />
+                Claim Job (Assign to Me)
+              </button>
+            )}
+
+            {ticket.status === "DEVICE_RECEIVED" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("REPAIR_IN_PROGRESS")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Start Repair (In Progress)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("WAITING_FOR_APPROVAL")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 active:scale-95 touch-target"
+                >
+                  Need Approval
+                </button>
+              </>
+            )}
+
+            {ticket.status === "REPAIR_IN_PROGRESS" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("READY_FOR_PICKUP")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Ready for Pickup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("WAITING_FOR_PARTS")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-800 active:scale-95 touch-target"
+                >
+                  Wait for Parts
+                </button>
+              </>
+            )}
+
+            {(ticket.status === "WAITING_FOR_APPROVAL" || ticket.status === "WAITING_FOR_PARTS") && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("REPAIR_IN_PROGRESS")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Resume Repair
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("READY_FOR_PICKUP")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                >
+                  Mark Ready
+                </button>
+              </>
+            )}
+
+            {ticket.status === "READY_FOR_PICKUP" && (
+              <>
+                {Number(ticket.balanceAmount) > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => scrollToPaymentSection(true)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  >
+                    💵 Collect Balance ({formatCurrency(Number(ticket.balanceAmount))})
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => quickUpdateStatus("DELIVERED")}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-700 px-4 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Hand Over & Deliver
+                  </button>
+                )}
+              </>
+            )}
+
+            {ticket.status === "DELIVERED" && (
+              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1.5 text-xs font-bold text-emerald-800">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Delivered & Settled ✓
+              </span>
+            )}
+          </div>
+
+          {/* Row 2: Secondary Quick-Touch Bench Actions */}
+          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => openWhatsApp("auto")}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 touch-target"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>WhatsApp</span>
+            </button>
+            <a
+              href={`tel:${ticket.customer.mobile}`}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-2 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-95 touch-target"
+            >
+              <Phone className="h-4 w-4" />
+              <span>Call</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setNewEstimateCost(ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "");
+                setNewEstimateRemarks("");
+                setNewEstimateWarrantyDays(ticket.warrantyDays ?? 30);
+                setEditingEstimate(true);
+                setTimeout(() => {
+                  estimateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 120);
+              }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 active:scale-95 touch-target"
+            >
+              <Pencil className="h-4 w-4" />
+              <span>Quote</span>
+            </button>
+            {Number(ticket.balanceAmount) > 0 && (
+              <button
+                type="button"
+                onClick={() => scrollToPaymentSection(true)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 active:scale-95 touch-target"
+              >
+                <span>Pay ₹</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </StaffLayout>
   );

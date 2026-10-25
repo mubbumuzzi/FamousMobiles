@@ -52,7 +52,8 @@ public class PublicTrackingService {
                 ticket.getAdvancePaid(),
                 ticket.getBalanceAmount(),
                 timeline,
-                TicketService.allStatuses()
+                TicketService.allStatuses(),
+                ticket.getWarrantyDays()
         );
     }
 

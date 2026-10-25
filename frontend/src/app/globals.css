@@ -76,6 +76,10 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+
+  button, a, select, input, textarea, [role="button"] {
+    touch-action: manipulation;
+  }
 }
 
 @layer utilities {
@@ -115,8 +119,16 @@
   }
 
   .touch-target {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
   }
 }
 

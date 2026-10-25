@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { BarChart3, IndianRupee, Package, TrendingUp, Users, Wrench } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DashboardMetrics, Ticket } from "@/lib/types";
+import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
 import { formatCurrency, formatStatus } from "@/lib/utils";
+import { isOverdue } from "@/lib/status-messages";
+import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
 
 const StatusPieChart = dynamic(
   () => import("@/components/dashboard/StatusPieChart").then((m) => m.StatusPieChart),
@@ -18,9 +21,12 @@ type AdminDashboardProps = {
   tickets: Ticket[];
   loading: boolean;
   error: string;
+  onRefresh?: () => void;
 };
 
-export function AdminDashboard({ metrics, tickets, loading, error }: AdminDashboardProps) {
+export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: AdminDashboardProps) {
+  const [activeMetric, setActiveMetric] = useState<MetricDrilldownType | null>(null);
+
   const statusData = metrics
     ? Object.entries(metrics.statusBreakdown).map(([name, value]) => ({ name: formatStatus(name), value }))
     : [];
@@ -34,28 +40,82 @@ export function AdminDashboard({ metrics, tickets, loading, error }: AdminDashbo
 
   const delivered = tickets.filter((t) => t.status === "DELIVERED").length;
   const active = tickets.filter((t) => t.status !== "DELIVERED").length;
+  const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">Executive Overview</h1>
-        <p className="text-sm text-slate-500">Business performance at a glance</p>
+        <p className="text-sm text-slate-500">Business performance at a glance · Click any metric card for live drilldown</p>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Revenue Today" value={loading ? null : formatCurrency(Number(metrics?.revenueToday ?? 0))} icon={IndianRupee} tone="success" />
-        <KpiCard label="Revenue This Month" value={loading ? null : formatCurrency(Number(metrics?.revenueThisMonth ?? 0))} icon={TrendingUp} tone="primary" />
-        <KpiCard label="Active Repairs" value={loading ? null : active} icon={Wrench} tone="accent" />
-        <KpiCard label="Delivered" value={loading ? null : delivered} icon={Package} tone="secondary" />
+        <KpiCard
+          label="Revenue Today"
+          value={loading ? null : formatCurrency(Number(metrics?.revenueToday ?? 0))}
+          icon={IndianRupee}
+          tone="success"
+          onClick={() => setActiveMetric("revenueToday")}
+          isSelected={activeMetric === "revenueToday"}
+        />
+        <KpiCard
+          label="Revenue This Month"
+          value={loading ? null : formatCurrency(Number(metrics?.revenueThisMonth ?? 0))}
+          icon={TrendingUp}
+          tone="primary"
+          onClick={() => setActiveMetric("revenueMonth")}
+          isSelected={activeMetric === "revenueMonth"}
+        />
+        <KpiCard
+          label="Active Repairs"
+          value={loading ? null : active}
+          icon={Wrench}
+          tone="accent"
+          badge={overdueCount > 0 ? `${overdueCount} Overdue` : undefined}
+          onClick={() => setActiveMetric("activeRepairs")}
+          isSelected={activeMetric === "activeRepairs"}
+        />
+        <KpiCard
+          label="Delivered"
+          value={loading ? null : delivered}
+          icon={Package}
+          tone="secondary"
+          onClick={() => setActiveMetric("deliveredAll")}
+          isSelected={activeMetric === "deliveredAll"}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard label="Received Today" value={loading ? null : metrics?.devicesReceivedToday ?? 0} tone="secondary" />
-        <KpiCard label="Ready Pickup" value={loading ? null : metrics?.readyForPickup ?? 0} tone="success" />
-        <KpiCard label="Waiting Parts" value={loading ? null : metrics?.waitingForParts ?? 0} tone="warning" />
-        <KpiCard label="Delivered Today" value={loading ? null : metrics?.deliveredToday ?? 0} tone="primary" />
+        <KpiCard
+          label="Received Today"
+          value={loading ? null : metrics?.devicesReceivedToday ?? 0}
+          tone="secondary"
+          onClick={() => setActiveMetric("receivedToday")}
+          isSelected={activeMetric === "receivedToday"}
+        />
+        <KpiCard
+          label="Ready Pickup"
+          value={loading ? null : metrics?.readyForPickup ?? 0}
+          tone="success"
+          onClick={() => setActiveMetric("readyPickup")}
+          isSelected={activeMetric === "readyPickup"}
+        />
+        <KpiCard
+          label="Waiting Parts"
+          value={loading ? null : metrics?.waitingForParts ?? 0}
+          tone="warning"
+          onClick={() => setActiveMetric("waitingParts")}
+          isSelected={activeMetric === "waitingParts"}
+        />
+        <KpiCard
+          label="Delivered Today"
+          value={loading ? null : metrics?.deliveredToday ?? 0}
+          tone="primary"
+          onClick={() => setActiveMetric("deliveredToday")}
+          isSelected={activeMetric === "deliveredToday"}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -90,6 +150,17 @@ export function AdminDashboard({ metrics, tickets, loading, error }: AdminDashbo
           </div>
         </div>
       </div>
+
+      <MetricDrilldownDrawer
+        metric={activeMetric}
+        onClose={() => setActiveMetric(null)}
+        onSelectMetric={setActiveMetric}
+        tickets={tickets}
+        role="ADMIN"
+        onTicketUpdated={onRefresh || (() => {})}
+        devicesReceivedToday={metrics?.devicesReceivedToday ?? 0}
+        devicesDeliveredToday={metrics?.deliveredToday ?? 0}
+      />
     </div>
   );
 }

@@ -43,6 +43,22 @@ export function RepairKanban({ tickets, onUpdate, filterAssignedToMe, myName }: 
     }
   };
 
+  const handleQuickMove = async (ticketId: string, targetStatus: RepairStatus) => {
+    setUpdating(true);
+    try {
+      await api(`/tickets/${ticketId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: targetStatus, remarks: `Status changed on mobile bench` }),
+      });
+      onUpdate();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Failed to move ticket");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className={cn("kanban-scroll flex gap-3 overflow-x-auto pb-2", updating && "opacity-60 pointer-events-none")}>
       {KANBAN_COLUMNS.map((column) => {
@@ -73,6 +89,7 @@ export function RepairKanban({ tickets, onUpdate, filterAssignedToMe, myName }: 
                   dragging={draggingId === ticket.id}
                   onDragStart={() => setDraggingId(ticket.id)}
                   onDragEnd={() => setDraggingId(null)}
+                  onQuickMove={handleQuickMove}
                 />
               ))}
               {columnTickets.length === 0 && (
@@ -91,11 +108,13 @@ function KanbanCard({
   dragging,
   onDragStart,
   onDragEnd,
+  onQuickMove,
 }: {
   ticket: Ticket;
   dragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onQuickMove: (ticketId: string, status: RepairStatus) => void;
 }) {
   const overdue = isOverdue(ticket.estimatedDeliveryDate, ticket.status);
 
@@ -132,6 +151,31 @@ function KanbanCard({
             </span>
           </div>
           <p className="mt-1 text-[10px] text-slate-400">{formatStatus(ticket.status)}</p>
+
+          {/* Mobile Touch Quick Mover */}
+          <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 sm:hidden">
+            <select
+              className="h-8 max-w-[140px] rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 outline-none"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) onQuickMove(ticket.id, e.target.value as RepairStatus);
+              }}
+            >
+              <option value="" disabled>Move status...</option>
+              {KANBAN_COLUMNS.map((col) => (
+                <option key={col.id} value={col.dropStatus} disabled={col.statuses.includes(ticket.status)}>
+                  {col.label}
+                </option>
+              ))}
+            </select>
+            <Link
+              href={`/tickets/${ticket.id}`}
+              className="touch-target flex items-center px-2 text-xs font-bold text-blue-600 hover:text-blue-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Open →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

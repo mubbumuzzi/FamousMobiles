@@ -30,6 +30,7 @@ import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ForbiddenException;
 import com.famousmobiles.repository.DevicePhotoRepository;
+import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
 import com.famousmobiles.repository.TicketNoteRepository;
 import com.famousmobiles.repository.TicketStatusHistoryRepository;
@@ -53,6 +54,7 @@ class TicketServiceAssignmentTest {
     @Mock private TrackingNumberService trackingNumberService;
     @Mock private NotificationService notificationService;
     @Mock private FileStorageService fileStorageService;
+    @Mock private PaymentRepository paymentRepository;
     @Mock private SecurityUtils securityUtils;
 
     @InjectMocks private TicketService ticketService;
@@ -267,6 +269,38 @@ class TicketServiceAssignmentTest {
         assertEquals(BigDecimal.ZERO, t.getAdvancePaid());
         assertEquals(BigDecimal.ZERO, t.getBalanceAmount());
         verify(ticketRepository).save(t);
+    }
+
+    @Test
+    void create_throwsWhenAdvanceExceedsEstimatedCost() {
+        UUID customerId = UUID.randomUUID();
+        User admin = new User();
+        admin.setId(UUID.randomUUID());
+        admin.setRole(UserRole.ADMIN);
+
+        when(securityUtils.getCurrentUser()).thenReturn(admin);
+
+        var request = new TicketDto.CreateTicketRequest(
+                customerId, DeviceType.MOBILE, "Apple", "iPhone 14", "Blue", null,
+                null, null, "Broken glass", new BigDecimal("100.00"), new BigDecimal("200.00"), null);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> ticketService.create(request));
+        assertEquals("Advance payment (₹200.00) cannot exceed estimated cost (₹100.00)", ex.getMessage());
+    }
+
+    @Test
+    void updateEstimation_throwsWhenEstimatedCostLessThanAdvance() {
+        RepairTicket t = sampleTicket();
+        t.setEstimatedCost(new BigDecimal("500.00"));
+        t.setAdvancePaid(new BigDecimal("200.00"));
+        t.setBalanceAmount(new BigDecimal("300.00"));
+
+        when(ticketRepository.findByIdWithDetails(ticketId)).thenReturn(Optional.of(t));
+
+        var request = new TicketDto.UpdateEstimationRequest(new BigDecimal("100.00"), "Lowered estimate");
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> ticketService.updateEstimation(ticketId, request));
+        assertEquals("Estimated cost (₹100.00) cannot be less than advance already collected (₹200.00)", ex.getMessage());
     }
 
     private RepairTicket sampleTicket() {

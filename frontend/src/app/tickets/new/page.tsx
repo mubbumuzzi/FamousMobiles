@@ -17,7 +17,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { ACCESSORIES, CONDITIONS, Customer, DeviceType, Ticket } from "@/lib/types";
-import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles } from "@/lib/utils";
+import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles, getVipStatus, cn } from "@/lib/utils";
 import { SHOP } from "@/lib/shop";
 import {
   cleanMobileInput,
@@ -51,10 +51,12 @@ export default function NewTicketPage() {
   const [accessories, setAccessories] = useState<string[]>([]);
   const [conditions, setConditions] = useState<string[]>([]);
   const [problem, setProblem] = useState("");
-  const [estimatedCost, setEstimatedCost] = useState("0");
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [estimatedCost, setEstimatedCost] = useState("");
   const [quoteAfterDiagnosis, setQuoteAfterDiagnosis] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState("0");
+  const [advancePaid, setAdvancePaid] = useState("");
   const [edd, setEdd] = useState("");
+  const [warrantyDays, setWarrantyDays] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -155,6 +157,31 @@ export default function NewTicketPage() {
     }
   };
 
+  const toggleIssueTemplate = (template: string) => {
+    setSelectedTemplates((prev) => {
+      const isSelected = prev.includes(template);
+      const next = isSelected ? prev.filter((item) => item !== template) : [...prev, template];
+
+      if (!isSelected) {
+        setProblem((curr) => {
+          if (!curr || !curr.trim()) return template;
+          if (curr.toLowerCase().includes(template.toLowerCase())) return curr;
+          return `${curr.trim()}, ${template}`;
+        });
+      } else {
+        setProblem((curr) => {
+          const parts = curr
+            .split(/,\s*|\n+/)
+            .map((p) => p.trim())
+            .filter((p) => p && p.toLowerCase() !== template.toLowerCase());
+          return parts.join(", ");
+        });
+      }
+
+      return next;
+    });
+  };
+
   const customerDisplay = useMemo(() => {
     if (selectedCustomer) return selectedCustomer;
     if (newCustomer.fullName || mobile) return { ...newCustomer, mobile, customerCode: "NEW" } as Customer;
@@ -167,6 +194,13 @@ export default function NewTicketPage() {
     }
     if (step === 1) return Boolean(brand.trim() && model.trim());
     if (step === 2) return Boolean(problem.trim());
+    if (step === 3) {
+      const est = Number(estimatedCost || 0);
+      const adv = Number(advancePaid || 0);
+      if (adv > est) return false;
+      if (quoteAfterDiagnosis && adv > 0) return false;
+      return true;
+    }
     return true;
   };
 
@@ -183,6 +217,19 @@ export default function NewTicketPage() {
     setLoading(true);
     setError("");
     try {
+      const estNum = Number(estimatedCost || 0);
+      const advNum = Number(advancePaid || 0);
+      if (advNum > estNum) {
+        setError(`Advance payment (₹${advNum}) cannot exceed estimated cost (₹${estNum})`);
+        setLoading(false);
+        return;
+      }
+      if (quoteAfterDiagnosis && advNum > 0) {
+        setError("Cannot accept advance payment when repair cost is pending diagnosis");
+        setLoading(false);
+        return;
+      }
+
       let cid = customerId;
       if (!cid) {
         if (!isExact10DigitMobile(mobile)) {
@@ -213,9 +260,10 @@ export default function NewTicketPage() {
           accessoriesReceived: accessories,
           deviceCondition: conditions,
           problemDescription: problem,
-          estimatedCost: Number(estimatedCost),
-          advancePaid: Number(advancePaid),
+          estimatedCost: Number(estimatedCost || 0),
+          advancePaid: Number(advancePaid || 0),
           estimatedDeliveryDate: edd || null,
+          warrantyDays: Number(warrantyDays),
         }),
       });
       router.push(`/tickets/${ticket.id}`);
@@ -313,7 +361,14 @@ export default function NewTicketPage() {
                 <div className="space-y-3">
                   <div className="rounded-xl bg-blue-50 p-4 border border-blue-100">
                     <div className="flex items-center justify-between">
-                      <p className="font-bold text-slate-900">{selectedCustomer.fullName}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-slate-900">{selectedCustomer.fullName}</p>
+                        {getVipStatus(repairHistory.length).isRepeat && (
+                          <span className={cn("text-[10px] px-2 py-0.5 rounded-full border", getVipStatus(repairHistory.length).badgeClass)}>
+                            {getVipStatus(repairHistory.length).label}
+                          </span>
+                        )}
+                      </div>
                       <Badge variant="default" className="bg-white border border-slate-200">{selectedCustomer.customerCode}</Badge>
                     </div>
                     <p className="text-sm text-slate-600 mt-0.5">{formatCustomerMobiles(selectedCustomer)}</p>
@@ -586,23 +641,54 @@ export default function NewTicketPage() {
               </div>
 
               <Field>
-                <Label>Quick issue templates</Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Quick issue templates</Label>
+                  <span className="text-[11px] text-slate-500">
+                    {selectedTemplates.length > 0
+                      ? `${selectedTemplates.length} selected · Click to toggle multiple`
+                      : "Tap to select one or multiple"}
+                  </span>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {ISSUE_TEMPLATES.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setProblem(t)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${problem === t ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {ISSUE_TEMPLATES.map((t) => {
+                    const isSelected = selectedTemplates.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleIssueTemplate(t)}
+                        className={cn(
+                          "touch-target flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all select-none",
+                          isSelected
+                            ? "border-blue-600 bg-blue-600 text-white shadow-xs scale-[1.02]"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50/50"
+                        )}
+                      >
+                        {isSelected && <Check className="h-3 w-3 stroke-[2.5]" />}
+                        <span>{t}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </Field>
               <Field>
                 <Label>Problem Description *</Label>
-                <Textarea placeholder="Describe the issue" value={problem} onChange={(e) => setProblem(e.target.value)} rows={3} />
+                <Textarea
+                  placeholder="Describe the issue or select templates above"
+                  value={problem}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setProblem(val);
+                    if (!val.trim()) {
+                      setSelectedTemplates([]);
+                    } else {
+                      setSelectedTemplates(
+                        ISSUE_TEMPLATES.filter((t) => val.toLowerCase().includes(t.toLowerCase()))
+                      );
+                    }
+                  }}
+                  rows={3}
+                />
               </Field>
               <Field><Label>Accessories received</Label><ChipSelect options={ACCESSORIES} selected={accessories} onChange={setAccessories} /></Field>
               <Field><Label>Device condition</Label><ChipSelect options={CONDITIONS} selected={conditions} onChange={setConditions} /></Field>
@@ -620,7 +706,8 @@ export default function NewTicketPage() {
                     const checked = e.target.checked;
                     setQuoteAfterDiagnosis(checked);
                     if (checked) {
-                      setEstimatedCost("0");
+                      setEstimatedCost("");
+                      setAdvancePaid("");
                     }
                   }}
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -635,9 +722,21 @@ export default function NewTicketPage() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field>
-                  <Label>Estimated Cost (₹)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Estimated Cost (₹)</Label>
+                    {estimatedCost !== "" && (
+                      <button
+                        type="button"
+                        onClick={() => setEstimatedCost("")}
+                        className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <Input
                     type="number"
+                    min="0"
                     value={estimatedCost}
                     onChange={(e) => {
                       setEstimatedCost(e.target.value);
@@ -645,28 +744,99 @@ export default function NewTicketPage() {
                         setQuoteAfterDiagnosis(false);
                       }
                     }}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        setEstimatedCost("");
+                      }
+                    }}
                     disabled={quoteAfterDiagnosis}
                     placeholder={quoteAfterDiagnosis ? "To be quoted later" : "0"}
                   />
                 </Field>
-                <Field><Label>Advance Paid (₹)</Label><Input type="number" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} /></Field>
+                <Field>
+                  <div className="flex items-center justify-between">
+                    <Label>Advance Paid (₹)</Label>
+                    {advancePaid !== "" && (
+                      <button
+                        type="button"
+                        onClick={() => setAdvancePaid("")}
+                        className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={estimatedCost ? Number(estimatedCost) : undefined}
+                    value={advancePaid}
+                    onChange={(e) => setAdvancePaid(e.target.value)}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        setAdvancePaid("");
+                      }
+                    }}
+                    disabled={quoteAfterDiagnosis}
+                    placeholder={quoteAfterDiagnosis ? "Enter cost first" : "0"}
+                  />
+                </Field>
                 <Field><Label>Delivery Date</Label><Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} /></Field>
                 <div className="sm:col-span-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-600">
                     Balance to pay:{" "}
-                    {quoteAfterDiagnosis || Number(estimatedCost) === 0 ? (
+                    {quoteAfterDiagnosis || Number(estimatedCost || 0) === 0 ? (
                       <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs">
                         Pending Diagnosis
                       </span>
                     ) : (
-                      <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost) - Number(advancePaid)))}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost || 0) - Number(advancePaid || 0)))}</span>
                     )}
                   </p>
-                  {Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0 && (
-                    <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                      ⚠ Warning: Advance paid (₹{advancePaid}) exceeds estimated cost (₹{estimatedCost})
+                  {Number(advancePaid || 0) > Number(estimatedCost || 0) && (
+                    <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
+                      ❌ Advance paid (₹{advancePaid}) cannot exceed estimated cost ({formatCurrency(Number(estimatedCost || 0))})
                     </p>
                   )}
+                  {quoteAfterDiagnosis && Number(advancePaid || 0) > 0 && (
+                    <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
+                      ❌ Uncheck &quot;Quote after diagnosis&quot; and enter an estimated cost to accept advance payment.
+                    </p>
+                  )}
+                </div>
+
+                <div className="sm:col-span-3 space-y-2 pt-3 border-t border-slate-100">
+                  <Label className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                    🛡️ Service Warranty Period
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { days: 0, label: "Testing Only (0d)" },
+                      { days: 15, label: "15 Days" },
+                      { days: 30, label: "30 Days (Standard)" },
+                      { days: 60, label: "60 Days" },
+                      { days: 90, label: "90 Days" },
+                      { days: 180, label: "6 Months" },
+                    ].map((w) => (
+                      <button
+                        key={w.days}
+                        type="button"
+                        onClick={() => setWarrantyDays(w.days)}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                          warrantyDays === w.days
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+                        }`}
+                      >
+                        {w.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {warrantyDays > 0
+                      ? `Customer will receive ${warrantyDays} days warranty starting from device collection date. Printed on receipt.`
+                      : "No extended warranty coverage; counter testing warranty only."}
+                  </p>
                 </div>
               </div>
             </div>
@@ -687,13 +857,14 @@ export default function NewTicketPage() {
                 <Row
                   label="Estimated"
                   value={
-                    quoteAfterDiagnosis || Number(estimatedCost) === 0
+                    quoteAfterDiagnosis || Number(estimatedCost || 0) === 0
                       ? "Pending Diagnosis (Quote later)"
-                      : formatCurrency(Number(estimatedCost))
+                      : formatCurrency(Number(estimatedCost || 0))
                   }
                 />
-                <Row label="Advance" value={formatCurrency(Number(advancePaid))} />
+                <Row label="Advance" value={formatCurrency(Number(advancePaid || 0))} />
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
+                <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "Testing Only (No Warranty)"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
               </div>
             </div>

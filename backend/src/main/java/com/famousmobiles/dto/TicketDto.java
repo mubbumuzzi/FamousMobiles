@@ -24,8 +24,27 @@ public final class TicketDto {
             String problemDescription,
             BigDecimal estimatedCost,
             BigDecimal advancePaid,
-            String estimatedDeliveryDate
-    ) {}
+            String estimatedDeliveryDate,
+            Integer warrantyDays
+    ) {
+        public CreateTicketRequest(
+                UUID customerId,
+                DeviceType deviceType,
+                String brand,
+                String model,
+                String color,
+                String imei,
+                List<String> accessoriesReceived,
+                List<String> deviceCondition,
+                String problemDescription,
+                BigDecimal estimatedCost,
+                BigDecimal advancePaid,
+                String estimatedDeliveryDate
+        ) {
+            this(customerId, deviceType, brand, model, color, imei, accessoriesReceived, deviceCondition,
+                    problemDescription, estimatedCost, advancePaid, estimatedDeliveryDate, 0);
+        }
+    }
 
     public record UpdateTicketRequest(
             String brand,
@@ -36,8 +55,24 @@ public final class TicketDto {
             List<String> deviceCondition,
             String problemDescription,
             BigDecimal estimatedCost,
-            String estimatedDeliveryDate
-    ) {}
+            String estimatedDeliveryDate,
+            Integer warrantyDays
+    ) {
+        public UpdateTicketRequest(
+                String brand,
+                String model,
+                String color,
+                String imei,
+                List<String> accessoriesReceived,
+                List<String> deviceCondition,
+                String problemDescription,
+                BigDecimal estimatedCost,
+                String estimatedDeliveryDate
+        ) {
+            this(brand, model, color, imei, accessoriesReceived, deviceCondition, problemDescription,
+                    estimatedCost, estimatedDeliveryDate, null);
+        }
+    }
 
     public record StatusUpdateRequest(
             RepairStatus status,
@@ -47,8 +82,13 @@ public final class TicketDto {
 
     public record UpdateEstimationRequest(
             BigDecimal estimatedCost,
-            String remarks
-    ) {}
+            String remarks,
+            Integer warrantyDays
+    ) {
+        public UpdateEstimationRequest(BigDecimal estimatedCost, String remarks) {
+            this(estimatedCost, remarks, null);
+        }
+    }
 
     public record AssignTechnicianRequest(UUID technicianId) {}
 
@@ -72,7 +112,8 @@ public final class TicketDto {
             BigDecimal balanceAmount,
             String estimatedDeliveryDate,
             String createdAt,
-            String deliveredAt
+            String deliveredAt,
+            Integer warrantyDays
     ) {
         public static TicketResponse from(RepairTicket t) {
             return new TicketResponse(
@@ -95,7 +136,8 @@ public final class TicketDto {
                     t.getBalanceAmount(),
                     t.getEstimatedDeliveryDate() != null ? t.getEstimatedDeliveryDate().toString() : null,
                     t.getCreatedAt() != null ? t.getCreatedAt().toString() : java.time.Instant.now().toString(),
-                    t.getDeliveredAt() != null ? t.getDeliveredAt().toString() : null
+                    t.getDeliveredAt() != null ? t.getDeliveredAt().toString() : null,
+                    t.getWarrantyDays()
             );
         }
     }
@@ -121,6 +163,25 @@ public final class TicketDto {
             BigDecimal advancePaid,
             BigDecimal balanceAmount,
             List<TimelineEntry> timeline,
-            List<RepairStatus> allStatuses
-    ) {}
+            List<RepairStatus> allStatuses,
+            Integer warrantyDays
+    ) {
+        public PublicTrackingResponse(
+                String trackingNumber,
+                String brand,
+                String model,
+                String color,
+                String imeiMasked,
+                RepairStatus currentStatus,
+                String estimatedDeliveryDate,
+                BigDecimal estimatedCost,
+                BigDecimal advancePaid,
+                BigDecimal balanceAmount,
+                List<TimelineEntry> timeline,
+                List<RepairStatus> allStatuses
+        ) {
+            this(trackingNumber, brand, model, color, imeiMasked, currentStatus, estimatedDeliveryDate,
+                    estimatedCost, advancePaid, balanceAmount, timeline, allStatuses, 0);
+        }
+    }
 }

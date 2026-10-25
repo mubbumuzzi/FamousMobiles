@@ -50,7 +50,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
     public CustomerDto.CustomerResponse update(@PathVariable UUID id, @Valid @RequestBody CustomerDto.CustomerRequest request) {
         return customerService.update(id, request);
     }

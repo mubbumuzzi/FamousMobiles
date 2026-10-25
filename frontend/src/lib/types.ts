@@ -76,6 +76,7 @@ export interface Ticket {
   estimatedDeliveryDate?: string;
   createdAt: string;
   deliveredAt?: string;
+  warrantyDays?: number;
 }
 
 export interface TimelineEntry {
@@ -100,6 +101,7 @@ export interface PublicTracking {
   balanceAmount: number;
   timeline: TimelineEntry[];
   allStatuses: RepairStatus[];
+  warrantyDays?: number;
 }
 
 export interface DashboardMetrics {
@@ -134,6 +136,42 @@ export interface Payment {
   recordedByName?: string;
   createdAt: string;
 }
+
+export interface DetailedPayment {
+  id: string;
+  ticketId: string;
+  trackingNumber: string;
+  customerName: string;
+  customerMobile: string;
+  brand: string;
+  model: string;
+  amount: number;
+  paymentMode: PaymentMode;
+  notes?: string;
+  recordedByName: string;
+  createdAt: string;
+  balanceAmount: number;
+}
+
+export interface TodayRevenueSummary {
+  totalRevenue: number;
+  cashTotal: number;
+  upiTotal: number;
+  cardTotal: number;
+  transactionCount: number;
+  payments: DetailedPayment[];
+}
+
+export type MetricDrilldownType =
+  | "revenueToday"
+  | "revenueMonth"
+  | "activeRepairs"
+  | "deliveredAll"
+  | "receivedToday"
+  | "readyPickup"
+  | "waitingParts"
+  | "deliveredToday"
+  | "overdue";
 
 export const REPAIR_STATUSES: RepairStatus[] = [
   "DEVICE_RECEIVED",

@@ -19,7 +19,7 @@ import { cn, formatRole } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/tickets", label: "Repairs", icon: Wrench },
-  { href: "/customers", label: "Customers", icon: Users, hideFor: ["TECHNICIAN"] as string[] },
+  { href: "/customers", label: "Customers", icon: Users },
   { href: "/search", label: "Search", icon: Search },
   { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
   { href: "/staff", label: "Staff", icon: UserCog, adminOnly: true },
@@ -30,7 +30,6 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
   const router = useRouter();
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && role !== "ADMIN") return false;
-    if (item.hideFor?.includes(role ?? "")) return false;
     return true;
   });
 
@@ -39,7 +38,8 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
     router.push("/login");
   };
 
-  const showFab = pathname !== "/tickets/new";
+  const isTicketDetail = /^\/tickets\/[a-zA-Z0-9_-]+$/.test(pathname);
+  const showFab = pathname !== "/tickets/new" && !isTicketDetail;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-0">
@@ -91,19 +91,19 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden">
-        <div className="flex justify-around py-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+        <div className="flex justify-around py-1.5">
           {visibleNavItems.slice(0, 4).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium touch-target",
-                pathname.startsWith(href) ? "text-blue-700" : "text-slate-500"
+                "flex flex-col items-center justify-center gap-1 px-3 py-1 text-[11px] font-medium touch-target min-w-[56px]",
+                pathname.startsWith(href) ? "text-blue-700 font-bold" : "text-slate-500"
               )}
             >
               <Icon className={cn("h-5 w-5", pathname.startsWith(href) && "text-blue-600")} />
-              {label}
+              <span>{label}</span>
             </Link>
           ))}
         </div>
