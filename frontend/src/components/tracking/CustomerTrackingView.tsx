@@ -64,11 +64,29 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
           </a>
         </div>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">Estimated</span><span>{formatCurrency(Number(data.estimatedCost))}</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Advance Paid</span><span className="text-emerald-600">{formatCurrency(Number(data.advancePaid))}</span></div>
-          <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-bold">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Estimated</span>
+            {Number(data.estimatedCost) === 0 && data.currentStatus !== "DELIVERED" && data.currentStatus !== "RETURNED_UNREPAIRED" ? (
+              <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                Pending Diagnosis
+              </span>
+            ) : (
+              <span className="font-semibold text-slate-800">{formatCurrency(Number(data.estimatedCost))}</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Advance Paid</span>
+            <span className="text-emerald-600 font-semibold">{formatCurrency(Number(data.advancePaid))}</span>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-base font-bold">
             <span>Balance Due</span>
-            <span>{formatCurrency(Number(data.balanceAmount))}</span>
+            {Number(data.estimatedCost) === 0 && data.currentStatus !== "DELIVERED" && data.currentStatus !== "RETURNED_UNREPAIRED" ? (
+              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                To be determined
+              </span>
+            ) : (
+              <span>{formatCurrency(Number(data.balanceAmount))}</span>
+            )}
           </div>
         </div>
       </div>

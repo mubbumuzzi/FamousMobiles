@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Phone, Printer, Share2, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, Share2, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -40,6 +40,11 @@ export default function TicketDetailPage() {
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
   const [cancelReason, setCancelReason] = useState("Customer changed mind / Cancelled");
   const [sharingReceipt, setSharingReceipt] = useState(false);
+  const [editingEstimate, setEditingEstimate] = useState(false);
+  const [newEstimateCost, setNewEstimateCost] = useState("");
+  const [newEstimateRemarks, setNewEstimateRemarks] = useState("");
+  const [savingEstimate, setSavingEstimate] = useState(false);
+  const [approvalEstimateCost, setApprovalEstimateCost] = useState("");
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -84,6 +89,32 @@ export default function TicketDetailPage() {
     }, 4000);
   };
 
+  const saveEstimation = async () => {
+    const cost = Number(newEstimateCost);
+    if (isNaN(cost) || cost < 0) {
+      alert("Please enter a valid estimated cost (₹)");
+      return;
+    }
+    setSavingEstimate(true);
+    try {
+      await api(`/tickets/${id}/estimation`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          estimatedCost: cost,
+          remarks: newEstimateRemarks.trim() || undefined,
+        }),
+      });
+      setEditingEstimate(false);
+      setNewEstimateCost("");
+      setNewEstimateRemarks("");
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update estimation");
+    } finally {
+      setSavingEstimate(false);
+    }
+  };
+
   const updateStatus = async () => {
     if (!nextStatus) return;
     const targetStatus = nextStatus;
@@ -106,6 +137,19 @@ export default function TicketDetailPage() {
 
     setPaymentWarning("");
     try {
+      if (targetStatus === "WAITING_FOR_APPROVAL" && approvalEstimateCost.trim()) {
+        const cost = Number(approvalEstimateCost);
+        if (!isNaN(cost) && cost >= 0) {
+          await api(`/tickets/${id}/estimation`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              estimatedCost: cost,
+              remarks: "Estimate determined for customer approval",
+            }),
+          });
+        }
+      }
+
       const finalRemarks =
         targetStatus === "RETURNED_UNREPAIRED"
           ? `${cancelReason}${remarks.trim() ? " · " + remarks.trim() : ""}`
@@ -117,6 +161,7 @@ export default function TicketDetailPage() {
       });
       setNextStatus("");
       setRemarks("");
+      setApprovalEstimateCost("");
       setJustUpdatedStatus(targetStatus);
       load();
     } catch (err) {
@@ -392,17 +437,125 @@ export default function TicketDetailPage() {
         </div>
 
         {/* Cost summary */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Estimated", value: formatCurrency(Number(ticket.estimatedCost)) },
-            { label: "Advance", value: formatCurrency(Number(ticket.advancePaid)) },
-            { label: "Balance", value: formatCurrency(Number(ticket.balanceAmount)) },
-          ].map((item) => (
-            <div key={item.label} className="premium-card p-3 text-center">
-              <p className="text-xs text-slate-500">{item.label}</p>
-              <p className="text-lg font-bold text-slate-900">{item.value}</p>
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Repair Cost & Balance</h3>
+            {canUpdateStatus && !editingEstimate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewEstimateCost(ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "");
+                  setNewEstimateRemarks("");
+                  setEditingEstimate(true);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <Pencil className="h-3 w-3" />
+                {Number(ticket.estimatedCost) === 0 ? "Add Estimate +" : "Edit Estimate"}
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
+              <p className="text-xs text-slate-500">Estimated Cost</p>
+              {Number(ticket.estimatedCost) === 0 ? (
+                <div className="mt-1">
+                  <span className="inline-block rounded bg-amber-100 text-amber-900 text-xs font-semibold px-2 py-0.5">
+                    Pending Diagnosis
+                  </span>
+                </div>
+              ) : (
+                <p className="text-lg font-bold text-slate-900">{formatCurrency(Number(ticket.estimatedCost))}</p>
+              )}
             </div>
-          ))}
+            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
+              <p className="text-xs text-slate-500">Advance Paid</p>
+              <p className="text-lg font-bold text-emerald-700">{formatCurrency(Number(ticket.advancePaid))}</p>
+            </div>
+            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
+              <p className="text-xs text-slate-500">Balance Due</p>
+              {Number(ticket.estimatedCost) === 0 ? (
+                <div className="mt-1">
+                  <span className="inline-block rounded bg-slate-100 text-slate-600 text-xs font-medium px-2 py-0.5">
+                    To be quoted
+                  </span>
+                </div>
+              ) : (
+                <p className="text-lg font-bold text-slate-900">{formatCurrency(Number(ticket.balanceAmount))}</p>
+              )}
+            </div>
+          </div>
+
+          {editingEstimate && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-blue-950 uppercase tracking-wider">
+                  {Number(ticket.estimatedCost) === 0 ? "Add Initial Repair Estimate" : "Update Repair Estimate"}
+                </p>
+                <span className="text-xs text-slate-600 font-medium">
+                  Advance Paid: {formatCurrency(Number(ticket.advancePaid))}
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 block">Estimated Cost (₹) *</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 2500"
+                    value={newEstimateCost}
+                    onChange={(e) => setNewEstimateCost(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 block">Remarks / Reason (Optional)</label>
+                  <Input
+                    placeholder="e.g. Screen replacement + frame fix"
+                    value={newEstimateRemarks}
+                    onChange={(e) => setNewEstimateRemarks(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {newEstimateCost && !isNaN(Number(newEstimateCost)) && (
+                <div className="flex items-center justify-between text-xs rounded-lg bg-white border border-blue-100 p-2 text-slate-700">
+                  <span>
+                    New Balance will be:{" "}
+                    <strong className="text-blue-900 text-sm">
+                      {formatCurrency(Math.max(0, Number(newEstimateCost) - Number(ticket.advancePaid)))}
+                    </strong>
+                  </span>
+                  {Number(ticket.advancePaid) > Number(newEstimateCost) && Number(newEstimateCost) > 0 && (
+                    <span className="text-amber-700 font-medium">⚠ Advance exceeds estimate</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingEstimate(false)}
+                  disabled={savingEstimate}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={saveEstimation}
+                  disabled={savingEstimate || !newEstimateCost || isNaN(Number(newEstimateCost)) || Number(newEstimateCost) < 0}
+                >
+                  {savingEstimate ? "Saving..." : "Save Estimate"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -505,15 +658,41 @@ export default function TicketDetailPage() {
                   )}
 
                   {nextStatus === "WAITING_FOR_APPROVAL" && (
-                    <div className="rounded-lg bg-amber-50 border border-amber-200 p-2 text-xs flex items-center justify-between text-amber-800">
-                      <span>Estimate approval request template ready</span>
-                      <button
-                        type="button"
-                        onClick={() => openWhatsApp("estimate")}
-                        className="font-bold underline hover:text-amber-950 flex items-center gap-1"
-                      >
-                        <MessageCircle className="h-3 w-3" /> Preview WhatsApp
-                      </button>
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2.5 text-xs text-amber-900 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          Estimate Approval Required
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openWhatsApp("estimate")}
+                          className="font-bold underline hover:text-amber-950 flex items-center gap-1"
+                        >
+                          <MessageCircle className="h-3 w-3" /> Preview WhatsApp
+                        </button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-semibold text-amber-950 block">
+                          {Number(ticket.estimatedCost) === 0
+                            ? "Enter estimated cost to seek customer approval (₹) *"
+                            : `Current Estimate: ${formatCurrency(Number(ticket.estimatedCost))}. Update quote if needed:`}
+                        </label>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder={ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "e.g. 2500"}
+                          value={approvalEstimateCost}
+                          onChange={(e) => setApprovalEstimateCost(e.target.value)}
+                          className="bg-white border-amber-300"
+                        />
+                        {approvalEstimateCost && !isNaN(Number(approvalEstimateCost)) && (
+                          <p className="text-[11px] text-amber-800">
+                            New balance will be: <strong>{formatCurrency(Math.max(0, Number(approvalEstimateCost) - Number(ticket.advancePaid)))}</strong>
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 

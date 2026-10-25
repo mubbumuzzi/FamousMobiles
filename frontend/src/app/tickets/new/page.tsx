@@ -52,6 +52,7 @@ export default function NewTicketPage() {
   const [conditions, setConditions] = useState<string[]>([]);
   const [problem, setProblem] = useState("");
   const [estimatedCost, setEstimatedCost] = useState("0");
+  const [quoteAfterDiagnosis, setQuoteAfterDiagnosis] = useState(false);
   const [advancePaid, setAdvancePaid] = useState("0");
   const [edd, setEdd] = useState("");
   const [loading, setLoading] = useState(false);
@@ -609,19 +610,64 @@ export default function NewTicketPage() {
           )}
 
           {step === 3 && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field><Label>Estimated Cost (₹)</Label><Input type="number" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)} /></Field>
-              <Field><Label>Advance Paid (₹)</Label><Input type="number" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} /></Field>
-              <Field><Label>Delivery Date</Label><Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} /></Field>
-              <div className="sm:col-span-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-600">
-                  Balance to pay: <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost) - Number(advancePaid)))}</span>
-                </p>
-                {Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0 && (
-                  <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                    ⚠ Warning: Advance paid (₹{advancePaid}) exceeds estimated cost (₹{estimatedCost})
+            <div className="space-y-4">
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="quoteAfterDiagnosis"
+                  checked={quoteAfterDiagnosis}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setQuoteAfterDiagnosis(checked);
+                    if (checked) {
+                      setEstimatedCost("0");
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="quoteAfterDiagnosis" className="cursor-pointer select-none space-y-1">
+                  <span className="font-bold text-blue-950 text-sm block">Quote after diagnosis (Issue unknown / inspection needed)</span>
+                  <p className="text-blue-800">
+                    Check this if the repair cost cannot be determined right now. The technician will diagnose the device and quote the estimate later. Customer tracking will show &quot;Pending Diagnosis&quot;.
                   </p>
-                )}
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field>
+                  <Label>Estimated Cost (₹)</Label>
+                  <Input
+                    type="number"
+                    value={estimatedCost}
+                    onChange={(e) => {
+                      setEstimatedCost(e.target.value);
+                      if (Number(e.target.value) > 0) {
+                        setQuoteAfterDiagnosis(false);
+                      }
+                    }}
+                    disabled={quoteAfterDiagnosis}
+                    placeholder={quoteAfterDiagnosis ? "To be quoted later" : "0"}
+                  />
+                </Field>
+                <Field><Label>Advance Paid (₹)</Label><Input type="number" value={advancePaid} onChange={(e) => setAdvancePaid(e.target.value)} /></Field>
+                <Field><Label>Delivery Date</Label><Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} /></Field>
+                <div className="sm:col-span-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-600">
+                    Balance to pay:{" "}
+                    {quoteAfterDiagnosis || Number(estimatedCost) === 0 ? (
+                      <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs">
+                        Pending Diagnosis
+                      </span>
+                    ) : (
+                      <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost) - Number(advancePaid)))}</span>
+                    )}
+                  </p>
+                  {Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0 && (
+                    <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                      ⚠ Warning: Advance paid (₹{advancePaid}) exceeds estimated cost (₹{estimatedCost})
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -638,7 +684,14 @@ export default function NewTicketPage() {
               </div>
               <div className="grid gap-2 rounded-xl bg-slate-50 p-4">
                 <Row label="Problem" value={problem} />
-                <Row label="Estimated" value={formatCurrency(Number(estimatedCost))} />
+                <Row
+                  label="Estimated"
+                  value={
+                    quoteAfterDiagnosis || Number(estimatedCost) === 0
+                      ? "Pending Diagnosis (Quote later)"
+                      : formatCurrency(Number(estimatedCost))
+                  }
+                />
                 <Row label="Advance" value={formatCurrency(Number(advancePaid))} />
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}

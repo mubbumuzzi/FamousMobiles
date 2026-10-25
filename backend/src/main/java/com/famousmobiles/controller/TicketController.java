@@ -62,6 +62,11 @@ public class TicketController {
         return ticketService.updateStatus(id, request);
     }
 
+    @PatchMapping("/{id}/estimation")
+    public TicketDto.TicketResponse updateEstimation(@PathVariable UUID id, @RequestBody TicketDto.UpdateEstimationRequest request) {
+        return ticketService.updateEstimation(id, request);
+    }
+
     @PostMapping("/{id}/assign")
     @PreAuthorize("hasRole('ADMIN')")
     public TicketDto.TicketResponse assign(@PathVariable UUID id, @RequestBody TicketDto.AssignTechnicianRequest request) {

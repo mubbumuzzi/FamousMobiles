@@ -45,6 +45,11 @@ public final class TicketDto {
             String technicianNotes
     ) {}
 
+    public record UpdateEstimationRequest(
+            BigDecimal estimatedCost,
+            String remarks
+    ) {}
+
     public record AssignTechnicianRequest(UUID technicianId) {}
 
     public record TicketResponse(

@@ -115,13 +115,44 @@ public class TicketService {
         if (request.deviceCondition() != null) ticket.setDeviceCondition(request.deviceCondition());
         if (request.problemDescription() != null) ticket.setProblemDescription(request.problemDescription());
         if (request.estimatedCost() != null) {
+            BigDecimal oldCost = ticket.getEstimatedCost() != null ? ticket.getEstimatedCost() : BigDecimal.ZERO;
             ticket.setEstimatedCost(request.estimatedCost());
             recalculateBalance(ticket);
+            if (request.estimatedCost().compareTo(oldCost) != 0) {
+                User user = securityUtils.getCurrentUser();
+                String note = "Estimated cost updated from ₹" + oldCost + " to ₹" + request.estimatedCost() + " (Balance: ₹" + ticket.getBalanceAmount() + ")";
+                recordStatusHistory(ticket, ticket.getStatus(), ticket.getStatus(), user, note, null);
+            }
         }
         if (request.estimatedDeliveryDate() != null && !request.estimatedDeliveryDate().isBlank()) {
             ticket.setEstimatedDeliveryDate(LocalDate.parse(request.estimatedDeliveryDate()));
         }
         return TicketDto.TicketResponse.from(ticketRepository.save(ticket));
+    }
+
+    @Transactional
+    public TicketDto.TicketResponse updateEstimation(UUID id, TicketDto.UpdateEstimationRequest request) {
+        RepairTicket ticket = getEntityWithAccess(id);
+        if (ticket.getStatus() == RepairStatus.DELIVERED || ticket.getStatus() == RepairStatus.RETURNED_UNREPAIRED) {
+            throw new BadRequestException("Cannot update estimation for completed/closed ticket");
+        }
+        BigDecimal oldCost = ticket.getEstimatedCost() != null ? ticket.getEstimatedCost() : BigDecimal.ZERO;
+        BigDecimal newCost = request.estimatedCost() != null ? request.estimatedCost() : BigDecimal.ZERO;
+        if (newCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Estimated cost cannot be negative");
+        }
+        ticket.setEstimatedCost(newCost);
+        recalculateBalance(ticket);
+        ticket = ticketRepository.save(ticket);
+
+        User user = securityUtils.getCurrentUser();
+        String timelineNote = "Estimated repair cost updated from ₹" + oldCost + " to ₹" + newCost +
+                " (Balance: ₹" + ticket.getBalanceAmount() + ")";
+        if (request.remarks() != null && !request.remarks().isBlank()) {
+            timelineNote += " · " + request.remarks().trim();
+        }
+        recordStatusHistory(ticket, ticket.getStatus(), ticket.getStatus(), user, timelineNote, null);
+        return TicketDto.TicketResponse.from(ticket);
     }
 
     @Transactional
