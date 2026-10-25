@@ -104,11 +104,13 @@ public class TicketController {
     @GetMapping("/{id}/receipt/pdf")
     public ResponseEntity<byte[]> receipt(
             @PathVariable UUID id,
-            @RequestParam(required = false, defaultValue = "false") boolean duplicate) throws Exception {
+            @RequestParam(required = false, defaultValue = "false") boolean duplicate,
+            @RequestParam(required = false, defaultValue = "inline") String disposition) throws Exception {
         var ticket = ticketService.getEntityWithAccess(id);
         byte[] pdf = pdfReceiptService.generateReceipt(ticket, duplicate);
+        String dispType = "attachment".equalsIgnoreCase(disposition) ? "attachment" : "inline";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + ticket.getTrackingNumber() + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, dispType + "; filename=\"" + ticket.getTrackingNumber() + ".pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }

@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, API_URL, getAccessToken } from "@/lib/api";
+import { printTicketReceipt } from "@/lib/print";
 import {
   DetailedPayment,
   MetricDrilldownType,
@@ -87,7 +88,19 @@ export function MetricDrilldownDrawer({
   const [loadingRevenue, setLoadingRevenue] = useState(false);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
+  const [printingTicketId, setPrintingTicketId] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState("");
+
+  const handlePrintTicket = async (ticket: Ticket) => {
+    setPrintingTicketId(ticket.id);
+    try {
+      await printTicketReceipt(ticket.id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to load receipt PDF");
+    } finally {
+      setPrintingTicketId(null);
+    }
+  };
 
   const drawerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -262,9 +275,13 @@ export function MetricDrilldownDrawer({
       });
 
       // Open PDF receipt for immediate printing
-      const token = getAccessToken();
-      const receiptUrl = `${API_URL}/tickets/${ticket.id}/receipt/pdf`;
-      window.open(receiptUrl, "_blank");
+      try {
+        await printTicketReceipt(ticket.id);
+      } catch {
+        const token = getAccessToken();
+        const receiptUrl = `${API_URL}/tickets/${ticket.id}/receipt/pdf${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+        window.open(receiptUrl, "_blank");
+      }
 
       setSuccessToast(`Delivered ${ticket.trackingNumber}! Receipt opened.`);
       setTimeout(() => setSuccessToast(""), 3500);
@@ -675,15 +692,20 @@ export function MetricDrilldownDrawer({
                             </a>
                           )}
 
-                          <a
-                            href={`${API_URL}/tickets/${ticket.id}/receipt/pdf`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Download receipt PDF"
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+                          <button
+                            type="button"
+                            disabled={printingTicketId === ticket.id}
+                            onClick={() => handlePrintTicket(ticket)}
+                            aria-label="Print receipt PDF"
+                            title="Print receipt PDF"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
                           >
-                            <Printer className="h-3.5 w-3.5" />
-                          </a>
+                            {printingTicketId === ticket.id ? (
+                              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                            ) : (
+                              <Printer className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                         </div>
 
                         {/* Power Operations */}

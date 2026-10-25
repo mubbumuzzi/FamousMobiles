@@ -16,6 +16,7 @@ import { Payment, REPAIR_STATUSES, RepairStatus, Technician, Ticket, TimelineEnt
 import { formatCurrency, formatDate, formatDateTime, formatStatus, formatCustomerMobiles, getWarrantyStatus, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { SHOP } from "@/lib/shop";
+import { downloadTicketReceipt, printTicketReceipt } from "@/lib/print";
 import { Alert } from "@/components/ui/alert";
 import { PageLoading } from "@/components/ui/skeleton";
 
@@ -256,52 +257,13 @@ export default function TicketDetailPage() {
   };
 
   const downloadReceipt = async () => {
-    try {
-      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${ticket?.trackingNumber}.pdf`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to download receipt");
-    }
+    if (!id || !ticket) return;
+    await downloadTicketReceipt(id, ticket.trackingNumber);
   };
 
   const printReceipt = async () => {
-    try {
-      const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
-      const blobUrl = URL.createObjectURL(blob);
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.src = blobUrl;
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-            URL.revokeObjectURL(blobUrl);
-          }, 60000);
-        }, 300);
-      };
-    } catch {
-      try {
-        const blob = await api<Blob>(`/tickets/${id}/receipt/pdf`);
-        const w = window.open(URL.createObjectURL(blob));
-        w?.print();
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to load receipt PDF");
-      }
-    }
+    if (!id) return;
+    await printTicketReceipt(id);
   };
 
   const openWhatsApp = (templateType: "auto" | "pickup" | "estimate" | "general" = "auto") => {
