@@ -39,7 +39,12 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   const topBrands = Object.entries(brandBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const delivered = tickets.filter((t) => t.status === "DELIVERED").length;
-  const active = tickets.filter((t) => t.status !== "DELIVERED").length;
+  const active = tickets.filter(
+    (t) =>
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP"
+  ).length;
   const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
 
   return (
