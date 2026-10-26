@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
+import { IntakeForkModal } from "@/components/stock/IntakeForkModal";
+import { StockOrderModal } from "@/components/stock/StockOrderModal";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -28,6 +31,9 @@ const navItems = [
 export function StaffLayout({ children, userName, role }: { children: React.ReactNode; userName?: string; role?: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isForkOpen, setIsForkOpen] = useState(false);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && role !== "ADMIN") return false;
     return true;
@@ -108,16 +114,37 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
         </div>
       </nav>
 
-      {/* FAB — New Repair */}
+      {/* FAB — Intake Fork Modal (Repair vs Order Stock) */}
       {showFab && (
-        <Link
-          href="/tickets/new"
-          className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg transition-transform active:scale-95 md:bottom-6 md:right-6"
-          aria-label="New repair"
+        <button
+          type="button"
+          onClick={() => setIsForkOpen(true)}
+          className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg transition-transform active:scale-95 hover:shadow-xl md:bottom-6 md:right-6"
+          aria-label="New Intake"
         >
           <Plus className="h-6 w-6" />
-        </Link>
+        </button>
       )}
+
+      {/* Intake Fork: Choose Repair vs Order Stock */}
+      <IntakeForkModal
+        isOpen={isForkOpen}
+        onClose={() => setIsForkOpen(false)}
+        onSelectStockOrder={() => setIsStockModalOpen(true)}
+      />
+
+      {/* Order Stock Modal */}
+      <StockOrderModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onSuccess={() => {
+          if (pathname === "/dashboard") {
+            window.location.reload();
+          } else {
+            router.push("/dashboard");
+          }
+        }}
+      />
     </div>
   );
 }

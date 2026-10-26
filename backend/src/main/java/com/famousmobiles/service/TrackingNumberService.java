@@ -34,4 +34,16 @@ public class TrackingNumberService {
             """, Long.class);
         return String.format("CUST-%06d", next);
     }
+
+    @Transactional
+    public String generateStockOrderCode() {
+        int year = Year.now().getValue();
+        Long next = jdbcTemplate.queryForObject("""
+            INSERT INTO stock_order_sequences (year, last_value)
+            VALUES (?, 1)
+            ON CONFLICT (year) DO UPDATE SET last_value = stock_order_sequences.last_value + 1
+            RETURNING last_value
+            """, Long.class, year);
+        return String.format("ORD-%d-%04d", year, next);
+    }
 }

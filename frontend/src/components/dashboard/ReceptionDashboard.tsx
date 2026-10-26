@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Package, PackageCheck, Plus, Search, Truck, Wrench } from "lucide-react";
+import { AlertTriangle, Package, PackageCheck, Plus, Search, ShoppingBag, Truck, Wrench } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { QuickAction } from "@/components/ui/quick-action";
 import { Alert } from "@/components/ui/alert";
@@ -11,6 +11,8 @@ import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
 import { formatCurrency, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
+import { StockDemandBoard } from "@/components/stock/StockDemandBoard";
+import { StockOrderModal } from "@/components/stock/StockOrderModal";
 
 type ReceptionDashboardProps = {
   metrics: DashboardMetrics | null;
@@ -23,6 +25,8 @@ type ReceptionDashboardProps = {
 
 export function ReceptionDashboard({ metrics, tickets, loading, error, showRevenue, onRefresh }: ReceptionDashboardProps) {
   const [activeMetric, setActiveMetric] = useState<MetricDrilldownType | null>(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockRefreshTrigger, setStockRefreshTrigger] = useState(0);
 
   const overdue = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status) && t.status !== "DELIVERED");
   const ready = tickets.filter((t) => t.status === "READY_FOR_PICKUP");
@@ -85,10 +89,16 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <QuickAction href="/tickets/new" icon={Plus} label="New Repair" description="Start intake" tone="primary" />
+        <QuickAction onClick={() => setIsStockModalOpen(true)} icon={ShoppingBag} label="Order Stock" description="Cases, chargers, parts" tone="success" />
+        <QuickAction href="/tickets?status=READY_FOR_PICKUP" icon={Truck} label="Deliver Device" description="Ready pickups" tone="accent" />
         <QuickAction href="/search" icon={Search} label="Search" description="Find customer" tone="secondary" />
-        <QuickAction href="/tickets?status=READY_FOR_PICKUP" icon={Truck} label="Deliver Device" description="Ready pickups" tone="success" />
-        <QuickAction href="/tickets" icon={Package} label="All Tickets" description="View list" tone="accent" />
       </div>
+
+      {/* Stock & Accessory Demands Board */}
+      <StockDemandBoard
+        onOpenNewStockOrder={() => setIsStockModalOpen(true)}
+        refreshTrigger={stockRefreshTrigger}
+      />
 
       {ready.length > 0 && (
         <section className="premium-card p-4">
@@ -153,6 +163,12 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
         onTicketUpdated={onRefresh || (() => {})}
         devicesReceivedToday={metrics?.devicesReceivedToday ?? 0}
         devicesDeliveredToday={metrics?.deliveredToday ?? 0}
+      />
+
+      <StockOrderModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onSuccess={() => setStockRefreshTrigger((t) => t + 1)}
       />
     </div>
   );

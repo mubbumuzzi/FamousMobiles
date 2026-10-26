@@ -187,3 +187,36 @@ export const REPAIR_STATUSES: RepairStatus[] = [
 
 export const ACCESSORIES = ["Battery", "SIM Card", "Memory Card", "Charger", "Earphones", "Box", "Stylus", "Other"];
 export const CONDITIONS = ["Screen Cracked", "Back Glass Broken", "Water Damage", "Camera Damage", "Touch Not Working", "Bent Frame"];
+
+export type StockOrderStatus = "PENDING" | "ARRIVED" | "FULFILLED" | "CANCELLED";
+
+export interface StockOrder {
+  id: string;
+  orderCode: string;
+  customerId?: string | null;
+  customerName: string;
+  customerMobile: string;
+  itemDetails: string;
+  quantity: number;
+  advanceAmount: number;
+  expectedPrice?: number | null;
+  status: StockOrderStatus;
+  notes?: string | null;
+  createdByName?: string | null;
+  arrivedAt?: string | null;
+  fulfilledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStockOrderRequest {
+  customerId?: string;
+  customerName?: string;
+  customerMobile: string;
+  itemDetails: string;
+  quantity?: number;
+  advanceAmount?: number;
+  expectedPrice?: number;
+  notes?: string;
+}
+
