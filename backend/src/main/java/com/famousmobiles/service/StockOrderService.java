@@ -2,6 +2,7 @@ package com.famousmobiles.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -123,10 +124,44 @@ public class StockOrderService {
 
     @Transactional(readOnly = true)
     public List<StockOrderDto.StockOrderResponse> list(String filter) {
+        Instant now = Instant.now();
+        Instant sevenDaysAgo = now.minus(7, ChronoUnit.DAYS);
+        Instant fourteenDaysAgo = now.minus(14, ChronoUnit.DAYS);
+
         if ("ACTIVE".equalsIgnoreCase(filter) || filter == null || filter.isBlank()) {
-            return stockOrderRepository.findByStatusInOrderByCreatedAtDesc(
-                    List.of(StockOrderStatus.PENDING, StockOrderStatus.ARRIVED)
-            ).stream().map(StockOrderDto.StockOrderResponse::from).toList();
+            // PENDING orders (never cleared - wholesale can take 20+ days)
+            // PLUS ARRIVED orders received within the last 7 days!
+            return stockOrderRepository.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(o -> {
+                        if (o.getStatus() == StockOrderStatus.PENDING) {
+                            return true; // Never auto-cleared!
+                        }
+                        if (o.getStatus() == StockOrderStatus.ARRIVED) {
+                            Instant arrived = o.getArrivedAt() != null ? o.getArrivedAt() : o.getCreatedAt();
+                            return !arrived.isBefore(sevenDaysAgo); // Active for 7 days after arrival
+                        }
+                        return false;
+                    })
+                    .map(StockOrderDto.StockOrderResponse::from)
+                    .toList();
+        } else if ("FULFILLED".equalsIgnoreCase(filter)) {
+            // Fulfilled history kept for 14 days (Option B)
+            return stockOrderRepository.findByStatusOrderByCreatedAtDesc(StockOrderStatus.FULFILLED).stream()
+                    .filter(o -> {
+                        Instant fulfilled = o.getFulfilledAt() != null ? o.getFulfilledAt() : o.getUpdatedAt();
+                        return !fulfilled.isBefore(fourteenDaysAgo);
+                    })
+                    .map(StockOrderDto.StockOrderResponse::from)
+                    .toList();
+        } else if ("UNCLAIMED".equalsIgnoreCase(filter) || "SHELF".equalsIgnoreCase(filter)) {
+            // Arrived at shop more than 7 days ago, customer didn't collect -> put to shelf for other customers
+            return stockOrderRepository.findByStatusOrderByCreatedAtDesc(StockOrderStatus.ARRIVED).stream()
+                    .filter(o -> {
+                        Instant arrived = o.getArrivedAt() != null ? o.getArrivedAt() : o.getCreatedAt();
+                        return arrived.isBefore(sevenDaysAgo);
+                    })
+                    .map(StockOrderDto.StockOrderResponse::from)
+                    .toList();
         } else if ("ALL".equalsIgnoreCase(filter)) {
             return stockOrderRepository.findAllByOrderByCreatedAtDesc()
                     .stream().map(StockOrderDto.StockOrderResponse::from).toList();
@@ -136,9 +171,7 @@ public class StockOrderService {
                 return stockOrderRepository.findByStatusOrderByCreatedAtDesc(st)
                         .stream().map(StockOrderDto.StockOrderResponse::from).toList();
             } catch (IllegalArgumentException e) {
-                return stockOrderRepository.findByStatusInOrderByCreatedAtDesc(
-                        List.of(StockOrderStatus.PENDING, StockOrderStatus.ARRIVED)
-                ).stream().map(StockOrderDto.StockOrderResponse::from).toList();
+                return list("ACTIVE");
             }
         }
     }

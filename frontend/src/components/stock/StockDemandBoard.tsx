@@ -27,11 +27,39 @@ interface StockDemandBoardProps {
   refreshTrigger?: number;
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isExpiredArrived(arrivedAt?: string | null, createdAt?: string): boolean {
+  const d = arrivedAt || createdAt;
+  if (!d) return false;
+  return Date.now() - new Date(d).getTime() > SEVEN_DAYS_MS;
+}
+
+function isExpiredFulfilled(fulfilledAt?: string | null, updatedAt?: string): boolean {
+  const d = fulfilledAt || updatedAt;
+  if (!d) return false;
+  return Date.now() - new Date(d).getTime() > FOURTEEN_DAYS_MS;
+}
+
+function formatArrivalIndicator(arrivedAt?: string | null, createdAt?: string): string {
+  const d = arrivedAt || createdAt;
+  if (!d) return "Arrived today";
+  const diffMs = Date.now() - new Date(d).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "Arrived today";
+  if (diffDays === 1) return "Arrived 1 day ago";
+  if (diffDays >= 5 && diffDays < 7) {
+    return `Arrived ${diffDays} days ago (${7 - diffDays}d left)`;
+  }
+  return `Arrived ${diffDays} days ago`;
+}
+
 export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: StockDemandBoardProps) {
   const [orders, setOrders] = useState<StockOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"ACTIVE" | "PENDING" | "ARRIVED" | "FULFILLED">("ACTIVE");
+  const [activeTab, setActiveTab] = useState<"ACTIVE" | "PENDING" | "ARRIVED" | "UNCLAIMED" | "FULFILLED">("ACTIVE");
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [copiedWholesale, setCopiedWholesale] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -39,9 +67,7 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Fetch both active and fulfilled
-      const filter = activeTab === "FULFILLED" ? "FULFILLED" : "ALL";
-      const data = await api<StockOrder[]>(`/stock-orders?status=${filter}`);
+      const data = await api<StockOrder[]>(`/stock-orders?status=ALL`);
       setOrders(data);
     } catch (err) {
       console.error("Failed to load stock orders", err);
@@ -136,13 +162,20 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   const filteredOrders = useMemo(() => {
     let list = orders;
     if (activeTab === "ACTIVE") {
-      list = list.filter((o) => o.status === "PENDING" || o.status === "ARRIVED");
+      // Pending orders (never expire) + Arrived within 7 days
+      list = list.filter((o) => o.status === "PENDING" || (o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt)));
     } else if (activeTab === "PENDING") {
+      // Waiting stock only (never expire)
       list = list.filter((o) => o.status === "PENDING");
     } else if (activeTab === "ARRIVED") {
-      list = list.filter((o) => o.status === "ARRIVED");
+      // Arrived in store within 7 days
+      list = list.filter((o) => o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt));
+    } else if (activeTab === "UNCLAIMED") {
+      // Arrived over 7 days ago and uncollected -> put on shelf for other customers
+      list = list.filter((o) => o.status === "ARRIVED" && isExpiredArrived(o.arrivedAt, o.createdAt));
     } else if (activeTab === "FULFILLED") {
-      list = list.filter((o) => o.status === "FULFILLED");
+      // Fulfilled history within 14 days (Option B)
+      list = list.filter((o) => o.status === "FULFILLED" && !isExpiredFulfilled(o.fulfilledAt, o.updatedAt));
     }
 
     if (search.trim()) {
@@ -150,8 +183,8 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
       list = list.filter(
         (o) =>
           o.orderCode.toLowerCase().includes(q) ||
-          o.customerName.toLowerCase().includes(q) ||
-          o.customerMobile.includes(q) ||
+          o.customerName?.toLowerCase().includes(q) ||
+          (o.customerMobile && o.customerMobile.includes(q)) ||
           o.itemDetails.toLowerCase().includes(q)
       );
     }
@@ -159,8 +192,10 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   }, [orders, activeTab, search]);
 
   const pendingCount = orders.filter((o) => o.status === "PENDING").length;
-  const arrivedCount = orders.filter((o) => o.status === "ARRIVED").length;
-  const activeCount = pendingCount + arrivedCount;
+  const arrivedActiveCount = orders.filter((o) => o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt)).length;
+  const activeCount = pendingCount + arrivedActiveCount;
+  const unclaimedCount = orders.filter((o) => o.status === "ARRIVED" && isExpiredArrived(o.arrivedAt, o.createdAt)).length;
+  const fulfilledCount = orders.filter((o) => o.status === "FULFILLED" && !isExpiredFulfilled(o.fulfilledAt, o.updatedAt)).length;
 
   return (
     <section className="premium-card p-4 sm:p-5">
@@ -250,7 +285,20 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >
-            📦 In Store ({arrivedCount})
+            📦 In Store ({arrivedActiveCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("UNCLAIMED")}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "UNCLAIMED"
+                ? "bg-orange-600 text-white shadow-sm"
+                : unclaimedCount > 0
+                ? "bg-orange-50 text-orange-700 hover:bg-orange-100 font-bold"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Unclaimed Shelf ({unclaimedCount})
           </button>
           <button
             type="button"
@@ -261,7 +309,7 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >
-            History (Fulfilled)
+            History 14d ({fulfilledCount})
           </button>
         </div>
 
@@ -277,6 +325,12 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
           />
         </div>
       </div>
+
+      {activeTab === "UNCLAIMED" && (
+        <div className="mt-2.5 rounded-xl border border-orange-200 bg-orange-50/70 p-2.5 text-xs text-orange-800">
+          💡 <strong>Shop Shelf Stock:</strong> These items arrived over 7 days ago and were not collected by the customer. They are released to the shop shelf to sell to other walk-in customers.
+        </div>
+      )}
 
       {/* Orders List */}
       <div className="mt-3 space-y-2.5">
@@ -323,12 +377,21 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
                     {/* Status Badge */}
                     {isPending && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                        <Clock className="h-3 w-3" /> WAITING STOCK
+                        <Clock className="h-3 w-3" /> WAITING WHOLESALE
                       </span>
                     )}
                     {isArrived && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 animate-pulse">
-                        <Package className="h-3 w-3" /> IN STORE (READY)
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          isExpiredArrived(order.arrivedAt, order.createdAt)
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        <Package className="h-3 w-3" />
+                        {isExpiredArrived(order.arrivedAt, order.createdAt)
+                          ? `ON SHELF · ${formatArrivalIndicator(order.arrivedAt, order.createdAt)}`
+                          : `IN STORE · ${formatArrivalIndicator(order.arrivedAt, order.createdAt)}`}
                       </span>
                     )}
                     {isFulfilled && (
