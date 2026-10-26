@@ -27,7 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, API_URL, getAccessToken } from "@/lib/api";
+import { api, getAccessToken } from "@/lib/api";
 import { printTicketReceipt } from "@/lib/print";
 import {
   DetailedPayment,

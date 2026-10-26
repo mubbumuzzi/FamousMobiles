@@ -2,11 +2,25 @@ import {
   initStorage,
   getCachedAccessToken,
   getCachedRefreshToken,
+  getCachedServerUrl,
   storeTokens,
   removeAuthData,
 } from "./storage";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.13:8080/api";
+
+export function getApiUrl(): string {
+  if (typeof window !== "undefined") {
+    const custom = getCachedServerUrl();
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, "");
+    }
+  }
+  return DEFAULT_API_URL.replace(/\/+$/, "");
+}
+
+// Fallback constant for legacy imports
+const API_URL = DEFAULT_API_URL;
 
 export async function setTokens(access: string, refresh: string): Promise<void> {
   await storeTokens(access, refresh);
@@ -58,7 +72,7 @@ export async function refreshAccessToken(): Promise<boolean> {
       const currentRefresh = getCachedRefreshToken();
       if (!currentRefresh) return false;
 
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const res = await fetch(`${getApiUrl()}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken: currentRefresh }),
@@ -86,7 +100,7 @@ export async function logoutUser(): Promise<void> {
   const currentRefresh = getCachedRefreshToken();
   if (currentRefresh) {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      await fetch(`${getApiUrl()}/auth/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken: currentRefresh }),
@@ -103,6 +117,7 @@ export async function logoutUser(): Promise<void> {
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   await loadTokens();
+  const url = getApiUrl();
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -116,10 +131,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    res = await fetch(`${url}${path}`, { ...options, headers });
   } catch {
     throw new Error(
-      `Cannot reach the server at ${API_URL}. Start the backend with: ./scripts/start-backend.sh`
+      `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
     );
   }
 
@@ -132,10 +147,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         headers.set("Authorization", `Bearer ${newToken}`);
       }
       try {
-        res = await fetch(`${API_URL}${path}`, { ...options, headers });
+        res = await fetch(`${url}${path}`, { ...options, headers });
       } catch {
         throw new Error(
-          `Cannot reach the server at ${API_URL}. Start the backend with: ./scripts/start-backend.sh`
+          `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
         );
       }
     }
@@ -158,12 +173,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 
 export async function apiPublic<T>(path: string): Promise<T> {
+  const url = getApiUrl();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`);
+    res = await fetch(`${url}${path}`);
   } catch {
     throw new Error(
-      `Cannot reach the server at ${API_URL}. Start the backend with: ./scripts/start-backend.sh`
+      `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
     );
   }
   if (!res.ok) {

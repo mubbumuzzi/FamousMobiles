@@ -4,25 +4,29 @@ import { Preferences } from "@capacitor/preferences";
 let memAccess: string | null = null;
 let memRefresh: string | null = null;
 let memUser: string | null = null;
+let memServerUrl: string | null = null;
 let initialized = false;
 
 export async function initStorage(): Promise<void> {
   if (initialized) return;
   try {
-    const [acc, ref, usr] = await Promise.all([
+    const [acc, ref, usr, srv] = await Promise.all([
       Preferences.get({ key: "fm_access" }),
       Preferences.get({ key: "fm_refresh" }),
       Preferences.get({ key: "fm_user" }),
+      Preferences.get({ key: "fm_server_url" }),
     ]);
 
     memAccess = acc.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_access") : null);
     memRefresh = ref.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_refresh") : null);
     memUser = usr.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_user") : null);
+    memServerUrl = srv.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_server_url") : null);
   } catch {
     if (typeof window !== "undefined") {
       memAccess = localStorage.getItem("fm_access");
       memRefresh = localStorage.getItem("fm_refresh");
       memUser = localStorage.getItem("fm_user");
+      memServerUrl = localStorage.getItem("fm_server_url");
     }
   }
   initialized = true;
@@ -47,6 +51,25 @@ export function getCachedUser(): string | null {
     memUser = localStorage.getItem("fm_user");
   }
   return memUser;
+}
+
+export function getCachedServerUrl(): string | null {
+  if (!memServerUrl && typeof window !== "undefined") {
+    memServerUrl = localStorage.getItem("fm_server_url");
+  }
+  return memServerUrl;
+}
+
+export async function storeServerUrl(url: string): Promise<void> {
+  memServerUrl = url;
+  if (typeof window !== "undefined") {
+    localStorage.setItem("fm_server_url", url);
+  }
+  try {
+    await Preferences.set({ key: "fm_server_url", value: url });
+  } catch (err) {
+    console.warn("Preferences.set server url error:", err);
+  }
 }
 
 export async function storeTokens(access: string, refresh: string): Promise<void> {
