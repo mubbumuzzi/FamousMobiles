@@ -63,7 +63,7 @@ export default function SearchPage() {
             <div>
               <h2 className="mb-2 font-semibold">Tickets ({results.tickets.length})</h2>
               {results.tickets.map((t) => (
-                <Link key={t.id} href={`/tickets/${t.id}`}>
+                <Link key={t.id} href={`/tickets/view?id=${t.id}`}>
                   <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="grid gap-2 p-3 text-sm md:grid-cols-4">
                       <span className="font-medium text-blue-700">{t.trackingNumber}</span>
@@ -81,7 +81,7 @@ export default function SearchPage() {
             <div>
               <h2 className="mb-2 font-semibold">Customers ({results.customers.length})</h2>
               {results.customers.map((c) => (
-                <Link key={c.id} href={`/customers/${c.id}`}>
+                <Link key={c.id} href={`/customers/view?id=${c.id}`}>
                   <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="p-3 text-sm">
                       <p className="font-medium text-slate-900">{c.fullName}</p>

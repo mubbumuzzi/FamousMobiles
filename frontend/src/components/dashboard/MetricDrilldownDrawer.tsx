@@ -274,16 +274,14 @@ export function MetricDrilldownDrawer({
         }),
       });
 
-      // Open PDF receipt for immediate printing
+      // Open PDF receipt or download safely on mobile
       try {
         await printTicketReceipt(ticket.id);
-      } catch {
-        const token = getAccessToken();
-        const receiptUrl = `${API_URL}/tickets/${ticket.id}/receipt/pdf${token ? `?token=${encodeURIComponent(token)}` : ""}`;
-        window.open(receiptUrl, "_blank");
+      } catch (printErr) {
+        console.warn("Could not auto-open receipt:", printErr);
       }
 
-      setSuccessToast(`Delivered ${ticket.trackingNumber}! Receipt opened.`);
+      setSuccessToast(`Delivered ${ticket.trackingNumber}! Receipt downloaded.`);
       setTimeout(() => setSuccessToast(""), 3500);
       onTicketUpdated();
     } catch (err) {
@@ -502,7 +500,7 @@ export function MetricDrilldownDrawer({
                     <div>
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/tickets/${p.ticketId}`}
+                          href={`/tickets/view?id=${p.ticketId}`}
                           className="font-bold text-blue-600 hover:underline text-xs"
                         >
                           {p.trackingNumber}
@@ -564,7 +562,7 @@ export function MetricDrilldownDrawer({
                       <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Link
-                            href={`/tickets/${ticket.id}`}
+                            href={`/tickets/view?id=${ticket.id}`}
                             className="font-bold text-blue-600 hover:underline text-xs"
                           >
                             {ticket.trackingNumber}
@@ -745,7 +743,7 @@ export function MetricDrilldownDrawer({
                           )}
 
                           {/* View details */}
-                          <Link href={`/tickets/${ticket.id}`}>
+                          <Link href={`/tickets/view?id=${ticket.id}`}>
                             <Button variant="outline" size="sm" className="h-8 text-xs">
                               View
                             </Button>

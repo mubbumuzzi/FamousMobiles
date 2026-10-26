@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import CustomerDetailClient from "./CustomerDetailClient";
 
 export function generateStaticParams() {
@@ -5,5 +6,9 @@ export function generateStaticParams() {
 }
 
 export default function CustomerDetailPage() {
-  return <CustomerDetailClient />;
+  return (
+    <Suspense fallback={null}>
+      <CustomerDetailClient />
+    </Suspense>
+  );
 }

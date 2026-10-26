@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthGuard } from "@/hooks/useAuth";
@@ -11,7 +11,11 @@ import { Customer, Ticket } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles, getVipStatus, getWarrantyStatus, cn } from "@/lib/utils";
 
 export default function CustomerDetailClient() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const rawId = params?.id || searchParams.get("id");
+  const id = rawId && rawId !== "view" ? rawId : searchParams.get("id") || "";
+
   const { user, loading: authLoading } = useAuthGuard();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [repairs, setRepairs] = useState<Ticket[]>([]);
@@ -42,7 +46,7 @@ export default function CustomerDetailClient() {
         {repairs.map((t) => {
           const warranty = getWarrantyStatus(t);
           return (
-            <Link key={t.id} href={`/tickets/${t.id}`}>
+            <Link key={t.id} href={`/tickets/view?id=${t.id}`}>
               <Card className="mb-2 hover:border-blue-300 transition-all">
                 <CardContent className="flex items-center justify-between p-4">
                   <div>

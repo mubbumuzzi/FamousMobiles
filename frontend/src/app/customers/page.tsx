@@ -122,7 +122,7 @@ export default function CustomersPage() {
                   <p className="text-sm text-slate-600">{formatCustomerMobiles(c)}</p>
                   <p className="text-xs text-slate-500">{c.customerCode}</p>
                 </div>
-                <Link href={`/customers/${c.id}`} className="text-sm text-blue-600">History</Link>
+                <Link href={`/customers/view?id=${c.id}`} className="text-sm text-blue-600">History</Link>
               </CardContent>
             </Card>
           ))}

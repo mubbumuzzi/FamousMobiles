@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import TrackByIdClient from "./TrackByIdClient";
 
 export function generateStaticParams() {
@@ -5,5 +6,9 @@ export function generateStaticParams() {
 }
 
 export default function TrackByIdPage() {
-  return <TrackByIdClient />;
+  return (
+    <Suspense fallback={null}>
+      <TrackByIdClient />
+    </Suspense>
+  );
 }

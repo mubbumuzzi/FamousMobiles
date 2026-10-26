@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import TicketDetailClient from "./TicketDetailClient";
 
 export function generateStaticParams() {
@@ -5,5 +6,9 @@ export function generateStaticParams() {
 }
 
 export default function TicketDetailPage() {
-  return <TicketDetailClient />;
+  return (
+    <Suspense fallback={null}>
+      <TicketDetailClient />
+    </Suspense>
+  );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Smartphone } from "lucide-react";
 import { CustomerTrackingView } from "@/components/tracking/CustomerTrackingView";
 import { ShopTerms } from "@/components/ShopInfo";
@@ -10,7 +10,11 @@ import { PublicTracking } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TrackByIdClient() {
-  const { trackingId } = useParams<{ trackingId: string }>();
+  const params = useParams<{ trackingId: string }>();
+  const searchParams = useSearchParams();
+  const rawId = params?.trackingId || searchParams.get("trackingId") || searchParams.get("id");
+  const trackingId = rawId && rawId !== "view" ? rawId : searchParams.get("trackingId") || searchParams.get("id") || "";
+
   const [data, setData] = useState<PublicTracking | null>(null);
   const [error, setError] = useState("");
 
@@ -38,13 +42,17 @@ export default function TrackByIdClient() {
         {error && <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         {!data && !error && (
           <div className="space-y-3">
-            <Skeleton className="h-40 w-full rounded-2xl" />
-            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-48 w-full rounded-2xl" />
+            <Skeleton className="h-40 w-full rounded-2xl" />
           </div>
         )}
-        {data && <CustomerTrackingView data={data} />}
-        <ShopTerms className="mt-6" />
+        {data && (
+          <>
+            <CustomerTrackingView data={data} />
+            <ShopTerms />
+          </>
+        )}
       </main>
     </div>
   );

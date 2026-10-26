@@ -266,7 +266,7 @@ export default function NewTicketPage() {
           warrantyDays: Number(warrantyDays),
         }),
       });
-      router.push(`/tickets/${ticket.id}`);
+      router.push(`/tickets/view?id=${ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create ticket");
     } finally {

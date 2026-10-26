@@ -196,7 +196,7 @@ export default function TicketsPageContent() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((t) => (
-              <Link key={t.id} href={`/tickets/${t.id}`} className={cn("premium-card block p-4 transition-transform hover:-translate-y-0.5", isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200")}>
+              <Link key={t.id} href={`/tickets/view?id=${t.id}`} className={cn("premium-card block p-4 transition-transform hover:-translate-y-0.5", isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200")}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-bold text-blue-700">{t.trackingNumber}</p>
                   <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>

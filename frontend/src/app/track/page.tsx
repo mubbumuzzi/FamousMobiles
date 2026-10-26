@@ -31,7 +31,7 @@ export default function TrackPage() {
     try {
       const result = await apiPublic<PublicTracking>(`/public/track/${encodeURIComponent(num.trim())}`);
       setData(result);
-      if (id) router.replace(`/track/${id}`);
+      if (id) router.replace(`/track/view?trackingId=${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Not found");
     } finally {
@@ -124,7 +124,7 @@ export default function TrackPage() {
                   type="button"
                   onClick={() => {
                     setData(t);
-                    router.replace(`/track/${t.trackingNumber}`);
+                    router.replace(`/track/view?trackingId=${t.trackingNumber}`);
                   }}
                   className="w-full text-left premium-card p-4 hover:border-blue-400 hover:shadow-md transition-all flex items-center justify-between gap-3"
                 >

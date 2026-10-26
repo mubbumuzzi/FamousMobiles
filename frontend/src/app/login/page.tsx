@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Label } from "@/components/ui/input";
-import { setTokens, API_URL } from "@/lib/api";
+import { setTokens, loadTokens, getAccessToken, API_URL } from "@/lib/api";
 import { AuthResponse } from "@/lib/types";
 import { saveUser } from "@/hooks/useAuth";
 import { ShopTerms } from "@/components/ShopInfo";
@@ -16,6 +16,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function checkExistingAuth() {
+      await loadTokens();
+      if (getAccessToken()) {
+        router.replace("/dashboard");
+      }
+    }
+    checkExistingAuth();
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
@@ -31,7 +31,10 @@ const WARRANTY_OPTIONS = [
 ];
 
 export default function TicketDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const rawId = params?.id || searchParams.get("id");
+  const id = rawId && rawId !== "view" ? rawId : searchParams.get("id") || "";
   const { user, loading: authLoading } = useAuthGuard();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loadError, setLoadError] = useState("");

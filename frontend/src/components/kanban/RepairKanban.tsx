@@ -226,7 +226,7 @@ function KanbanCard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <Link
-              href={`/tickets/${ticket.id}`}
+              href={`/tickets/view?id=${ticket.id}`}
               className="text-base font-extrabold text-blue-700 hover:underline"
             >
               {ticket.trackingNumber}
@@ -283,7 +283,7 @@ function KanbanCard({
             ))}
           </select>
           <Link
-            href={`/tickets/${ticket.id}`}
+            href={`/tickets/view?id=${ticket.id}`}
             className="touch-target flex h-10 items-center justify-center rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all"
           >
             Workbench →
@@ -310,7 +310,7 @@ function KanbanCard({
       <div className="flex items-start gap-2">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
         <div className="min-w-0 flex-1">
-          <Link href={`/tickets/${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/tickets/view?id=${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
             {ticket.trackingNumber}
           </Link>
           <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{ticket.brand} {ticket.model}</p>
@@ -344,7 +344,7 @@ function KanbanCard({
               ))}
             </select>
             <Link
-              href={`/tickets/${ticket.id}`}
+              href={`/tickets/view?id=${ticket.id}`}
               className="touch-target flex items-center px-2 text-xs font-bold text-blue-600 hover:text-blue-800"
               onClick={(e) => e.stopPropagation()}
             >

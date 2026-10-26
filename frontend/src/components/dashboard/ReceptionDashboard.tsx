@@ -104,7 +104,7 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
           </div>
           <div className="space-y-2">
             {ready.slice(0, 5).map((t) => (
-              <Link key={t.id} href={`/tickets/${t.id}`} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 transition-colors hover:bg-emerald-100">
+              <Link key={t.id} href={`/tickets/view?id=${t.id}`} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 transition-colors hover:bg-emerald-100">
                 <div>
                   <p className="font-semibold text-slate-900">{t.customer.fullName}</p>
                   <p className="text-xs text-slate-600">{t.brand} {t.model} · {t.trackingNumber}</p>
@@ -130,7 +130,7 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
           </div>
           <div className="space-y-2">
             {overdue.slice(0, 5).map((t) => (
-              <Link key={t.id} href={`/tickets/${t.id}`} className="flex items-center justify-between rounded-xl bg-red-50 px-3 py-2.5 hover:bg-red-100">
+              <Link key={t.id} href={`/tickets/view?id=${t.id}`} className="flex items-center justify-between rounded-xl bg-red-50 px-3 py-2.5 hover:bg-red-100">
                 <div>
                   <p className="font-semibold text-slate-900">{t.trackingNumber}</p>
                   <p className="text-xs text-slate-600">{formatStatus(t.status)} · {t.customer.fullName}</p>
