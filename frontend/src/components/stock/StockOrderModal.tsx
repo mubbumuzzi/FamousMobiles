@@ -14,14 +14,8 @@ interface StockOrderModalProps {
 }
 
 const COMMON_ACCESSORIES = [
-  "Watch Charger",
-  "15 Pro Max Case",
-  "S25 Edge Fancy Case",
-  "Matte Glass",
-  "Lens Protector",
-  "Type-C Cable",
-  "Fast Adapter",
-  "AirPods Case",
+  "Backcover",
+  "Glass",
 ];
 
 const ADVANCE_PRESETS = [0, 100, 200, 500];
