@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus, Phone, MessageCircle } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -195,20 +195,69 @@ export default function TicketsPageContent() {
           <EmptyState icon={Plus} title="No repair tickets yet" description="Create your first repair ticket to get started." actionLabel="New Repair" onAction={() => (window.location.href = "/tickets/new")} />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((t) => (
-              <Link key={t.id} href={`/tickets/view?id=${t.id}`} className={cn("premium-card block p-4 transition-transform hover:-translate-y-0.5", isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200")}>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-blue-700">{t.trackingNumber}</p>
-                  <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+            {filtered.map((t) => {
+              const cleanMobile = t.customer?.mobile ? t.customer.mobile.replace(/\D/g, "").slice(-10) : "";
+              const waText = encodeURIComponent(
+                `Hello ${t.customer?.fullName || "Customer"}, regarding your ${t.brand} ${t.model} (${t.trackingNumber}) at Famous Mobiles:`
+              );
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => router.push(`/tickets/view?id=${t.id}`)}
+                  className={cn(
+                    "group relative premium-card block p-4 cursor-pointer touch-active active:scale-[0.98] transition-all hover:shadow-md",
+                    isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
+                    <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+                  </div>
+
+                  <p className="mt-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    {t.brand} {t.model}
+                  </p>
+
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{t.customer.fullName}</p>
+                      {cleanMobile && (
+                        <p className="text-xs text-slate-400 font-mono">{cleanMobile}</p>
+                      )}
+                    </div>
+
+                    {/* 1-Tap Direct Call & WhatsApp Actions */}
+                    {cleanMobile && (
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <a
+                          href={`tel:${cleanMobile}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 touch-active transition-all"
+                          title={`Call ${t.customer.fullName}`}
+                        >
+                          <Phone className="h-4 w-4" />
+                        </a>
+                        <a
+                          href={`https://wa.me/91${cleanMobile}?text=${waText}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 touch-active transition-all"
+                          title="Chat on WhatsApp"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs text-slate-500">
+                    <span>{t.assignedTechnicianName ?? "Unassigned"}</span>
+                    <span className={cn("font-bold text-sm", Number(t.balanceAmount) > 0 ? "text-amber-700" : "text-emerald-700")}>
+                      {formatCurrency(Number(t.balanceAmount))}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{t.brand} {t.model}</p>
-                <p className="text-sm text-slate-600">{t.customer.fullName}</p>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
-                  <span className="text-slate-500">{t.assignedTechnicianName ?? "Unassigned"}</span>
-                  <span className="font-semibold">{formatCurrency(Number(t.balanceAmount))}</span>
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

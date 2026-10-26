@@ -2,6 +2,7 @@
 
 import { Wrench, ShoppingBag, X, ArrowRight, ShieldCheck, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 interface IntakeForkModalProps {
   isOpen: boolean;
@@ -11,6 +12,9 @@ interface IntakeForkModalProps {
 
 export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeForkModalProps) {
   const router = useRouter();
+
+  // Android hardware back button handler
+  useAndroidBackButton(onClose, isOpen, 15);
 
   if (!isOpen) return null;
 
@@ -25,17 +29,20 @@ export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeF
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 sheet-backdrop transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl transition-all sm:p-7">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      {/* Slide-up Bottom Sheet on Mobile / Centered Card on Desktop */}
+      <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-5 pb-safe sm:p-7 shadow-2xl transition-all max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-fade-in sheet-container">
+        {/* Mobile Drag Handle */}
+        <div className="sm:hidden sheet-handle" />
+
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
           <div>
             <h3 className="text-xl font-bold text-slate-900">New Customer Intake</h3>
             <p className="text-xs text-slate-500 mt-0.5">What are you creating for this customer?</p>
@@ -43,18 +50,18 @@ export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeF
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors touch-target flex items-center justify-center"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4">
+        <div className="mt-4 sm:mt-5 grid grid-cols-1 gap-3.5 sm:gap-4">
           {/* Option 1: Mobile / Device Repair */}
           <button
             type="button"
             onClick={handleSelectRepair}
-            className="group relative flex items-start gap-4 rounded-2xl border-2 border-slate-150 bg-gradient-to-br from-blue-50/50 via-white to-slate-50/30 p-5 text-left transition-all hover:border-blue-500 hover:shadow-md hover:bg-blue-50/30 active:scale-[0.99]"
+            className="group relative flex items-start gap-4 rounded-2xl border-2 border-slate-150 bg-gradient-to-br from-blue-50/50 via-white to-slate-50/30 p-4 sm:p-5 text-left transition-all hover:border-blue-500 hover:shadow-md hover:bg-blue-50/30 touch-active"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
               <Wrench className="h-6 w-6" />
@@ -81,7 +88,7 @@ export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeF
           <button
             type="button"
             onClick={handleSelectStock}
-            className="group relative flex items-start gap-4 rounded-2xl border-2 border-slate-150 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/30 p-5 text-left transition-all hover:border-emerald-500 hover:shadow-md hover:bg-emerald-50/30 active:scale-[0.99]"
+            className="group relative flex items-start gap-4 rounded-2xl border-2 border-slate-150 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/30 p-4 sm:p-5 text-left transition-all hover:border-emerald-500 hover:shadow-md hover:bg-emerald-50/30 touch-active"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
               <ShoppingBag className="h-6 w-6" />

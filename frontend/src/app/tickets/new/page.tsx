@@ -15,6 +15,7 @@ import { DEVICE_BRANDS } from "@/lib/device-brands";
 import { ISSUE_TEMPLATES } from "@/lib/issue-templates";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { api } from "@/lib/api";
 import { ACCESSORIES, CONDITIONS, Customer, DeviceType, Ticket } from "@/lib/types";
 import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles, getVipStatus, cn } from "@/lib/utils";
@@ -35,6 +36,15 @@ export default function NewTicketPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
   const [step, setStep] = useState(0);
+
+  // Intercept Android hardware back button: step back in wizard before leaving page
+  useAndroidBackButton(() => {
+    if (step > 0) {
+      setStep((s) => s - 1);
+      return true;
+    }
+    return false;
+  }, true, 10);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -613,7 +623,16 @@ export default function NewTicketPage() {
               <Field><Label>Brand *</Label><SearchableSelect placeholder="Search brand..." value={brand} onChange={setBrand} options={DEVICE_BRANDS} /></Field>
               <Field><Label>Model *</Label><Input placeholder="e.g. A14" value={model} onChange={(e) => setModel(e.target.value)} /></Field>
               <Field><Label>Color</Label><Input value={color} onChange={(e) => setColor(e.target.value)} /></Field>
-              <Field><Label>IMEI</Label><Input value={imei} onChange={(e) => setImei(e.target.value)} /></Field>
+              <Field>
+                <Label>IMEI</Label>
+                <Input
+                  inputMode="numeric"
+                  maxLength={16}
+                  placeholder="15-digit IMEI (optional)"
+                  value={imei}
+                  onChange={(e) => setImei(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                />
+              </Field>
             </div>
           )}
 
@@ -873,14 +892,15 @@ export default function NewTicketPage() {
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         </div>
 
-        <div className="flex gap-3">
+        {/* Sticky Mobile-first Action Bar */}
+        <div className="sticky bottom-0 -mx-4 -mb-5 sm:mx-0 sm:mb-0 sm:relative sm:bottom-auto border-t border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 sm:p-0 pb-safe sm:pb-0 z-30 shadow-lg sm:shadow-none flex gap-3">
           {step > 0 && (
-            <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => setStep((s) => s - 1)}>
+            <Button type="button" variant="outline" size="lg" className="flex-1 touch-active" onClick={() => setStep((s) => s - 1)}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <Button type="button" size="lg" className="flex-1" disabled={!canNext()} onClick={handleNext}>
+            <Button type="button" size="lg" className="flex-1 touch-active" disabled={!canNext()} onClick={handleNext}>
               {step === 0 && selectedPastTicketId ? (
                 <>Skip to Issue <ArrowRight className="h-4 w-4" /></>
               ) : (
@@ -888,7 +908,7 @@ export default function NewTicketPage() {
               )}
             </Button>
           ) : (
-            <Button type="button" size="lg" className="flex-1" disabled={loading} onClick={submit}>
+            <Button type="button" size="lg" className="flex-1 touch-active bg-emerald-600 hover:bg-emerald-700" disabled={loading} onClick={submit}>
               {loading ? "Creating..." : <><Check className="h-4 w-4" /> Create & Print Receipt</>}
             </Button>
           )}

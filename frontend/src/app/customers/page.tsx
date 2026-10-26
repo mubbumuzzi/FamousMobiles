@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Phone, MessageCircle, ChevronRight, UserPlus } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +15,7 @@ import { Customer } from "@/lib/types";
 import { formatCustomerMobiles } from "@/lib/utils";
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
@@ -113,19 +116,65 @@ export default function CustomersPage() {
             </CardContent>
           </Card>
         )}
-        <div className="space-y-2">
-          {customers.map((c) => (
-            <Card key={c.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-medium text-slate-900">{c.fullName}</p>
-                  <p className="text-sm text-slate-600">{formatCustomerMobiles(c)}</p>
-                  <p className="text-xs text-slate-500">{c.customerCode}</p>
+        <div className="space-y-2.5">
+          {customers.map((c) => {
+            const cleanMobile = c.mobile ? c.mobile.replace(/\D/g, "").slice(-10) : "";
+            const waText = encodeURIComponent(
+              `Hello ${c.fullName}, contacting you from Famous Mobiles:`
+            );
+            return (
+              <div
+                key={c.id}
+                onClick={() => router.push(`/customers/view?id=${c.id}`)}
+                className="group relative rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md touch-active active:scale-[0.98] cursor-pointer transition-all flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                      {c.fullName}
+                    </p>
+                    <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-600">
+                      {c.customerCode}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-500 font-medium">
+                    {formatCustomerMobiles(c)}
+                  </p>
+                  {c.address && (
+                    <p className="mt-0.5 text-[11px] text-slate-400 truncate">
+                      {c.address}
+                    </p>
+                  )}
                 </div>
-                <Link href={`/customers/view?id=${c.id}`} className="text-sm text-blue-600">History</Link>
-              </CardContent>
-            </Card>
-          ))}
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* 1-Tap Direct Call & WhatsApp */}
+                  {cleanMobile && (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={`tel:${cleanMobile}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 touch-active transition-all"
+                        title={`Call ${c.fullName}`}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      <a
+                        href={`https://wa.me/91${cleanMobile}?text=${waText}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 touch-active transition-all"
+                        title="Chat on WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </a>
+                    </div>
+                  )}
+
+                  <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </StaffLayout>

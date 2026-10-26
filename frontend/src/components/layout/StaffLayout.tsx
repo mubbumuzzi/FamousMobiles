@@ -19,6 +19,7 @@ import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
 import { IntakeForkModal } from "@/components/stock/IntakeForkModal";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -36,6 +37,10 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
   const [isForkOpen, setIsForkOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
+  // Android hardware back button handler: close modal if open
+  useAndroidBackButton(() => setIsStockModalOpen(false), isStockModalOpen, 20);
+  useAndroidBackButton(() => setIsForkOpen(false), isForkOpen, 15);
+
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && role !== "ADMIN") return false;
     return true;
@@ -50,7 +55,7 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-0">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md shadow-sm">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md shadow-2xs pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="flex items-center gap-2.5 font-bold text-slate-900 transition-opacity hover:opacity-90">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl gradient-header text-white shadow-md">
@@ -97,34 +102,50 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
         <main className="min-w-0 flex-1">{children}</main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
-        <div className="flex justify-around py-1.5">
-          {visibleNavItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-1 text-[11px] font-medium touch-target min-w-[56px]",
-                pathname.startsWith(href) ? "text-blue-700 font-bold" : "text-slate-500"
-              )}
-            >
-              <Icon className={cn("h-5 w-5", pathname.startsWith(href) && "text-blue-600")} />
-              <span>{label}</span>
-            </Link>
-          ))}
+      {/* Material 3 Mobile bottom navigation bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/90 bg-white/95 backdrop-blur-md md:hidden pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+        <div className="flex justify-around items-center px-1 py-1">
+          {visibleNavItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
+            const isActive = pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex flex-col items-center justify-center gap-0.5 py-1 px-1 touch-target min-w-[58px] touch-active"
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-full px-3.5 py-1 transition-all duration-200",
+                    isActive
+                      ? "bg-blue-100 text-blue-700 shadow-2xs"
+                      : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  <Icon className={cn("h-5 w-5", isActive ? "stroke-[2.5]" : "stroke-[1.75]")} />
+                </div>
+                <span
+                  className={cn(
+                    "text-[10.5px] tracking-tight transition-colors",
+                    isActive ? "font-bold text-blue-800" : "font-medium text-slate-500"
+                  )}
+                >
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
 
-      {/* FAB — Intake Fork Modal (Repair vs Order Stock) */}
+      {/* Elevated FAB — Intake Fork Modal (Repair vs Order Stock) */}
       {showFab && (
         <button
           type="button"
           onClick={() => setIsForkOpen(true)}
-          className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg transition-transform active:scale-95 hover:shadow-xl md:bottom-6 md:right-6"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-xl shadow-blue-600/30 touch-active hover:shadow-2xl md:bottom-6 md:right-6"
           aria-label="New Intake"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-6 w-6 stroke-[2.5]" />
         </button>
       )}
 
