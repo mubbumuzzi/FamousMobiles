@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     Preferences: {
       group: "famous_mobiles_secure",
     },

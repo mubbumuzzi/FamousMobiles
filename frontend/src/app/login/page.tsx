@@ -14,21 +14,21 @@ import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 const PRESET_SERVERS = [
   {
-    name: "Local Wi-Fi (Mac)",
-    url: "http://192.168.1.13:8080/api",
-    description: "Phone & Mac on same Wi-Fi network",
-    icon: Wifi,
-  },
-  {
-    name: "Production Cloud",
+    name: "Production Cloud (Live 24/7)",
     url: "http://13.140.146.12:8080/api",
-    description: "Cloud server (works anywhere, 4G/5G)",
+    description: "Connects anywhere (Wi-Fi or 4G/5G mobile data)",
     icon: Cloud,
   },
   {
-    name: "USB Debugging",
+    name: "Local Wi-Fi (Mac)",
+    url: "http://192.168.1.13:8080/api",
+    description: "Mac & phone on same Wi-Fi with ./scripts/start-backend.sh",
+    icon: Wifi,
+  },
+  {
+    name: "USB Debugging (adb reverse)",
     url: "http://localhost:8080/api",
-    description: "With: adb reverse tcp:8080 tcp:8080",
+    description: "USB cable with: adb reverse tcp:8080 tcp:8080",
     icon: Cable,
   },
 ];

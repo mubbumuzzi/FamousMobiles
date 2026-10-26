@@ -7,7 +7,7 @@ import {
   removeAuthData,
 } from "./storage";
 
-export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.13:8080/api";
+export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8080/api";
 
 export function getApiUrl(): string {
   if (typeof window !== "undefined") {
@@ -134,7 +134,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     res = await fetch(`${url}${path}`, { ...options, headers });
   } catch {
     throw new Error(
-      `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
+      `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
     );
   }
 
@@ -150,7 +150,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         res = await fetch(`${url}${path}`, { ...options, headers });
       } catch {
         throw new Error(
-          `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
+          `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
         );
       }
     }
@@ -179,7 +179,7 @@ export async function apiPublic<T>(path: string): Promise<T> {
     res = await fetch(`${url}${path}`);
   } catch {
     throw new Error(
-      `Cannot reach the server at ${url}. Start the backend with: ./scripts/start-backend.sh`
+      `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
     );
   }
   if (!res.ok) {
