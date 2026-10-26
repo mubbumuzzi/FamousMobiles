@@ -13,6 +13,7 @@ import {
   Smartphone,
   UserCog,
   Plus,
+  ShoppingBag,
 } from "lucide-react";
 import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
@@ -22,6 +23,7 @@ import { StockOrderModal } from "@/components/stock/StockOrderModal";
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/tickets", label: "Repairs", icon: Wrench },
+  { href: "/stock-orders", label: "Stock Demand", icon: ShoppingBag },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/search", label: "Search", icon: Search },
   { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
@@ -98,7 +100,7 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
         <div className="flex justify-around py-1.5">
-          {visibleNavItems.slice(0, 4).map(({ href, label, icon: Icon }) => (
+          {visibleNavItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
