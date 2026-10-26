@@ -7,4 +7,5 @@ node_modules/
 target/
 .next/
 *.log
+*.apk
 .DS_Store

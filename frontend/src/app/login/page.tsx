@@ -38,8 +38,8 @@ export default function LoginPage() {
         throw new Error(message);
       }
       const data: AuthResponse = await res.json();
-      setTokens(data.accessToken, data.refreshToken);
-      saveUser(data);
+      await setTokens(data.accessToken, data.refreshToken);
+      await saveUser(data);
       router.push("/dashboard");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";

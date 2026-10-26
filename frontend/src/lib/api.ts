@@ -1,39 +1,27 @@
+import {
+  initStorage,
+  getCachedAccessToken,
+  getCachedRefreshToken,
+  storeTokens,
+  removeAuthData,
+} from "./storage";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
-
-export function setTokens(access: string, refresh: string) {
-  accessToken = access;
-  refreshToken = refresh;
-  if (typeof window !== "undefined") {
-    localStorage.setItem("fm_access", access);
-    localStorage.setItem("fm_refresh", refresh);
-  }
+export async function setTokens(access: string, refresh: string): Promise<void> {
+  await storeTokens(access, refresh);
 }
 
-export function loadTokens() {
-  if (typeof window !== "undefined") {
-    accessToken = localStorage.getItem("fm_access");
-    refreshToken = localStorage.getItem("fm_refresh");
-  }
+export async function loadTokens(): Promise<void> {
+  await initStorage();
 }
 
-export function clearTokens() {
-  accessToken = null;
-  refreshToken = null;
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("fm_access");
-    localStorage.removeItem("fm_refresh");
-    localStorage.removeItem("fm_user");
-  }
+export async function clearTokens(): Promise<void> {
+  await removeAuthData();
 }
 
-export function getAccessToken() {
-  if (!accessToken && typeof window !== "undefined") {
-    accessToken = localStorage.getItem("fm_access");
-  }
-  return accessToken;
+export function getAccessToken(): string | null {
+  return getCachedAccessToken();
 }
 
 async function readErrorMessage(res: Response): Promise<string> {
@@ -56,32 +44,74 @@ function redirectToLogin() {
   }
 }
 
-async function refreshAccessToken(): Promise<boolean> {
-  loadTokens();
-  if (!refreshToken) return false;
-  const res = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  if (!res.ok) {
-    clearTokens();
-    return false;
+// Mutex to serialize concurrent refresh requests and avoid token rotation race conditions
+let refreshPromise: Promise<boolean> | null = null;
+
+export async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
   }
-  const data = await res.json();
-  setTokens(data.accessToken, data.refreshToken);
-  return true;
+
+  refreshPromise = (async () => {
+    try {
+      await loadTokens();
+      const currentRefresh = getCachedRefreshToken();
+      if (!currentRefresh) return false;
+
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: currentRefresh }),
+      });
+
+      if (!res.ok) {
+        await clearTokens();
+        return false;
+      }
+
+      const data = await res.json();
+      await setTokens(data.accessToken, data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+export async function logoutUser(): Promise<void> {
+  const currentRefresh = getCachedRefreshToken();
+  if (currentRefresh) {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: currentRefresh }),
+      });
+    } catch {
+      // Ignore network errors during logout
+    }
+  }
+  await clearTokens();
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  loadTokens();
+  await loadTokens();
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  const hadToken = Boolean(accessToken);
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
+
+  const token = getAccessToken();
+  const hadToken = Boolean(token);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   let res: Response;
@@ -93,10 +123,14 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     );
   }
 
-  if (refreshToken && hadToken && res.status === 401) {
+  // If token expired (401), trigger serialized refresh and retry once
+  if (hadToken && res.status === 401) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
-      headers.set("Authorization", `Bearer ${getAccessToken()}`);
+      const newToken = getAccessToken();
+      if (newToken) {
+        headers.set("Authorization", `Bearer ${newToken}`);
+      }
       try {
         res = await fetch(`${API_URL}${path}`, { ...options, headers });
       } catch {

@@ -13,7 +13,7 @@ import {
   UserCog,
   Plus,
 } from "lucide-react";
-import { clearTokens } from "@/lib/api";
+import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
 
 const navItems = [
@@ -33,9 +33,8 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
     return true;
   });
 
-  const logout = () => {
-    clearTokens();
-    router.push("/login");
+  const logout = async () => {
+    await logoutUser();
   };
 
   const isTicketDetail = /^\/tickets\/[a-zA-Z0-9_-]+$/.test(pathname);
