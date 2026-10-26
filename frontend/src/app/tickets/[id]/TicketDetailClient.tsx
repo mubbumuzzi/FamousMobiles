@@ -56,10 +56,10 @@ export default function TicketDetailPage() {
   const [editingEstimate, setEditingEstimate] = useState(false);
   const [newEstimateCost, setNewEstimateCost] = useState("");
   const [newEstimateRemarks, setNewEstimateRemarks] = useState("");
-  const [newEstimateWarrantyDays, setNewEstimateWarrantyDays] = useState<number>(30);
+  const [newEstimateWarrantyDays, setNewEstimateWarrantyDays] = useState<number>(0);
   const [savingEstimate, setSavingEstimate] = useState(false);
   const [approvalEstimateCost, setApprovalEstimateCost] = useState("");
-  const [approvalWarrantyDays, setApprovalWarrantyDays] = useState<number>(30);
+  const [approvalWarrantyDays, setApprovalWarrantyDays] = useState<number>(0);
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -417,7 +417,7 @@ export default function TicketDetailPage() {
                 onClick={() => {
                   setNewEstimateCost(ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "");
                   setNewEstimateRemarks("");
-                  setNewEstimateWarrantyDays(ticket.warrantyDays ?? 30);
+                  setNewEstimateWarrantyDays(ticket.warrantyDays ?? 0);
                   setEditingEstimate(true);
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
@@ -1172,7 +1172,7 @@ export default function TicketDetailPage() {
               onClick={() => {
                 setNewEstimateCost(ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "");
                 setNewEstimateRemarks("");
-                setNewEstimateWarrantyDays(ticket.warrantyDays ?? 30);
+                setNewEstimateWarrantyDays(ticket.warrantyDays ?? 0);
                 setEditingEstimate(true);
                 setTimeout(() => {
                   estimateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });

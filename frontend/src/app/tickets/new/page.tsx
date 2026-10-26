@@ -56,7 +56,7 @@ export default function NewTicketPage() {
   const [quoteAfterDiagnosis, setQuoteAfterDiagnosis] = useState(false);
   const [advancePaid, setAdvancePaid] = useState("");
   const [edd, setEdd] = useState("");
-  const [warrantyDays, setWarrantyDays] = useState(30);
+  const [warrantyDays, setWarrantyDays] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
