@@ -109,8 +109,8 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
     setError("");
 
     const cleanMobile = mobile.replace(/\s+/g, "");
-    if (!isExact10DigitMobile(cleanMobile)) {
-      setError("Please enter a valid 10-digit mobile number.");
+    if (cleanMobile && !isExact10DigitMobile(cleanMobile)) {
+      setError("Please enter a valid 10-digit mobile number, or leave empty for shop stock.");
       return;
     }
 
@@ -124,10 +124,11 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
       const advNum = Number(advanceAmount) || 0;
       const expNum = expectedPrice ? Number(expectedPrice) : undefined;
 
+      const fallbackName = cleanMobile ? `Customer ${cleanMobile}` : "Shop Stock";
       const payload = {
         customerId: matchedCustomer?.id,
-        customerName: customerName.trim() || `Customer ${cleanMobile}`,
-        customerMobile: cleanMobile,
+        customerName: customerName.trim() || fallbackName,
+        customerMobile: cleanMobile || undefined,
         itemDetails: itemDetails.trim(),
         quantity: quantity > 0 ? quantity : 1,
         advanceAmount: advNum,
@@ -223,16 +224,18 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
           {/* Customer Mobile & Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-slate-500" /> Customer Mobile *
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-slate-500" /> Customer Mobile
+                </label>
+                <span className="text-[11px] font-normal text-slate-400">Optional (for shop)</span>
+              </div>
               <input
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(cleanMobileInput(e.target.value))}
-                placeholder="10-digit mobile"
+                placeholder="10-digit mobile (or leave empty)"
                 maxLength={10}
-                required
                 className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
               {matchedCustomer && (
@@ -243,14 +246,26 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-slate-500" /> Customer Name
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-slate-500" /> Customer / Recipient
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomerName("Shop Stock");
+                    setMobile("");
+                  }}
+                  className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                >
+                  Set as &quot;Shop Stock&quot;
+                </button>
+              </div>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Name or nickname"
+                placeholder="e.g. Shop Stock or Customer Name"
                 className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>

@@ -45,41 +45,44 @@ public class StockOrderService {
 
     @Transactional
     public StockOrderDto.StockOrderResponse create(StockOrderDto.CreateStockOrderRequest req) {
-        if (req.customerMobile() == null || req.customerMobile().trim().length() < 10) {
-            throw new BadRequestException("A valid 10-digit mobile number is required");
-        }
         if (req.itemDetails() == null || req.itemDetails().trim().isEmpty()) {
             throw new BadRequestException("Item / accessory details are required");
         }
 
-        String rawMobile = req.customerMobile().trim().replaceAll("\\s+", "");
-        String cleanMobile = rawMobile.length() > 10 ? rawMobile.substring(rawMobile.length() - 10) : rawMobile;
-
-        // Auto-link or auto-create Customer
+        String cleanMobile = null;
         Customer customer = null;
-        if (req.customerId() != null) {
-            customer = customerRepository.findById(req.customerId()).orElse(null);
-        }
-        if (customer == null) {
-            var phoneOpt = customerRepository.findPhoneByMobile(cleanMobile);
-            if (phoneOpt.isPresent()) {
-                customer = phoneOpt.get().getCustomer();
-            } else {
-                String name = req.customerName() != null && !req.customerName().isBlank() ? req.customerName().trim() : "Customer " + cleanMobile;
-                if (name.length() < 4) {
-                    name = name + " Cust";
+
+        if (req.customerMobile() != null && !req.customerMobile().trim().isEmpty()) {
+            String rawMobile = req.customerMobile().trim().replaceAll("\\s+", "");
+            cleanMobile = rawMobile.length() > 10 ? rawMobile.substring(rawMobile.length() - 10) : rawMobile;
+
+            // Auto-link or auto-create Customer
+            if (req.customerId() != null) {
+                customer = customerRepository.findById(req.customerId()).orElse(null);
+            }
+            if (customer == null && !cleanMobile.isEmpty()) {
+                var phoneOpt = customerRepository.findPhoneByMobile(cleanMobile);
+                if (phoneOpt.isPresent()) {
+                    customer = phoneOpt.get().getCustomer();
+                } else if (cleanMobile.length() >= 10) {
+                    String name = req.customerName() != null && !req.customerName().isBlank()
+                            ? req.customerName().trim()
+                            : "Customer " + cleanMobile;
+                    if (name.length() < 4) {
+                        name = name + " Cust";
+                    }
+                    var custResp = customerService.create(new CustomerDto.CustomerRequest(
+                            name,
+                            List.of(new CustomerDto.MobileEntry(cleanMobile, "Primary", true)),
+                            cleanMobile,
+                            null,
+                            null,
+                            null,
+                            null,
+                            "Auto-created from stock demand order"
+                    ));
+                    customer = customerRepository.findById(custResp.id()).orElse(null);
                 }
-                var custResp = customerService.create(new CustomerDto.CustomerRequest(
-                        name,
-                        List.of(new CustomerDto.MobileEntry(cleanMobile, "Primary", true)),
-                        cleanMobile,
-                        null,
-                        null,
-                        null,
-                        null,
-                        "Auto-created from stock demand order"
-                ));
-                customer = customerRepository.findById(custResp.id()).orElse(null);
             }
         }
 
@@ -90,12 +93,19 @@ public class StockOrderService {
             // allow service calls if running without user context in tests
         }
 
+        String displayName = "Shop Stock";
+        if (req.customerName() != null && !req.customerName().isBlank()) {
+            displayName = req.customerName().trim();
+        } else if (customer != null) {
+            displayName = customer.getFullName();
+        } else if (cleanMobile != null && !cleanMobile.isBlank()) {
+            displayName = "Customer " + cleanMobile;
+        }
+
         StockOrder order = new StockOrder();
         order.setOrderCode(trackingNumberService.generateStockOrderCode());
         order.setCustomer(customer);
-        order.setCustomerName(req.customerName() != null && !req.customerName().isBlank()
-                ? req.customerName().trim()
-                : (customer != null ? customer.getFullName() : "Customer " + cleanMobile));
+        order.setCustomerName(displayName);
         order.setCustomerMobile(cleanMobile);
         order.setItemDetails(req.itemDetails().trim());
         order.setQuantity(req.quantity() != null && req.quantity() > 0 ? req.quantity() : 1);

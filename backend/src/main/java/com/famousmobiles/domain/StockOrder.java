@@ -25,10 +25,10 @@ public class StockOrder extends BaseEntity {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "customer_name", nullable = false, length = 150)
+    @Column(name = "customer_name", length = 150)
     private String customerName;
 
-    @Column(name = "customer_mobile", nullable = false, length = 20)
+    @Column(name = "customer_mobile", length = 20)
     private String customerMobile;
 
     @Column(name = "item_details", nullable = false, columnDefinition = "TEXT")

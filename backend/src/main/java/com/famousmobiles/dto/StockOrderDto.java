@@ -16,7 +16,7 @@ public final class StockOrderDto {
     public record CreateStockOrderRequest(
             UUID customerId,
             String customerName,
-            @NotBlank(message = "Customer mobile is required") String customerMobile,
+            String customerMobile,
             @NotBlank(message = "Item details are required") String itemDetails,
             Integer quantity,
             BigDecimal advanceAmount,

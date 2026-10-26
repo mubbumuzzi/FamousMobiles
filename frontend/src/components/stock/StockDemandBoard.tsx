@@ -355,12 +355,18 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
                   {/* Customer & Payment details */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
                     <span className="font-semibold text-slate-800">{order.customerName}</span>
-                    <a
-                      href={`tel:${order.customerMobile}`}
-                      className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium"
-                    >
-                      <Phone className="h-3 w-3" /> {order.customerMobile}
-                    </a>
+                    {order.customerMobile ? (
+                      <a
+                        href={`tel:${order.customerMobile}`}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium"
+                      >
+                        <Phone className="h-3 w-3" /> {order.customerMobile}
+                      </a>
+                    ) : (
+                      <span className="rounded-md bg-emerald-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                        Shop Stock
+                      </span>
+                    )}
 
                     {order.advanceAmount > 0 ? (
                       <span className="rounded-md bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
@@ -404,15 +410,17 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
                   {/* When Arrived: WhatsApp Customer & Fulfill & Remove */}
                   {isArrived && (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => handleWhatsAppCustomer(order)}
-                        className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm active:scale-95 transition-all"
-                        title="Notify customer on WhatsApp that item is ready for pickup"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        <span>WhatsApp</span>
-                      </button>
+                      {order.customerMobile && (
+                        <button
+                          type="button"
+                          onClick={() => handleWhatsAppCustomer(order)}
+                          className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm active:scale-95 transition-all"
+                          title="Notify customer on WhatsApp that item is ready for pickup"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>WhatsApp</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"
