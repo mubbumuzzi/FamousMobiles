@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 import { StockOrder, StockOrderStatus } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { SHOP } from "@/lib/shop";
+import { formatSupplierOrderList, sanitizeItemForSupplier } from "@/lib/supplier-list-sanitizer";
 
 interface StockDemandBoardProps {
   onOpenNewStockOrder: () => void;
@@ -124,8 +125,9 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   const handleWhatsAppCustomer = (order: StockOrder) => {
     const rawMobile = order.customerMobile.replace(/\D/g, "");
     const mobileWithCountry = rawMobile.length === 10 ? `91${rawMobile}` : rawMobile;
+    const cleanItem = sanitizeItemForSupplier(order.itemDetails, order.customerName, order.customerMobile);
 
-    const text = `Hello ${order.customerName},\n\nYour requested item *${order.itemDetails}* has arrived and is ready for pickup at *Famous Mobiles*!\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Contact: 9063786751`;
+    const text = `Hello ${order.customerName},\n\nYour requested item *${cleanItem}* has arrived and is ready for pickup at *Famous Mobiles*!\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Contact: 9063786751`;
 
     const url = `https://wa.me/${mobileWithCountry}?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank");
@@ -139,17 +141,7 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
       return;
     }
 
-    const todayStr = new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
-    let msg = `📦 *FAMOUS MOBILES - ACCESSORY STOCK REQUIREMENTS*\n📅 ${todayStr}\n\n`;
-    pendingOrders.forEach((o, idx) => {
-      msg += `${idx + 1}. *${o.itemDetails}* (Qty: ${o.quantity || 1})\n`;
-    });
-    msg += `\nTotal: ${pendingOrders.length} pending customer orders. Please confirm availability & dispatch.`;
+    const msg = formatSupplierOrderList(pendingOrders);
 
     navigator.clipboard.writeText(msg).then(() => {
       setCopiedWholesale(true);

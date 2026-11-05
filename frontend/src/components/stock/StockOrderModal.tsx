@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Customer, StockOrder } from "@/lib/types";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cleanMobileInput, isExact10DigitMobile, findExactCustomerMatch } from "@/lib/new-ticket-validation";
+import { parseWhatsAppStockText, sanitizeItemForSupplier } from "@/lib/supplier-list-sanitizer";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 interface StockOrderModalProps {
@@ -82,14 +83,18 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
   // WhatsApp line parser
   const handleParseWhatsApp = (text: string) => {
     if (!text.trim()) return;
-    // Regex matches patterns like:
-    // [7:44 pm, 25/10/2026] Navaneeth@dkn: 15pro max black colour case
-    // or Navaneeth: S25edge fancy case...
-    let cleaned = text.trim();
-    cleaned = cleaned.replace(/^\[.*?\]\s*[^:]+:\s*/i, ""); // strip timestamp & author
-    cleaned = cleaned.replace(/^[^:]+:\s*/i, ""); // strip plain "Author:"
+    const parsed = parseWhatsAppStockText(text, mobile, customerName);
 
-    setItemDetails((prev) => (prev ? `${prev}, ${cleaned}` : cleaned));
+    if (parsed.detectedMobile && !mobile) {
+      setMobile(parsed.detectedMobile);
+    }
+    if (parsed.detectedName && !customerName) {
+      setCustomerName(parsed.detectedName);
+    }
+
+    if (parsed.cleanedItem) {
+      setItemDetails((prev) => (prev ? `${prev}, ${parsed.cleanedItem}` : parsed.cleanedItem));
+    }
     setWhatsappPasteInput("");
     setShowPasteBox(false);
   };
@@ -117,17 +122,21 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
       return;
     }
 
+    // Sanitize itemDetails so customer phone number or name does not get stored in item description
+    const fallbackName = cleanMobile ? `Customer ${cleanMobile}` : "Shop Stock";
+    const effectiveName = customerName.trim() || fallbackName;
+    const cleanedItem = sanitizeItemForSupplier(itemDetails, effectiveName, cleanMobile);
+
     setLoading(true);
     try {
       const advNum = Number(advanceAmount) || 0;
       const expNum = expectedPrice ? Number(expectedPrice) : undefined;
 
-      const fallbackName = cleanMobile ? `Customer ${cleanMobile}` : "Shop Stock";
       const payload = {
         customerId: matchedCustomer?.id,
-        customerName: customerName.trim() || fallbackName,
+        customerName: effectiveName,
         customerMobile: cleanMobile || undefined,
-        itemDetails: itemDetails.trim(),
+        itemDetails: cleanedItem || itemDetails.trim(),
         quantity: quantity > 0 ? quantity : 1,
         advanceAmount: advNum,
         expectedPrice: expNum,
