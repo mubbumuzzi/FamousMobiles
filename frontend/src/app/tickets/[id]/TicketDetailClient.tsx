@@ -50,7 +50,6 @@ export default function TicketDetailPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("CASH");
   const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [assignId, setAssignId] = useState("");
   const [paymentWarning, setPaymentWarning] = useState("");
   const [highlightPayment, setHighlightPayment] = useState(false);
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
@@ -308,11 +307,6 @@ export default function TicketDetailPage() {
   };
 
   const assignSelf = async () => { await api(`/tickets/${id}/assign-me`, { method: "POST" }); load(); };
-  const assignTechnician = async () => {
-    if (!assignId) return;
-    await api(`/tickets/${id}/assign`, { method: "POST", body: JSON.stringify({ technicianId: assignId }) });
-    setAssignId(""); load();
-  };
 
   const downloadReceipt = async () => {
     if (!id || !ticket) return;
@@ -697,27 +691,7 @@ export default function TicketDetailPage() {
         </div>
 
         {/* Actions */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Assignment</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {!ticket.assignedTechnicianName && (
-                <Button className="w-full" onClick={assignSelf}>I&apos;m repairing this device</Button>
-              )}
-              {user?.role === "ADMIN" && (
-                <>
-                  <select className={selectClassName} value={assignId} onChange={(e) => setAssignId(e.target.value)}>
-                    <option value="">Select technician...</option>
-                    {technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  <Button className="w-full" onClick={assignTechnician} disabled={!assignId}>Assign</Button>
-                </>
-              )}
-              {ticket.assignedTechnicianName && user?.role !== "ADMIN" && (
-                <p className="text-sm text-slate-600">{ticket.assignedTechnicianName} is assigned.</p>
-              )}
-            </CardContent>
-          </Card>
+        <div>
           <Card>
             <CardHeader><CardTitle className="text-base">Update Status</CardTitle></CardHeader>
             <CardContent className="space-y-2">
