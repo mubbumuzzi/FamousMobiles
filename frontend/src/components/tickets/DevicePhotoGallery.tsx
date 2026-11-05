@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Camera, Image as ImageIcon, Trash2, X, ZoomIn, Plus, Eye, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Camera, Image as ImageIcon, Trash2, X, ZoomIn, Eye, Loader2 } from "lucide-react";
 import { DevicePhoto } from "@/lib/types";
-import { api, getApiUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
+import { getPhotoFullUrl, invalidatePhotoCache } from "@/lib/photo-loader";
+import { SafeDeviceImage } from "./SafeDeviceImage";
+
+export { getPhotoFullUrl };
 
 interface DevicePhotoGalleryProps {
   ticketId: string;
@@ -14,15 +18,6 @@ interface DevicePhotoGalleryProps {
   photos: DevicePhoto[];
   onPhotosUpdated?: () => void;
   canEdit?: boolean;
-}
-
-export function getPhotoFullUrl(fileUrl?: string): string {
-  if (!fileUrl) return "";
-  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://") || fileUrl.startsWith("data:")) {
-    return fileUrl;
-  }
-  const apiRoot = getApiUrl().replace(/\/api$/, "");
-  return `${apiRoot}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
 }
 
 export function DevicePhotoGallery({
@@ -62,6 +57,8 @@ export function DevicePhotoGallery({
         body: formData,
       });
 
+      invalidatePhotoCache();
+
       if (onPhotosUpdated) {
         onPhotosUpdated();
       }
@@ -79,6 +76,7 @@ export function DevicePhotoGallery({
       await api(`/tickets/${ticketId}/photos/${photoId}`, {
         method: "DELETE",
       });
+      invalidatePhotoCache();
       if (selectedPhoto?.id === photoId) {
         setSelectedPhoto(null);
       }
@@ -203,7 +201,6 @@ export function DevicePhotoGallery({
         ) : (
           (() => {
             const photo = photos[0];
-            const fullUrl = getPhotoFullUrl(photo.fileUrl);
             return (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
                 {/* Single Image Thumbnail with Zoom */}
@@ -211,10 +208,11 @@ export function DevicePhotoGallery({
                   onClick={() => setSelectedPhoto(photo)}
                   className="group relative h-28 w-28 sm:h-32 sm:w-32 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 border-emerald-500/40 bg-slate-900 shadow-sm"
                 >
-                  <img
-                    src={fullUrl}
+                  <SafeDeviceImage
+                    fileUrl={photo.fileUrl}
                     alt={`${deviceLabel} photo`}
-                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    className="h-full w-full"
+                    imgClassName="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <span className="rounded-full bg-white/95 p-1.5 text-slate-900 shadow-sm">
@@ -244,33 +242,44 @@ export function DevicePhotoGallery({
                     Use this visual reference to match the exact device in your shop tray before handing it over to the customer.
                   </p>
 
-                  {canEdit && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        disabled={uploading}
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
-                        <span>Retake Photo</span>
-                      </button>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPhoto(photo)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View Photo</span>
+                    </button>
 
-                      <button
-                        type="button"
-                        disabled={deletingId === photo.id}
-                        onClick={() => handleDelete(photo.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        {deletingId === photo.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  )}
+                    {canEdit && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                          <span>Retake Photo</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={deletingId === photo.id}
+                          onClick={() => handleDelete(photo.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          {deletingId === photo.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -310,10 +319,11 @@ export function DevicePhotoGallery({
 
             {/* Large Image */}
             <div className="flex items-center justify-center bg-black/50 p-2 max-h-[75vh] overflow-auto">
-              <img
-                src={getPhotoFullUrl(selectedPhoto.fileUrl)}
+              <SafeDeviceImage
+                fileUrl={selectedPhoto.fileUrl}
                 alt={`${deviceLabel} Full View`}
-                className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-lg"
+                className="max-h-[70vh] w-auto max-w-full rounded-lg"
+                imgClassName="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-lg"
               />
             </div>
 

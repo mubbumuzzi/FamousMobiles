@@ -20,6 +20,7 @@ import {
 import { Ticket, DevicePhoto } from "@/lib/types";
 import { formatCurrency, formatCustomerMobiles } from "@/lib/utils";
 import { getPhotoFullUrl } from "./DevicePhotoGallery";
+import { SafeDeviceImage } from "./SafeDeviceImage";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 interface DeliveryVerificationModalProps {
@@ -144,10 +145,11 @@ export function DeliveryVerificationModal({
               <div className="space-y-2">
                 {/* Large Preview */}
                 <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl border-2 border-emerald-500/40 bg-slate-950 shadow-md">
-                  <img
-                    src={getPhotoFullUrl(currentPhoto.fileUrl)}
+                  <SafeDeviceImage
+                    fileUrl={currentPhoto.fileUrl}
                     alt={`${deviceName} Intake Photo`}
-                    className="h-full w-full object-contain cursor-pointer"
+                    className="h-full w-full"
+                    imgClassName="h-full w-full object-contain cursor-pointer"
                     onClick={() => setIsZoomed(!isZoomed)}
                   />
 
