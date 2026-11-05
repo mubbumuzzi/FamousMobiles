@@ -709,17 +709,6 @@ export default function NewTicketPage() {
               </Field>
               <Field><Label>Brand *</Label><SearchableSelect placeholder="Search brand..." value={brand} onChange={setBrand} options={DEVICE_BRANDS} /></Field>
               <Field><Label>Model *</Label><Input placeholder="e.g. A14" value={model} onChange={(e) => setModel(e.target.value)} /></Field>
-              <Field><Label>Color</Label><Input value={color} onChange={(e) => setColor(e.target.value)} /></Field>
-              <Field>
-                <Label>IMEI</Label>
-                <Input
-                  inputMode="numeric"
-                  maxLength={16}
-                  placeholder="15-digit IMEI (optional)"
-                  value={imei}
-                  onChange={(e) => setImei(e.target.value.replace(/\D/g, "").slice(0, 16))}
-                />
-              </Field>
 
               {/* Phone Photo Capture for Shelf ID & Return Check */}
               <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">

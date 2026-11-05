@@ -1023,8 +1023,8 @@ export default function TicketDetailPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Device Details</CardTitle></CardHeader>
           <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-            <p><span className="text-slate-500">IMEI:</span> {ticket.imei || "—"}</p>
-            <p><span className="text-slate-500">Color:</span> {ticket.color || "—"}</p>
+            {ticket.imei && <p><span className="text-slate-500">IMEI:</span> {ticket.imei}</p>}
+            {ticket.color && <p><span className="text-slate-500">Color:</span> {ticket.color}</p>}
             <p className="sm:col-span-2"><span className="text-slate-500">Problem:</span> {ticket.problemDescription || "—"}</p>
           </CardContent>
         </Card>

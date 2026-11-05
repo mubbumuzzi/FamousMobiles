@@ -158,7 +158,7 @@ export function DeliveryVerificationModal({
 
                   {/* Visual reminder overlay */}
                   <div className="absolute bottom-2 inset-x-2 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-medium text-white flex items-center justify-between">
-                    <span>Match phone color, stickers, back cover & scratches</span>
+                    <span>Match phone details, stickers, back cover & scratches</span>
                     <button
                       type="button"
                       onClick={() => setIsZoomed(!isZoomed)}
@@ -175,7 +175,7 @@ export function DeliveryVerificationModal({
                 <AlertTriangle className="h-6 w-6 text-amber-600 mx-auto mb-1.5" />
                 <p className="text-xs font-bold text-amber-900">No device photo was captured at intake</p>
                 <p className="text-[11px] text-amber-700 mt-0.5 mb-3 max-w-sm mx-auto">
-                  Carefully check the physical brand, model, color, and accessories below to ensure you have the right phone.
+                  Carefully check the physical brand, model, and accessories below to ensure you have the right phone.
                 </p>
 
                 {onQuickUploadPhoto && (
@@ -217,28 +217,28 @@ export function DeliveryVerificationModal({
               <span className="text-emerald-700 font-bold">{deviceName}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-white p-2 border border-slate-100">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Device Color</span>
-                <span className="font-bold text-slate-800 text-xs">
-                  {ticket.color ? (
-                    <span className="inline-flex items-center gap-1.5">
+            {(ticket.color || ticket.imei) && (
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {ticket.color ? (
+                  <div className="rounded-xl bg-white p-2 border border-slate-100">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Device Color</span>
+                    <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
                       <span className="h-2.5 w-2.5 rounded-full bg-blue-500 inline-block border border-slate-300" />
                       {ticket.color}
                     </span>
-                  ) : (
-                    "Not specified"
-                  )}
-                </span>
-              </div>
+                  </div>
+                ) : null}
 
-              <div className="rounded-xl bg-white p-2 border border-slate-100">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">IMEI / Serial</span>
-                <span className="font-mono font-semibold text-slate-800 text-xs truncate block">
-                  {ticket.imei || "—"}
-                </span>
+                {ticket.imei ? (
+                  <div className="rounded-xl bg-white p-2 border border-slate-100">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">IMEI / Serial</span>
+                    <span className="font-mono font-semibold text-slate-800 text-xs truncate block">
+                      {ticket.imei}
+                    </span>
+                  </div>
+                ) : null}
               </div>
-            </div>
+            )}
 
             {/* Accessories Taken In */}
             {ticket.accessoriesReceived && ticket.accessoriesReceived.length > 0 && (
