@@ -143,6 +143,15 @@ export default function NewTicketPage() {
     [repairHistory, selectedPastTicketId]
   );
 
+  const recentDeliveredTicket = useMemo(() => {
+    return repairHistory.find((t) => {
+      if (t.status !== "DELIVERED" || !t.deliveredAt) return false;
+      const days = Math.floor((Date.now() - new Date(t.deliveredAt).getTime()) / (1000 * 60 * 60 * 24));
+      const maxDays = Math.max(7, t.warrantyDays ?? 0);
+      return days <= maxDays;
+    });
+  }, [repairHistory]);
+
   const applyPastDevice = (ticket: Ticket) => {
     setSelectedPastTicketId(ticket.id);
     if (ticket.deviceType) setDeviceType(ticket.deviceType);
@@ -388,6 +397,41 @@ export default function NewTicketPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* 7-Day Re-Check / Guarantee Banner */}
+                  {recentDeliveredTicket && (
+                    <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-4 shadow-sm space-y-2.5 animate-fade-in">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+                          <RotateCcw className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-emerald-950 text-sm">
+                              Recent Repair: {recentDeliveredTicket.brand} {recentDeliveredTicket.model}
+                            </span>
+                            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+                              Within 7-Day Guarantee Window
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                            Delivered on {formatDate(recentDeliveredTicket.deliveredAt)} ({recentDeliveredTicket.trackingNumber}).
+                            If the customer returned with a recurring problem, re-check is <strong>FREE (₹0)</strong> under shop assurance.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-emerald-200/80">
+                        <Link
+                          href={`/tickets/${recentDeliveredTicket.id}?recheck=true`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-colors"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Reopen for 7-Day Re-Check (No New Booking)
+                        </Link>
+                        <span className="text-[11px] text-emerald-700">or continue below for a brand new repair</span>
+                      </div>
+                    </div>
+                  )}
 
                   {repairHistory.length > 0 && (
                     <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4 space-y-3">

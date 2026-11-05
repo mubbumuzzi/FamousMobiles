@@ -50,9 +50,14 @@ export default function CustomerDetailClient() {
               <Card className="mb-2 hover:border-blue-300 transition-all">
                 <CardContent className="flex items-center justify-between p-4">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-blue-700">{t.trackingNumber}</span>
                       <span className="text-sm font-semibold text-slate-800">{t.brand} {t.model}</span>
+                      {t.reopenCount && t.reopenCount > 0 ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
+                          🔁 Re-Check
+                        </span>
+                      ) : null}
                     </div>
                     {warranty.status !== "NONE" && (
                       <p className="text-xs text-slate-500 mt-1">{warranty.label}</p>

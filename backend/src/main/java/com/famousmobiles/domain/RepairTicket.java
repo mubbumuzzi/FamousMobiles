@@ -85,6 +85,15 @@ public class RepairTicket extends BaseEntity {
     @Column(name = "warranty_days", nullable = false)
     private Integer warrantyDays = 0;
 
+    @Column(name = "reopen_count", nullable = false)
+    private Integer reopenCount = 0;
+
+    @Column(name = "last_reopened_at")
+    private Instant lastReopenedAt;
+
+    @Column(name = "reopen_reason")
+    private String reopenReason;
+
     public String getTrackingNumber() {
         return trackingNumber;
     }
@@ -235,5 +244,29 @@ public class RepairTicket extends BaseEntity {
 
     public void setWarrantyDays(Integer warrantyDays) {
         this.warrantyDays = warrantyDays != null ? warrantyDays : 0;
+    }
+
+    public Integer getReopenCount() {
+        return reopenCount != null ? reopenCount : 0;
+    }
+
+    public void setReopenCount(Integer reopenCount) {
+        this.reopenCount = reopenCount != null ? reopenCount : 0;
+    }
+
+    public Instant getLastReopenedAt() {
+        return lastReopenedAt;
+    }
+
+    public void setLastReopenedAt(Instant lastReopenedAt) {
+        this.lastReopenedAt = lastReopenedAt;
+    }
+
+    public String getReopenReason() {
+        return reopenReason;
+    }
+
+    public void setReopenReason(String reopenReason) {
+        this.reopenReason = reopenReason;
     }
 }

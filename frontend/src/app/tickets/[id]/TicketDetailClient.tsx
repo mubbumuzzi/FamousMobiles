@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -60,6 +60,16 @@ export default function TicketDetailPage() {
   const [savingEstimate, setSavingEstimate] = useState(false);
   const [approvalEstimateCost, setApprovalEstimateCost] = useState("");
   const [approvalWarrantyDays, setApprovalWarrantyDays] = useState<number>(0);
+
+  // 7-Day Re-Check & Warranty Reopen state
+  const [recheckModalOpen, setRecheckModalOpen] = useState(false);
+  const [recheckReasonType, setRecheckReasonType] = useState<"SAME_ISSUE" | "NEW_ISSUE">("SAME_ISSUE");
+  const [recheckReason, setRecheckReason] = useState("");
+  const [recheckRemarks, setRecheckRemarks] = useState("");
+  const [recheckCost, setRecheckCost] = useState("0");
+  const [recheckTechId, setRecheckTechId] = useState("");
+  const [submittingRecheck, setSubmittingRecheck] = useState(false);
+  const [recheckError, setRecheckError] = useState("");
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -344,6 +354,52 @@ export default function TicketDetailPage() {
     window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  useEffect(() => {
+    if (ticket && ticket.status === "DELIVERED") {
+      if (searchParams.get("recheck") === "true" || searchParams.get("openRecheck") === "true") {
+        setRecheckModalOpen(true);
+      }
+    }
+  }, [ticket, searchParams]);
+
+  const daysSinceDelivery = ticket?.daysSinceDelivery ?? (ticket?.deliveredAt
+    ? Math.floor((Date.now() - new Date(ticket.deliveredAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null);
+  const isEligibleForFree = ticket?.eligibleForFreeRecheck ?? (
+    daysSinceDelivery !== null && daysSinceDelivery <= Math.max(7, ticket?.warrantyDays ?? 0)
+  );
+
+  const handleReopenTicket = async () => {
+    if (!recheckRemarks.trim()) {
+      setRecheckError("Please enter customer complaint notes.");
+      return;
+    }
+    setSubmittingRecheck(true);
+    setRecheckError("");
+    try {
+      const extraCost = recheckReasonType === "NEW_ISSUE" && Number(recheckCost) > 0 ? Number(recheckCost) : 0;
+      const defaultReason = isEligibleForFree ? "7-Day Free Re-Check" : "Post-Delivery Rework";
+      const body = {
+        reason: recheckReason.trim() || defaultReason,
+        remarks: recheckRemarks.trim(),
+        additionalCost: extraCost,
+        technicianId: recheckTechId || undefined,
+      };
+      const updated = await api<Ticket>(`/tickets/${ticket!.id}/reopen`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setTicket(updated);
+      setRecheckModalOpen(false);
+      setPaymentSuccessMsg("Ticket reopened for quality re-check! Status set to Under Diagnosis.");
+      load();
+    } catch (err: unknown) {
+      setRecheckError(err instanceof Error ? err.message : "Failed to reopen ticket");
+    } finally {
+      setSubmittingRecheck(false);
+    }
+  };
+
   if (authLoading || loading) return <PageLoading label="Loading ticket..." />;
   if (loadError || !ticket) {
     return (
@@ -370,6 +426,12 @@ export default function TicketDetailPage() {
             </div>
             <div className="flex flex-col items-end gap-1.5">
               <Badge className="bg-white/20 text-white border-0 text-sm">{formatStatus(ticket.status)}</Badge>
+              {ticket.reopenCount && ticket.reopenCount > 0 ? (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-900 border border-amber-300 shadow-xs flex items-center gap-1">
+                  <RotateCcw className="h-3 w-3" />
+                  Re-Check ({ticket.reopenCount}x)
+                </span>
+              ) : null}
               {getWarrantyStatus(ticket).status !== "NONE" && (
                 <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-xs">
                   {getWarrantyStatus(ticket).label}
@@ -835,6 +897,68 @@ export default function TicketDetailPage() {
                     </div>
                   )}
                 </>
+              ) : ticket.status === "DELIVERED" ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-emerald-950">Repair Delivered & Handed Over</p>
+                        <p className="text-xs text-emerald-700">
+                          {ticket.deliveredAt ? `Delivered on ${formatDateTime(ticket.deliveredAt)}` : "Order settled"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "rounded-lg p-3 text-xs border space-y-1",
+                    isEligibleForFree
+                      ? "bg-white border-emerald-300 text-emerald-900 shadow-xs"
+                      : "bg-amber-50 border-amber-300 text-amber-900"
+                  )}>
+                    <div className="flex items-center gap-1.5 font-bold">
+                      {isEligibleForFree ? (
+                        <>
+                          <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Within 7-Day Free Service Guarantee (₹0 Charge)</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          <span>Beyond 7-Day Guarantee Window</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-[11px] opacity-90 leading-relaxed">
+                      {daysSinceDelivery !== null ? (
+                        daysSinceDelivery === 0
+                          ? "Delivered today. If the customer encounters any recurring problem, accept for free quality re-check."
+                          : `Delivered ${daysSinceDelivery} day${daysSinceDelivery === 1 ? "" : "s"} ago. ${
+                              isEligibleForFree
+                                ? "Covered by our 7-day assurance. Free check applies for recurring issues."
+                                : "Standard diagnosis or new estimate applies."
+                            }`
+                      ) : "Free re-check applies within 7 days of delivery."}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!recheckReason) {
+                        setRecheckReason(isEligibleForFree ? "7-Day Free Re-Check" : "Post-Delivery Rework");
+                      }
+                      setRecheckModalOpen(true);
+                    }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Accept Device for Re-Check / Rework
+                  </Button>
+                </div>
               ) : (
                 <p className="text-sm text-slate-500">This repair is complete.</p>
               )}
@@ -1143,10 +1267,25 @@ export default function TicketDetailPage() {
             )}
 
             {ticket.status === "DELIVERED" && (
-              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1.5 text-xs font-bold text-emerald-800">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                Delivered & Settled ✓
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Delivered ✓
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!recheckReason) {
+                      setRecheckReason(isEligibleForFree ? "7-Day Free Re-Check" : "Post-Delivery Rework");
+                    }
+                    setRecheckModalOpen(true);
+                  }}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Re-Check / Return
+                </button>
+              </div>
             )}
           </div>
 
@@ -1195,6 +1334,229 @@ export default function TicketDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 7-Day Re-Check & Quality Rework Modal */}
+      {recheckModalOpen && ticket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0">
+                  <RotateCcw className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Device Return / Quality Re-Check</h3>
+                  <p className="text-xs text-slate-500 font-mono">{ticket.trackingNumber} · {ticket.brand} {ticket.model}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecheckModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Guarantee / 7-Day Assurance banner */}
+            <div className={cn(
+              "rounded-xl p-3 text-xs border space-y-1",
+              isEligibleForFree
+                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                : "bg-amber-50 border-amber-200 text-amber-900"
+            )}>
+              <div className="flex items-center gap-1.5 font-bold">
+                {isEligibleForFree ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>Eligible for 7-Day Free Re-Check (₹0 Charge)</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>Post-Delivery Rework (Beyond 7-Day Window)</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs opacity-90 leading-relaxed">
+                {daysSinceDelivery !== null && `Delivered ${daysSinceDelivery} day${daysSinceDelivery === 1 ? "" : "s"} ago. `}
+                {isEligibleForFree
+                  ? "Under shop assurance, recurring issues are inspected free of charge without creating a new booking."
+                  : "You may specify an additional estimate if new replacement parts or fresh diagnosis apply."}
+              </p>
+            </div>
+
+            {/* Issue Category selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Issue Category *
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecheckReasonType("SAME_ISSUE");
+                    setRecheckCost("0");
+                    if (!recheckReason || recheckReason.startsWith("New issue")) {
+                      setRecheckReason("7-Day Free Re-Check: Recurring fault / parts quality issue");
+                    }
+                  }}
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
+                    recheckReasonType === "SAME_ISSUE"
+                      ? "border-emerald-600 bg-emerald-50/50 shadow-xs ring-1 ring-emerald-500"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900">Same / Recurring Issue</span>
+                    {isEligibleForFree && (
+                      <span className="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900">
+                        FREE ₹0
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">Screen flicker, touch issue, loose port, same fault</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecheckReasonType("NEW_ISSUE");
+                    if (!recheckReason || recheckReason.startsWith("7-Day Free")) {
+                      setRecheckReason("New issue or customer-induced damage");
+                    }
+                  }}
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
+                    recheckReasonType === "NEW_ISSUE"
+                      ? "border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-500"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900">New / Secondary Issue</span>
+                    <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                      Chargeable
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">Fresh physical drop, liquid spill, or unrelated new fault</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Reason chips */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Quick Reason</label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Touch not responding / ghost touches",
+                  "Display flickering / black screen",
+                  "Battery draining quickly",
+                  "Charging port loose / slow charging",
+                  "Speaker / Mic not clear",
+                  "Physical drop / damage by customer",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setRecheckReason(preset);
+                      if (!recheckRemarks) setRecheckRemarks(preset);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Complaint Remarks */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Customer Complaint Notes *
+              </label>
+              <Textarea
+                rows={3}
+                placeholder="Describe exact symptoms reported by the customer..."
+                value={recheckRemarks}
+                onChange={(e) => setRecheckRemarks(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+
+            {/* Additional Charge (if applicable) */}
+            {recheckReasonType === "NEW_ISSUE" && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Additional Estimate Cost (₹)
+                </label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  placeholder="0"
+                  value={recheckCost}
+                  onChange={(e) => setRecheckCost(e.target.value)}
+                  className="text-xs"
+                />
+                <p className="text-[10px] text-slate-500">Leave 0 if diagnosing before providing quote.</p>
+              </div>
+            )}
+
+            {/* Technician Assignment */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Assign Technician
+              </label>
+              <select
+                className={selectClassName}
+                value={recheckTechId}
+                onChange={(e) => setRecheckTechId(e.target.value)}
+              >
+                <option value="">
+                  {ticket.assignedTechnicianName
+                    ? `Keep ${ticket.assignedTechnicianName} (Original Technician)`
+                    : "Unassigned"}
+                </option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.id === ticket.assignedTechnicianId ? "(Original)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {recheckError && (
+              <p className="text-xs text-red-600 bg-red-50 p-2 rounded-lg font-medium">
+                {recheckError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRecheckModalOpen(false)}
+                disabled={submittingRecheck}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                disabled={submittingRecheck || !recheckRemarks.trim()}
+                onClick={handleReopenTicket}
+              >
+                {submittingRecheck ? "Reopening..." : "Confirm & Reopen for Re-Check"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </StaffLayout>
   );
 }

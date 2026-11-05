@@ -8,7 +8,7 @@ import { QuickAction } from "@/components/ui/quick-action";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
-import { formatCurrency, formatStatus } from "@/lib/utils";
+import { formatCurrency, formatStatus, isSameDay } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
 import { StockDemandBoard } from "@/components/stock/StockDemandBoard";
@@ -30,6 +30,8 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
 
   const overdue = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status) && t.status !== "DELIVERED");
   const ready = tickets.filter((t) => t.status === "READY_FOR_PICKUP");
+  const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
+  const deliveredTodayCount = tickets.filter((t) => t.status === "DELIVERED" && isSameDay(t.deliveredAt)).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -59,7 +61,7 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
         />
         <KpiCard
           label="Received Today"
-          value={loading ? null : metrics?.devicesReceivedToday ?? 0}
+          value={loading ? null : (tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0)}
           icon={Package}
           tone="secondary"
           onClick={() => setActiveMetric("receivedToday")}
@@ -161,8 +163,8 @@ export function ReceptionDashboard({ metrics, tickets, loading, error, showReven
         tickets={tickets}
         role="SALESMAN"
         onTicketUpdated={onRefresh || (() => {})}
-        devicesReceivedToday={metrics?.devicesReceivedToday ?? 0}
-        devicesDeliveredToday={metrics?.deliveredToday ?? 0}
+        devicesReceivedToday={tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0}
+        devicesDeliveredToday={tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0}
       />
 
       <StockOrderModal

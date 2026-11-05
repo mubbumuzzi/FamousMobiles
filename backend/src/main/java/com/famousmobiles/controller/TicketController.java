@@ -62,6 +62,11 @@ public class TicketController {
         return ticketService.updateStatus(id, request);
     }
 
+    @PostMapping("/{id}/reopen")
+    public TicketDto.TicketResponse reopen(@PathVariable UUID id, @RequestBody TicketDto.ReopenTicketRequest request) {
+        return ticketService.reopenTicket(id, request);
+    }
+
     @PatchMapping("/{id}/estimation")
     public TicketDto.TicketResponse updateEstimation(@PathVariable UUID id, @RequestBody TicketDto.UpdateEstimationRequest request) {
         return ticketService.updateEstimation(id, request);

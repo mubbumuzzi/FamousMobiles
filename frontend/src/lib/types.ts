@@ -77,6 +77,11 @@ export interface Ticket {
   createdAt: string;
   deliveredAt?: string;
   warrantyDays?: number;
+  reopenCount?: number;
+  lastReopenedAt?: string;
+  reopenReason?: string;
+  daysSinceDelivery?: number;
+  eligibleForFreeRecheck?: boolean;
 }
 
 export interface TimelineEntry {
@@ -102,6 +107,9 @@ export interface PublicTracking {
   timeline: TimelineEntry[];
   allStatuses: RepairStatus[];
   warrantyDays?: number;
+  reopenCount?: number;
+  lastReopenedAt?: string;
+  reopenReason?: string;
 }
 
 export interface DashboardMetrics {

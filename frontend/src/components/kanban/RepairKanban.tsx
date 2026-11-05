@@ -225,12 +225,19 @@ function KanbanCard({
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <Link
-              href={`/tickets/view?id=${ticket.id}`}
-              className="text-base font-extrabold text-blue-700 hover:underline"
-            >
-              {ticket.trackingNumber}
-            </Link>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link
+                href={`/tickets/view?id=${ticket.id}`}
+                className="text-base font-extrabold text-blue-700 hover:underline"
+              >
+                {ticket.trackingNumber}
+              </Link>
+              {ticket.reopenCount && ticket.reopenCount > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
+                  🔁 Re-Check
+                </span>
+              ) : null}
+            </div>
             <p className="mt-0.5 text-base font-bold text-slate-900">
               {ticket.brand} {ticket.model}
             </p>
@@ -310,9 +317,16 @@ function KanbanCard({
       <div className="flex items-start gap-2">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
         <div className="min-w-0 flex-1">
-          <Link href={`/tickets/view?id=${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
-            {ticket.trackingNumber}
-          </Link>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Link href={`/tickets/view?id=${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
+              {ticket.trackingNumber}
+            </Link>
+            {ticket.reopenCount && ticket.reopenCount > 0 ? (
+              <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-900 border border-amber-300">
+                🔁 Re-Check
+              </span>
+            ) : null}
+          </div>
           <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{ticket.brand} {ticket.model}</p>
           <p className="truncate text-xs text-slate-500">{ticket.customer.fullName}</p>
           {ticket.problemDescription && (

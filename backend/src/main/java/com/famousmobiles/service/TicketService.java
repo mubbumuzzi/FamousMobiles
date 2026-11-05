@@ -250,6 +250,73 @@ public class TicketService {
     }
 
     @Transactional
+    public TicketDto.TicketResponse reopenTicket(UUID id, TicketDto.ReopenTicketRequest request) {
+        RepairTicket ticket = getEntityWithAccess(id);
+        if (ticket.getStatus() != RepairStatus.DELIVERED) {
+            throw new BadRequestException("Only delivered tickets can be reopened for re-check or rework (Current status: " + formatStatus(ticket.getStatus()) + ")");
+        }
+        if (request.remarks() == null || request.remarks().trim().isEmpty()) {
+            throw new BadRequestException("Customer complaint / remarks are required when reopening a ticket");
+        }
+
+        User user = securityUtils.getCurrentUser();
+        long daysSinceDelivery = ticket.getDeliveredAt() != null
+                ? java.time.Duration.between(ticket.getDeliveredAt(), Instant.now()).toDays()
+                : 0;
+        int warranty = ticket.getWarrantyDays() != null ? ticket.getWarrantyDays() : 0;
+        boolean isFreeRecheck = daysSinceDelivery <= Math.max(7, warranty);
+
+        BigDecimal extraCost = request.additionalCost() != null ? request.additionalCost() : BigDecimal.ZERO;
+        if (extraCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Additional cost cannot be negative");
+        }
+
+        if (extraCost.compareTo(BigDecimal.ZERO) > 0) {
+            ticket.setEstimatedCost(ticket.getEstimatedCost().add(extraCost));
+            recalculateBalance(ticket);
+        }
+
+        if (request.technicianId() != null) {
+            var tech = technicianRepository.findById(request.technicianId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Technician not found"));
+            ticket.setAssignedTechnician(tech);
+        }
+
+        RepairStatus previousStatus = ticket.getStatus();
+        ticket.setStatus(RepairStatus.UNDER_DIAGNOSIS);
+        ticket.setReopenCount(ticket.getReopenCount() + 1);
+        ticket.setLastReopenedAt(Instant.now());
+
+        String reason = request.reason() != null && !request.reason().isBlank()
+                ? request.reason().trim()
+                : (isFreeRecheck ? "7-Day Free Re-Check" : "Post-Delivery Rework");
+        ticket.setReopenReason(reason);
+
+        ticket = ticketRepository.save(ticket);
+
+        StringBuilder historyNote = new StringBuilder();
+        if (isFreeRecheck) {
+            historyNote.append("Device returned for 7-Day Free Quality Re-Check / Warranty (Day ").append(daysSinceDelivery).append(")");
+        } else {
+            historyNote.append("Device returned for Post-Delivery Rework (Day ").append(daysSinceDelivery).append(")");
+        }
+        historyNote.append(" · Reason: ").append(reason);
+        if (extraCost.compareTo(BigDecimal.ZERO) > 0) {
+            historyNote.append(" · Additional Charge: ₹").append(extraCost);
+        } else {
+            historyNote.append(" · Free of Charge (₹0)");
+        }
+        if (ticket.getAssignedTechnician() != null) {
+            historyNote.append(" · Assigned to: ").append(ticket.getAssignedTechnician().getName());
+        }
+
+        recordStatusHistory(ticket, previousStatus, RepairStatus.UNDER_DIAGNOSIS, user, historyNote.toString(), request.remarks().trim());
+        notificationService.onStatusChange(ticket, RepairStatus.UNDER_DIAGNOSIS);
+
+        return TicketDto.TicketResponse.from(ticket);
+    }
+
+    @Transactional
     public TicketDto.TicketResponse assignTechnician(UUID id, TicketDto.AssignTechnicianRequest request) {
         if (!securityUtils.isAdmin()) {
             throw new ForbiddenException("Only admin can assign technicians");

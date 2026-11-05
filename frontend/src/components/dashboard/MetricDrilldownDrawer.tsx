@@ -227,6 +227,32 @@ export function MetricDrilldownDrawer({
   }, [metric, tickets, search]);
 
   // Quick Reschedule EDD (+1 or +2 days)
+  const getTabCount = (key: MetricDrilldownType): number | null => {
+    switch (key) {
+      case "activeRepairs":
+        return tickets.filter(
+          (t) =>
+            t.status !== "DELIVERED" &&
+            t.status !== "RETURNED_UNREPAIRED" &&
+            t.status !== "READY_FOR_PICKUP"
+        ).length;
+      case "readyPickup":
+        return tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
+      case "receivedToday":
+        return tickets.filter((t) => isSameDay(t.createdAt)).length;
+      case "deliveredToday":
+        return tickets.filter((t) => t.status === "DELIVERED" && isSameDay(t.deliveredAt)).length;
+      case "deliveredAll":
+        return tickets.filter((t) => t.status === "DELIVERED").length;
+      case "waitingParts":
+        return tickets.filter((t) => t.status === "WAITING_FOR_PARTS").length;
+      case "overdue":
+        return tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
+      default:
+        return null;
+    }
+  };
+
   const handleExtendEdd = async (ticket: Ticket, daysToAdd: number) => {
     setReschedulingId(ticket.id);
     try {
@@ -361,24 +387,37 @@ export function MetricDrilldownDrawer({
 
           {/* Quick Metric Switcher Pills */}
           <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 text-xs">
-            {METRIC_TABS.filter((tab) => !tab.adminOnly || role === "ADMIN").map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  onSelectMetric(tab.key);
-                }}
-                className={cn(
-                  "shrink-0 rounded-lg px-3 py-1.5 font-medium transition-all",
-                  metric === tab.key
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-white text-slate-600 hover:bg-slate-200"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {METRIC_TABS.filter((tab) => !tab.adminOnly || role === "ADMIN").map((tab) => {
+              const count = getTabCount(tab.key);
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    onSelectMetric(tab.key);
+                  }}
+                  className={cn(
+                    "shrink-0 rounded-lg px-3 py-1.5 font-medium transition-all flex items-center gap-1.5",
+                    metric === tab.key
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "bg-white text-slate-600 hover:bg-slate-200"
+                  )}
+                >
+                  <span>{tab.label}</span>
+                  {count !== null && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.2 text-[10px] font-bold",
+                        metric === tab.key ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 

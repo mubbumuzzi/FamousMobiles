@@ -32,11 +32,14 @@ public class DashboardService {
     public MiscDto.DashboardMetrics getMetrics(boolean includeRevenue) {
         LocalDate today = LocalDate.now(SHOP_ZONE);
         Instant startOfDay = today.atStartOfDay(SHOP_ZONE).toInstant();
+        Instant endOfDay = today.plusDays(1).atStartOfDay(SHOP_ZONE).toInstant();
         Instant startOfWeek = today.minusDays(today.getDayOfWeek().getValue() - 1L).atStartOfDay(SHOP_ZONE).toInstant();
         Instant startOfMonth = today.withDayOfMonth(1).atStartOfDay(SHOP_ZONE).toInstant();
 
         long receivedToday = ticketRepository.findAll().stream()
-                .filter(t -> !t.getCreatedAt().isBefore(startOfDay)).count();
+                .filter(t -> t.getCreatedAt() != null 
+                          && !t.getCreatedAt().isBefore(startOfDay) 
+                          && t.getCreatedAt().isBefore(endOfDay)).count();
         long underRepair = ticketRepository.findAll().stream()
                 .filter(t -> t.getStatus() != RepairStatus.DELIVERED 
                           && t.getStatus() != RepairStatus.READY_FOR_PICKUP 
@@ -44,7 +47,10 @@ public class DashboardService {
         long waitingParts = ticketRepository.countByStatus(RepairStatus.WAITING_FOR_PARTS);
         long readyPickup = ticketRepository.countByStatus(RepairStatus.READY_FOR_PICKUP);
         long deliveredToday = ticketRepository.findAll().stream()
-                .filter(t -> t.getDeliveredAt() != null && !t.getDeliveredAt().isBefore(startOfDay)).count();
+                .filter(t -> t.getStatus() == RepairStatus.DELIVERED 
+                          && t.getDeliveredAt() != null 
+                          && !t.getDeliveredAt().isBefore(startOfDay) 
+                          && t.getDeliveredAt().isBefore(endOfDay)).count();
 
         BigDecimal revenueToday = includeRevenue ? sumPaymentsSince(startOfDay) : null;
         BigDecimal revenueWeek = includeRevenue ? sumPaymentsSince(startOfWeek) : null;

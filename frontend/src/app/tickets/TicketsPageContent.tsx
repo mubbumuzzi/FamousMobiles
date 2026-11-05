@@ -210,7 +210,14 @@ export default function TicketsPageContent() {
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
+                      {t.reopenCount && t.reopenCount > 0 ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
+                          🔁 Re-Check
+                        </span>
+                      ) : null}
+                    </div>
                     <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
                   </div>
 

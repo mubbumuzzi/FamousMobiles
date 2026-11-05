@@ -8,7 +8,7 @@ import { QuickAction } from "@/components/ui/quick-action";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
-import { formatCurrency, formatStatus } from "@/lib/utils";
+import { formatCurrency, formatStatus, isSameDay } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
 import { StockDemandBoard } from "@/components/stock/StockDemandBoard";
@@ -44,6 +44,8 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   const topBrands = Object.entries(brandBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const delivered = tickets.filter((t) => t.status === "DELIVERED").length;
+  const deliveredTodayCount = tickets.filter((t) => t.status === "DELIVERED" && isSameDay(t.deliveredAt)).length;
+  const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
   const active = tickets.filter(
     (t) =>
       t.status !== "DELIVERED" &&
@@ -101,7 +103,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
           label="Received Today"
-          value={loading ? null : metrics?.devicesReceivedToday ?? 0}
+          value={loading ? null : (tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0)}
           tone="secondary"
           onClick={() => setActiveMetric("receivedToday")}
           isSelected={activeMetric === "receivedToday"}
@@ -122,7 +124,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
         />
         <KpiCard
           label="Delivered Today"
-          value={loading ? null : metrics?.deliveredToday ?? 0}
+          value={loading ? null : (tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0)}
           tone="primary"
           subtitle="Delivered today"
           onClick={() => setActiveMetric("deliveredToday")}
@@ -183,8 +185,8 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
         tickets={tickets}
         role="ADMIN"
         onTicketUpdated={onRefresh || (() => {})}
-        devicesReceivedToday={metrics?.devicesReceivedToday ?? 0}
-        devicesDeliveredToday={metrics?.deliveredToday ?? 0}
+        devicesReceivedToday={tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0}
+        devicesDeliveredToday={tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0}
       />
 
       <StockOrderModal
