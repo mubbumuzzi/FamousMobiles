@@ -82,6 +82,21 @@ export interface Ticket {
   reopenReason?: string;
   daysSinceDelivery?: number;
   eligibleForFreeRecheck?: boolean;
+  photos?: DevicePhoto[];
+  photoCount?: number;
+  primaryPhotoUrl?: string;
+}
+
+export interface DevicePhoto {
+  id: string;
+  ticketId: string;
+  photoType: "FRONT" | "BACK" | "DAMAGE" | "REPAIR" | "DEVICE";
+  fileName: string;
+  fileUrl: string;
+  contentType: string;
+  fileSize: number;
+  uploadedByName?: string;
+  createdAt: string;
 }
 
 export interface TimelineEntry {

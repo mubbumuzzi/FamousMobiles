@@ -23,6 +23,7 @@ import com.famousmobiles.domain.enums.PaymentMode;
 import com.famousmobiles.domain.enums.PhotoType;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.domain.enums.UserRole;
+import com.famousmobiles.dto.DevicePhotoDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ForbiddenException;
@@ -128,7 +129,10 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public TicketDto.TicketResponse get(UUID id) {
-        return TicketDto.TicketResponse.from(getEntityWithAccess(id));
+        RepairTicket ticket = getEntityWithAccess(id);
+        List<DevicePhotoDto> photos = photoRepository.findByTicketIdOrderByCreatedAtAsc(id).stream()
+                .map(this::toPhotoDto).toList();
+        return TicketDto.TicketResponse.from(ticket, photos);
     }
 
     @Transactional(readOnly = true)
@@ -374,24 +378,71 @@ public class TicketService {
         return entries;
     }
 
+    public DevicePhotoDto toPhotoDto(DevicePhoto p) {
+        String fileUrl = "/api/files/tickets/" + p.getTicket().getId() + "/photos/" + p.getId();
+        String uploader = p.getUploadedBy() != null ? p.getUploadedBy().getFullName() : null;
+        return new DevicePhotoDto(
+                p.getId(),
+                p.getTicket().getId(),
+                p.getPhotoType(),
+                p.getFileName(),
+                fileUrl,
+                p.getContentType(),
+                p.getFileSize(),
+                uploader,
+                p.getCreatedAt()
+        );
+    }
+
     @Transactional
-    public DevicePhoto uploadPhoto(UUID id, PhotoType photoType, MultipartFile file) {
+    public DevicePhotoDto uploadPhoto(UUID id, PhotoType photoType, MultipartFile file) {
         RepairTicket ticket = getEntityWithAccess(id);
-        var stored = fileStorageService.storeTicketPhoto(id, photoType.name().toLowerCase(), file);
+
+        // Single photo policy: replace any previous photo for this ticket
+        List<DevicePhoto> existing = photoRepository.findByTicketIdOrderByCreatedAtAsc(id);
+        for (DevicePhoto prev : existing) {
+            photoRepository.delete(prev);
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(prev.getFilePath()));
+            } catch (Exception ignored) {}
+        }
+
+        PhotoType effectiveType = photoType != null ? photoType : PhotoType.DEVICE;
+        var stored = fileStorageService.storeTicketPhoto(id, effectiveType.name().toLowerCase(), file);
         DevicePhoto photo = new DevicePhoto();
         photo.setTicket(ticket);
-        photo.setPhotoType(photoType);
+        photo.setPhotoType(effectiveType);
         photo.setFileName(stored.fileName());
         photo.setFilePath(stored.filePath());
         photo.setContentType(stored.contentType());
         photo.setFileSize(stored.fileSize());
-        photo.setUploadedBy(securityUtils.getCurrentUser());
-        return photoRepository.save(photo);
+        try {
+            photo.setUploadedBy(securityUtils.getCurrentUser());
+        } catch (Exception ignored) {}
+        DevicePhoto saved = photoRepository.save(photo);
+        return toPhotoDto(saved);
     }
 
-    public List<DevicePhoto> getPhotos(UUID id) {
+    public List<DevicePhotoDto> getPhotos(UUID id) {
         getEntityWithAccess(id);
-        return photoRepository.findByTicketIdOrderByCreatedAtAsc(id);
+        return photoRepository.findByTicketIdOrderByCreatedAtAsc(id).stream()
+                .map(this::toPhotoDto).toList();
+    }
+
+    public DevicePhoto getPhotoEntity(UUID ticketId, UUID photoId) {
+        return photoRepository.findByIdAndTicketId(photoId, ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found"));
+    }
+
+    @Transactional
+    public void deletePhoto(UUID ticketId, UUID photoId) {
+        getEntityWithAccess(ticketId);
+        DevicePhoto photo = photoRepository.findByIdAndTicketId(photoId, ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found"));
+        photoRepository.delete(photo);
+        try {
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(photo.getFilePath()));
+        } catch (Exception ignored) {}
     }
 
     public RepairTicket getEntity(UUID id) {

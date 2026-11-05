@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Calendar, GripVertical } from "lucide-react";
+import { Calendar, Camera, GripVertical } from "lucide-react";
 import { Ticket, RepairStatus } from "@/lib/types";
 import { cn, formatCurrency, formatDate, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
@@ -237,9 +237,17 @@ function KanbanCard({
                   🔁 Re-Check
                 </span>
               ) : null}
+              {((ticket.photos && ticket.photos.length > 0) || (ticket.photoCount && ticket.photoCount > 0)) && (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200 flex items-center gap-1" title="Device photo stored for shelf verification">
+                  <Camera className="h-3 w-3 text-blue-600" /> Photo
+                </span>
+              )}
             </div>
             <p className="mt-0.5 text-base font-bold text-slate-900">
               {ticket.brand} {ticket.model}
+              {ticket.color && (
+                <span className="ml-1 text-xs font-semibold text-slate-500">· {ticket.color}</span>
+              )}
             </p>
             <p className="text-xs text-slate-600">
               Customer: <strong className="text-slate-800">{ticket.customer.fullName}</strong>

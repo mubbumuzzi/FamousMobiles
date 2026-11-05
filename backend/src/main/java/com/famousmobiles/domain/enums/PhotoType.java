@@ -4,5 +4,6 @@ public enum PhotoType {
     FRONT,
     BACK,
     DAMAGE,
-    REPAIR
+    REPAIR,
+    DEVICE
 }

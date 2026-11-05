@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Plus, Phone, MessageCircle } from "lucide-react";
+import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -217,12 +217,20 @@ export default function TicketsPageContent() {
                           🔁 Re-Check
                         </span>
                       ) : null}
+                      {((t.photos && t.photos.length > 0) || (t.photoCount && t.photoCount > 0)) && (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200 flex items-center gap-1" title="Device photo stored for shelf verification">
+                          <Camera className="h-3 w-3 text-blue-600" /> Photo
+                        </span>
+                      )}
                     </div>
                     <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
                   </div>
 
                   <p className="mt-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                     {t.brand} {t.model}
+                    {t.color && (
+                      <span className="ml-1 text-xs font-semibold text-slate-500">· {t.color}</span>
+                    )}
                   </p>
 
                   <div className="mt-1 flex items-center justify-between gap-2">

@@ -129,8 +129,44 @@ public final class TicketDto {
             String lastReopenedAt,
             String reopenReason,
             Long daysSinceDelivery,
-            Boolean eligibleForFreeRecheck
+            Boolean eligibleForFreeRecheck,
+            List<DevicePhotoDto> photos
     ) {
+        public TicketResponse(
+                UUID id,
+                String trackingNumber,
+                CustomerDto.CustomerResponse customer,
+                UUID assignedTechnicianId,
+                String assignedTechnicianName,
+                RepairStatus status,
+                DeviceType deviceType,
+                String brand,
+                String model,
+                String color,
+                String imei,
+                List<String> accessoriesReceived,
+                List<String> deviceCondition,
+                String problemDescription,
+                BigDecimal estimatedCost,
+                BigDecimal advancePaid,
+                BigDecimal balanceAmount,
+                String estimatedDeliveryDate,
+                String createdAt,
+                String deliveredAt,
+                Integer warrantyDays,
+                Integer reopenCount,
+                String lastReopenedAt,
+                String reopenReason,
+                Long daysSinceDelivery,
+                Boolean eligibleForFreeRecheck
+        ) {
+            this(id, trackingNumber, customer, assignedTechnicianId, assignedTechnicianName, status,
+                    deviceType, brand, model, color, imei, accessoriesReceived, deviceCondition,
+                    problemDescription, estimatedCost, advancePaid, balanceAmount, estimatedDeliveryDate,
+                    createdAt, deliveredAt, warrantyDays, reopenCount, lastReopenedAt, reopenReason,
+                    daysSinceDelivery, eligibleForFreeRecheck, List.of());
+        }
+
         public TicketResponse(
                 UUID id,
                 String trackingNumber,
@@ -157,10 +193,14 @@ public final class TicketDto {
             this(id, trackingNumber, customer, assignedTechnicianId, assignedTechnicianName, status,
                     deviceType, brand, model, color, imei, accessoriesReceived, deviceCondition,
                     problemDescription, estimatedCost, advancePaid, balanceAmount, estimatedDeliveryDate,
-                    createdAt, deliveredAt, warrantyDays, 0, null, null, null, false);
+                    createdAt, deliveredAt, warrantyDays, 0, null, null, null, false, List.of());
         }
 
         public static TicketResponse from(RepairTicket t) {
+            return from(t, List.of());
+        }
+
+        public static TicketResponse from(RepairTicket t, List<DevicePhotoDto> photos) {
             Long daysSinceDelivery = null;
             Boolean eligibleForFreeRecheck = false;
             if (t.getDeliveredAt() != null) {
@@ -195,7 +235,8 @@ public final class TicketDto {
                     t.getLastReopenedAt() != null ? t.getLastReopenedAt().toString() : null,
                     t.getReopenReason(),
                     daysSinceDelivery,
-                    eligibleForFreeRecheck
+                    eligibleForFreeRecheck,
+                    photos != null ? photos : List.of()
             );
         }
     }

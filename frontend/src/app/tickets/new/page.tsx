@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Smartphone, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Image as ImageIcon, RotateCcw, Smartphone, Wrench, X } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,33 @@ export default function NewTicketPage() {
   const [warrantyDays, setWarrantyDays] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  interface IntakePhoto {
+    file: File;
+    previewUrl: string;
+    photoType: "DEVICE";
+  }
+  const [pendingPhoto, setPendingPhoto] = useState<IntakePhoto | null>(null);
+  const intakeCameraInputRef = useRef<HTMLInputElement>(null);
+  const intakeGalleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleIntakePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (pendingPhoto?.previewUrl) {
+      URL.revokeObjectURL(pendingPhoto.previewUrl);
+    }
+    const previewUrl = URL.createObjectURL(file);
+    setPendingPhoto({ file, previewUrl, photoType: "DEVICE" });
+  };
+
+  const removePendingPhoto = () => {
+    if (pendingPhoto?.previewUrl) {
+      URL.revokeObjectURL(pendingPhoto.previewUrl);
+    }
+    setPendingPhoto(null);
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -285,6 +312,22 @@ export default function NewTicketPage() {
           warrantyDays: Number(warrantyDays),
         }),
       });
+
+      // Upload captured intake device photo (single photo policy)
+      if (pendingPhoto) {
+        try {
+          const formData = new FormData();
+          formData.append("file", pendingPhoto.file);
+          formData.append("photoType", "DEVICE");
+          await api(`/tickets/${ticket.id}/photos?photoType=DEVICE`, {
+            method: "POST",
+            body: formData,
+          });
+        } catch (uploadErr) {
+          console.error("Failed to upload intake photo", uploadErr);
+        }
+      }
+
       router.push(`/tickets/view?id=${ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create ticket");
@@ -677,6 +720,93 @@ export default function NewTicketPage() {
                   onChange={(e) => setImei(e.target.value.replace(/\D/g, "").slice(0, 16))}
                 />
               </Field>
+
+              {/* Phone Photo Capture for Shelf ID & Return Check */}
+              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-800">Phone Photo (Optional)</span>
+                    <span className="rounded-md bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-bold">
+                      Shelf ID & Return Match
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">Helps identify phone on shop trays during return</span>
+                </div>
+
+                <input
+                  ref={intakeCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleIntakePhotoCapture}
+                />
+                <input
+                  ref={intakeGalleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleIntakePhotoCapture}
+                />
+
+                {pendingPhoto ? (
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-emerald-500/50 bg-black/5 shadow-2xs group shrink-0">
+                      <img src={pendingPhoto.previewUrl} alt="Device preview" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={removePendingPhoto}
+                        className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                        title="Remove photo"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <p className="font-bold text-slate-800">Phone photo ready ✓</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => intakeCameraInputRef.current?.click()}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer"
+                        >
+                          <Camera className="h-3 w-3" />
+                          <span>Retake Photo</span>
+                        </button>
+                        <span className="text-slate-300">·</span>
+                        <button
+                          type="button"
+                          onClick={removePendingPhoto}
+                          className="text-[11px] font-medium text-red-600 hover:underline cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => intakeCameraInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                      <span>Snap Phone Photo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => intakeGalleryInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Choose from Gallery</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -929,6 +1059,19 @@ export default function NewTicketPage() {
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
                 <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "No Warranty"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
+                {pendingPhoto && (
+                  <div className="pt-2 border-t border-slate-200/70 flex items-center gap-3">
+                    <img
+                      src={pendingPhoto.previewUrl}
+                      alt="preview"
+                      className="h-14 w-14 rounded-xl object-cover border border-slate-300 shadow-2xs"
+                    />
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-700 block">Device Intake Photo Attached ✓</span>
+                      <span className="text-[10px] text-slate-500">Will be stored for shelf matching & delivery check</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
+import { DevicePhotoGallery } from "@/components/tickets/DevicePhotoGallery";
+import { DeliveryVerificationModal } from "@/components/tickets/DeliveryVerificationModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +72,9 @@ export default function TicketDetailPage() {
   const [recheckTechId, setRecheckTechId] = useState("");
   const [submittingRecheck, setSubmittingRecheck] = useState(false);
   const [recheckError, setRecheckError] = useState("");
+
+  // Delivery Photo Verification modal state
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
 
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const payAmountInputRef = useRef<HTMLInputElement>(null);
@@ -147,13 +152,49 @@ export default function TicketDetailPage() {
     }
   };
 
+  const handleConfirmDeliveryFromModal = async () => {
+    try {
+      await api(`/tickets/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "DELIVERED",
+          remarks: "Handed over to customer with visual photo & specification verification",
+          technicianNotes: "Handed over to customer with visual photo & specification verification",
+        }),
+      });
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(30); } catch (_) {}
+      }
+      setJustUpdatedStatus("DELIVERED");
+      setNextStatus("");
+      load();
+    } catch (err: any) {
+      alert(err?.message || "Failed to mark as delivered");
+    }
+  };
+
+  const handleQuickUploadPhoto = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("photoType", "DEVICE");
+    await api(`/tickets/${id}/photos?photoType=DEVICE`, {
+      method: "POST",
+      body: formData,
+    });
+    load();
+  };
+
   const quickUpdateStatus = async (targetStatus: RepairStatus) => {
     const balance = Number(ticket?.balanceAmount ?? 0);
-    if (targetStatus === "DELIVERED" && balance > 0) {
-      setPaymentWarning(
-        `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking as Delivered.`
-      );
-      scrollToPaymentSection(true);
+    if (targetStatus === "DELIVERED") {
+      if (balance > 0) {
+        setPaymentWarning(
+          `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking as Delivered.`
+        );
+        scrollToPaymentSection(true);
+        return;
+      }
+      setIsDeliveryModalOpen(true);
       return;
     }
     setPaymentWarning("");
@@ -182,11 +223,15 @@ export default function TicketDetailPage() {
     const balance = Number(ticket?.balanceAmount ?? 0);
 
     // Guard: delivered status requires full payment
-    if (targetStatus === "DELIVERED" && balance > 0) {
-      setPaymentWarning(
-        `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking this ticket as Delivered.`
-      );
-      scrollToPaymentSection(true);
+    if (targetStatus === "DELIVERED") {
+      if (balance > 0) {
+        setPaymentWarning(
+          `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking this ticket as Delivered.`
+        );
+        scrollToPaymentSection(true);
+        return;
+      }
+      setIsDeliveryModalOpen(true);
       return;
     }
 
@@ -421,7 +466,15 @@ export default function TicketDetailPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Repair Job</p>
-              <h1 className="text-2xl font-bold">{ticket.brand} {ticket.model}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold">{ticket.brand} {ticket.model}</h1>
+                {ticket.photos && ticket.photos.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-xs px-2.5 py-0.5 text-xs font-semibold text-white shadow-2xs">
+                    <Camera className="h-3 w-3" />
+                    {ticket.photos.length} Photo{ticket.photos.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
               <p className="mt-1 font-mono text-sm opacity-90">{ticket.trackingNumber}</p>
             </div>
             <div className="flex flex-col items-end gap-1.5">
@@ -975,6 +1028,17 @@ export default function TicketDetailPage() {
             <p className="sm:col-span-2"><span className="text-slate-500">Problem:</span> {ticket.problemDescription || "—"}</p>
           </CardContent>
         </Card>
+
+        {/* Device Photos & Shelf ID */}
+        <DevicePhotoGallery
+          ticketId={ticket.id}
+          brand={ticket.brand}
+          model={ticket.model}
+          color={ticket.color}
+          photos={ticket.photos || []}
+          onPhotosUpdated={load}
+          canEdit={ticket.status !== "DELIVERED" && ticket.status !== "RETURNED_UNREPAIRED"}
+        />
 
         {/* Timeline */}
         <Card>
@@ -1556,6 +1620,17 @@ export default function TicketDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hand Over & Delivery Verification Modal */}
+      {ticket && (
+        <DeliveryVerificationModal
+          isOpen={isDeliveryModalOpen}
+          onClose={() => setIsDeliveryModalOpen(false)}
+          ticket={ticket}
+          onConfirmDelivery={handleConfirmDeliveryFromModal}
+          onQuickUploadPhoto={handleQuickUploadPhoto}
+        />
       )}
     </StaffLayout>
   );
