@@ -1,6 +1,7 @@
 package com.famousmobiles.controller;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.famousmobiles.domain.enums.RepairStatus;
+import com.famousmobiles.dto.MiscDto;
 import com.famousmobiles.service.ReportService;
 
 @RestController
@@ -25,21 +27,31 @@ public class ReportController {
         this.reportService = reportService;
     }
 
+    @GetMapping("/repairs/summary")
+    public MiscDto.ReportSummary summary(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to,
+            @RequestParam(required = false) RepairStatus status,
+            @RequestParam(required = false) UUID storeId) {
+        return reportService.getReportSummary(from, to, status, storeId);
+    }
+
     @GetMapping("/repairs")
     public ResponseEntity<byte[]> repairs(
             @RequestParam LocalDate from,
             @RequestParam LocalDate to,
             @RequestParam(required = false) RepairStatus status,
+            @RequestParam(required = false) UUID storeId,
             @RequestParam(defaultValue = "pdf") String format) throws Exception {
         byte[] data = "xlsx".equals(format)
-                ? reportService.exportRepairsExcel(from, to, status)
-                : reportService.exportRepairsPdf(from, to, status);
+                ? reportService.exportRepairsExcel(from, to, status, storeId)
+                : reportService.exportRepairsPdf(from, to, status, storeId);
         String contentType = "xlsx".equals(format)
                 ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 : MediaType.APPLICATION_PDF_VALUE;
         String ext = "xlsx".equals(format) ? "xlsx" : "pdf";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=repairs." + ext)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=repairs-" + from + "-to-" + to + "." + ext)
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(data);
     }

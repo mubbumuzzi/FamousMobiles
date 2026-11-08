@@ -84,4 +84,14 @@ public final class MiscDto {
             List<TicketDto.TicketResponse> tickets,
             List<CustomerDto.CustomerResponse> customers
     ) {}
+
+    public record ReportSummary(
+            long totalTickets,
+            long deliveredCount,
+            long inProgressCount,
+            long readyCount,
+            BigDecimal totalCost,
+            BigDecimal totalAdvance,
+            BigDecimal totalBalance
+    ) {}
 }

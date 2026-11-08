@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle, AlertTriangle } from "lucide-react";
+import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle, AlertTriangle, Search, X } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,42 @@ function statusVariant(status: string): "default" | "success" | "warning" | "des
   return "default";
 }
 
+function formatCompactStatus(status: string): string {
+  switch (status) {
+    case "DEVICE_RECEIVED":
+      return "Received";
+    case "IN_PROGRESS":
+      return "In Progress";
+    case "READY_FOR_PICKUP":
+      return "Ready";
+    case "DELIVERED":
+      return "Delivered";
+    case "WAITING_FOR_PARTS":
+      return "Waiting Parts";
+    case "WAITING_FOR_APPROVAL":
+      return "Waiting Approval";
+    case "RETURNED_UNREPAIRED":
+      return "Unrepaired";
+    case "REOPENED_FOR_RECHECK":
+      return "Re-Check";
+    default:
+      return formatStatus(status);
+  }
+}
+
+function formatIntakeDate(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
 export default function TicketsPageContent() {
   const { user, loading: authLoading } = useAuthGuard();
   const router = useRouter();
@@ -37,6 +73,7 @@ export default function TicketsPageContent() {
   const [error, setError] = useState("");
   const [view, setView] = useState<"cards" | "board">("cards");
   const [cardFilter, setCardFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const load = () => {
     setLoading(true);
@@ -64,18 +101,31 @@ export default function TicketsPageContent() {
 
   if (authLoading) return <PageLoading />;
 
-  // Filter based on URL param or local chip selection
-  const filtered = statusFilter
-    ? tickets.filter((t) => t.status === statusFilter)
-    : cardFilter === "ACTIVE"
-    ? tickets.filter((t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED")
-    : cardFilter === "READY"
-    ? tickets.filter((t) => t.status === "READY_FOR_PICKUP")
-    : cardFilter === "OVERDUE"
-    ? tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status))
-    : cardFilter === "DELIVERED"
-    ? tickets.filter((t) => t.status === "DELIVERED")
-    : tickets;
+  // Filter based on URL param or local chip selection + live search query
+  const filtered = tickets.filter((t) => {
+    // 1. Status Filter
+    if (statusFilter && t.status !== statusFilter) return false;
+    if (!statusFilter) {
+      if (cardFilter === "ACTIVE" && (t.status === "DELIVERED" || t.status === "RETURNED_UNREPAIRED")) return false;
+      if (cardFilter === "READY" && t.status !== "READY_FOR_PICKUP") return false;
+      if (cardFilter === "OVERDUE" && !isOverdue(t.estimatedDeliveryDate, t.status)) return false;
+      if (cardFilter === "DELIVERED" && t.status !== "DELIVERED") return false;
+    }
+
+    // 2. Search Query (Token, Customer Name, Mobile, Brand, Model, Problem Description)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchToken = t.trackingNumber?.toLowerCase().includes(q);
+      const matchCustomer = t.customer?.fullName?.toLowerCase().includes(q);
+      const matchMobile = t.customer?.mobile?.includes(q);
+      const matchBrand = t.brand?.toLowerCase().includes(q);
+      const matchModel = t.model?.toLowerCase().includes(q);
+      const matchProblem = t.problemDescription?.toLowerCase().includes(q);
+      return Boolean(matchToken || matchCustomer || matchMobile || matchBrand || matchModel || matchProblem);
+    }
+
+    return true;
+  });
 
   const activeCount = tickets.filter(
     (t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED"
@@ -159,121 +209,148 @@ export default function TicketsPageContent() {
           </div>
         </div>
 
-        {/* Filter Chips for Card View */}
-        {view === "cards" && !statusFilter && (
-          <div className="flex gap-2 overflow-x-auto pb-1 kanban-scroll">
-            <button
-              type="button"
-              onClick={() => setCardFilter("ALL")}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                cardFilter === "ALL"
-                  ? "bg-[#121212] text-white shadow-2xs"
-                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
-              )}
-            >
-              <span>All</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.2 text-[10px]",
-                  cardFilter === "ALL" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
-                )}
-              >
-                {tickets.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setCardFilter("ACTIVE")}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                cardFilter === "ACTIVE"
-                  ? "bg-[#121212] text-white shadow-2xs"
-                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
-              )}
-            >
-              <span>Active</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.2 text-[10px]",
-                  cardFilter === "ACTIVE" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
-                )}
-              >
-                {activeCount}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setCardFilter("READY")}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                cardFilter === "READY"
-                  ? "bg-[#121212] text-white shadow-2xs"
-                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
-              )}
-            >
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#0E8345]" />
-                Ready for Pickup
-              </span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.2 text-[10px]",
-                  cardFilter === "READY" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
-                )}
-              >
-                {readyCount}
-              </span>
-            </button>
-
-            {overdueCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setCardFilter("OVERDUE")}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                  cardFilter === "OVERDUE"
-                    ? "bg-[#C5221F] text-white shadow-2xs"
-                    : "bg-[#FDE8E8]/60 text-[#C5221F] border border-[#FDE8E8] hover:bg-[#FDE8E8]"
-                )}
-              >
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#C5221F]" />
-                  Overdue
-                </span>
-                <span
+        {/* Filter Chips & Inline Search for Card View */}
+        {view === "cards" && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Filter Chips */}
+            {!statusFilter && (
+              <div className="flex gap-2 overflow-x-auto pb-1 kanban-scroll items-center">
+                <button
+                  type="button"
+                  onClick={() => setCardFilter("ALL")}
                   className={cn(
-                    "rounded-full px-1.5 py-0.2 text-[10px]",
-                    cardFilter === "OVERDUE" ? "bg-white/20 text-white" : "bg-[#FDE8E8] text-[#C5221F]"
+                    "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                    cardFilter === "ALL"
+                      ? "bg-[#121212] text-white shadow-2xs"
+                      : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
                   )}
                 >
-                  {overdueCount}
-                </span>
-              </button>
+                  <span>All</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      cardFilter === "ALL" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                    )}
+                  >
+                    {tickets.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCardFilter("ACTIVE")}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                    cardFilter === "ACTIVE"
+                      ? "bg-[#121212] text-white shadow-2xs"
+                      : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  <span>Active</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      cardFilter === "ACTIVE" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                    )}
+                  >
+                    {activeCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCardFilter("READY")}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                    cardFilter === "READY"
+                      ? "bg-[#121212] text-white shadow-2xs"
+                      : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#0E8345]" />
+                    Ready for Pickup
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      cardFilter === "READY" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                    )}
+                  >
+                    {readyCount}
+                  </span>
+                </button>
+
+                {overdueCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCardFilter("OVERDUE")}
+                    className={cn(
+                      "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                      cardFilter === "OVERDUE"
+                        ? "bg-[#C5221F] text-white shadow-2xs"
+                        : "bg-[#FDE8E8]/60 text-[#C5221F] border border-[#FDE8E8] hover:bg-[#FDE8E8]"
+                    )}
+                  >
+                    <span className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#C5221F]" />
+                      Overdue
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.2 text-[10px]",
+                        cardFilter === "OVERDUE" ? "bg-white/20 text-white" : "bg-[#FDE8E8] text-[#C5221F]"
+                      )}
+                    >
+                      {overdueCount}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setCardFilter("DELIVERED")}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                    cardFilter === "DELIVERED"
+                      ? "bg-[#121212] text-white shadow-2xs"
+                      : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  <span>Delivered</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      cardFilter === "DELIVERED" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                    )}
+                  >
+                    {deliveredCount}
+                  </span>
+                </button>
+              </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => setCardFilter("DELIVERED")}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                cardFilter === "DELIVERED"
-                  ? "bg-[#121212] text-white shadow-2xs"
-                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
+            {/* Inline Search Bar */}
+            <div className="relative w-full sm:w-[280px] shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#767676]" />
+              <input
+                type="text"
+                placeholder="Search token, customer, model..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full rounded-[10px] border border-[#EBEBEB] bg-white pl-8 pr-7 text-xs text-[#121212] placeholder-[#767676] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[#767676] hover:text-[#121212] cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
-            >
-              <span>Delivered</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.2 text-[10px]",
-                  cardFilter === "DELIVERED" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
-                )}
-              >
-                {deliveredCount}
-              </span>
-            </button>
+            </div>
           </div>
         )}
 
@@ -313,52 +390,76 @@ export default function TicketsPageContent() {
                   key={t.id}
                   onClick={() => router.push(`/tickets/view?id=${t.id}`)}
                   className={cn(
-                    "group relative flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[#DFDFDF] hover:bg-[#F7F7F8] active:scale-[0.99] transition-all cursor-pointer",
+                    "group relative flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs hover:border-[#121212] hover:bg-[#F7F7F8] active:scale-[0.99] transition-all cursor-pointer min-h-[185px]",
                     overdueItem && "border-[#FDE8E8] bg-[#FDE8E8]/10"
                   )}
                 >
-                  <div>
-                    {/* Header: Tracking + Badges */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono text-[13px] font-bold text-[#121212]">
+                  <div className="space-y-2">
+                    {/* Header: Tracking + Badges (NEVER WRAPS) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-nowrap overflow-hidden">
+                        <span className="font-mono text-[13px] font-bold text-[#121212] shrink-0">
                           {t.trackingNumber}
                         </span>
                         {t.store && (
-                          <span className="rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-bold text-[#121212]">
+                          <span className="shrink-0 rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-bold text-[#121212]">
                             {t.store.code}
                           </span>
                         )}
                         {t.reopenCount && t.reopenCount > 0 ? (
-                          <span className="rounded-[4px] bg-[#FFF4EB] px-1.5 py-0.5 text-[10px] font-semibold text-[#B35300] border border-[#B35300]/20">
-                            Re-Check ({t.reopenCount}x)
+                          <span className="shrink-0 rounded-[4px] bg-[#FFF4EB] px-1.5 py-0.5 text-[10px] font-semibold text-[#B35300] border border-[#B35300]/20">
+                            Re-Check
                           </span>
                         ) : null}
                         {((t.photos && t.photos.length > 0) || (t.photoCount && t.photoCount > 0)) && (
                           <span
-                            className="rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-medium text-[#767676] flex items-center gap-1"
+                            className="shrink-0 rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-medium text-[#767676] flex items-center gap-0.5"
                             title="Device photo stored for shelf verification"
                           >
-                            <Camera className="h-3 w-3 text-[#767676]" /> Photo
+                            <Camera className="h-3 w-3 text-[#767676]" />
                           </span>
                         )}
                       </div>
 
-                      <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+                      <Badge
+                        variant={statusVariant(t.status)}
+                        className="shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5"
+                      >
+                        {formatCompactStatus(t.status)}
+                      </Badge>
                     </div>
 
-                    {/* Device */}
-                    <p className="mt-2 text-[15px] font-bold text-[#121212] leading-tight">
-                      {t.brand} {t.model}
-                      {t.color && (
-                        <span className="ml-1 text-[12px] font-medium text-[#767676]">· {t.color}</span>
+                    {/* Device & Issue */}
+                    <div>
+                      <p
+                        className="text-[14px] font-bold text-[#121212] truncate leading-tight"
+                        title={`${t.brand} ${t.model}${t.color ? ` · ${t.color}` : ""}`}
+                      >
+                        {t.brand} {t.model}
+                        {t.color && (
+                          <span className="ml-1 text-[12px] font-medium text-[#767676]">· {t.color}</span>
+                        )}
+                      </p>
+
+                      {/* Problem Description Snippet */}
+                      {t.problemDescription ? (
+                        <p
+                          className="mt-1 text-[12px] text-[#767676] truncate leading-normal"
+                          title={t.problemDescription}
+                        >
+                          <span className="font-medium text-[#121212]">Issue:</span> {t.problemDescription}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[12px] text-[#A3A3A3] italic leading-normal">
+                          No issue notes
+                        </p>
                       )}
-                    </p>
+                    </div>
 
                     {/* Customer */}
-                    <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-medium text-[#767676] truncate">
+                        <p className="text-[13px] font-medium text-[#121212] truncate">
                           {t.customer.fullName}
                         </p>
                         {cleanMobile && (
@@ -374,7 +475,7 @@ export default function TicketsPageContent() {
                         >
                           <a
                             href={`tel:${cleanMobile}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
                             title={`Call ${t.customer.fullName}`}
                           >
                             <Phone className="h-3.5 w-3.5" />
@@ -383,7 +484,7 @@ export default function TicketsPageContent() {
                             href={`https://wa.me/91${cleanMobile}?text=${waText}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
                             title="Chat on WhatsApp"
                           >
                             <MessageCircle className="h-3.5 w-3.5" />
@@ -393,17 +494,27 @@ export default function TicketsPageContent() {
                     </div>
                   </div>
 
-                  {/* Footer: Technician & Balance */}
-                  <div className="mt-3.5 pt-2.5 border-t border-[#EBEBEB] flex items-center justify-between text-[11px] text-[#767676]">
-                    <span className="truncate">{t.assignedTechnicianName ?? "Unassigned"}</span>
-                    <span
-                      className={cn(
-                        "font-bold text-[13px]",
-                        Number(t.balanceAmount) > 0 ? "text-[#B35300]" : "text-[#0E8345]"
-                      )}
-                    >
-                      {formatCurrency(Number(t.balanceAmount))}
-                    </span>
+                  {/* Footer: Date + Technician & Balance */}
+                  <div className="mt-3 pt-2.5 border-t border-[#EBEBEB] flex items-center justify-between text-[11px] text-[#767676]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-medium text-[#121212]/80 shrink-0">
+                        {formatIntakeDate(t.createdAt)}
+                      </span>
+                      <span>·</span>
+                      <span className="truncate max-w-[110px]" title={t.assignedTechnicianName ?? "Unassigned"}>
+                        {t.assignedTechnicianName ?? "Unassigned"}
+                      </span>
+                    </div>
+
+                    {Number(t.balanceAmount) > 0 ? (
+                      <span className="font-bold text-[12px] text-[#B35300] bg-[#FFF4EB] px-2 py-0.5 rounded-[4px] border border-[#B35300]/20">
+                        Due: {formatCurrency(Number(t.balanceAmount))}
+                      </span>
+                    ) : (
+                      <span className="font-medium text-[11px] text-[#767676] bg-[#F0F0F2] px-1.5 py-0.5 rounded-[4px]">
+                        Paid
+                      </span>
+                    )}
                   </div>
                 </div>
               );

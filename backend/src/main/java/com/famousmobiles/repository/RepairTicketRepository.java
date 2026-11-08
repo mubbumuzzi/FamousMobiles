@@ -1,5 +1,6 @@
 package com.famousmobiles.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,6 +47,7 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
            OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR c.mobile LIKE CONCAT('%', :q, '%')
            OR p.mobile LIKE CONCAT('%', :q, '%')
+           OR LOWER(t.brand) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(t.model) LIKE LOWER(CONCAT('%', :q, '%'))
            OR t.imei LIKE CONCAT('%', :q, '%')
         ORDER BY t.createdAt DESC
@@ -63,11 +65,29 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
            OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR c.mobile LIKE CONCAT('%', :q, '%')
            OR p.mobile LIKE CONCAT('%', :q, '%')
+           OR LOWER(t.brand) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(t.model) LIKE LOWER(CONCAT('%', :q, '%'))
            OR t.imei LIKE CONCAT('%', :q, '%'))
         ORDER BY t.createdAt DESC
         """)
     List<RepairTicket> searchWithDetailsAndStore(@Param("q") String query, @Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT DISTINCT t FROM RepairTicket t
+        JOIN FETCH t.customer c
+        LEFT JOIN FETCH t.assignedTechnician tech
+        LEFT JOIN FETCH t.store s
+        WHERE t.createdAt >= :fromInstant AND t.createdAt < :toInstant
+          AND (:status IS NULL OR t.status = :status)
+          AND (:storeId IS NULL OR s.id = :storeId)
+        ORDER BY t.createdAt DESC
+        """)
+    List<RepairTicket> findForReport(
+        @Param("fromInstant") Instant fromInstant,
+        @Param("toInstant") Instant toInstant,
+        @Param("status") RepairStatus status,
+        @Param("storeId") UUID storeId
+    );
 
     long countByStatus(RepairStatus status);
 
