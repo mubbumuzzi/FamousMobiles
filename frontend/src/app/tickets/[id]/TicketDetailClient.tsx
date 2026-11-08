@@ -32,6 +32,14 @@ const WARRANTY_OPTIONS = [
   { days: 365, label: "1 Year" },
 ];
 
+function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
+  if (status === "DELIVERED") return "success";
+  if (status === "READY_FOR_PICKUP") return "warning";
+  if (status.includes("WAITING")) return "warning";
+  if (status === "RETURNED_UNREPAIRED") return "destructive";
+  return "default";
+}
+
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -468,79 +476,80 @@ export default function TicketDetailPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="mx-auto max-w-3xl space-y-5 animate-fade-in pb-36 md:pb-8">
+      <div className="mx-auto max-w-3xl space-y-5 animate-fade-in pb-36 md:pb-8 text-[#121212]">
         {/* Hero */}
-        <div className="overflow-hidden rounded-2xl gradient-hero p-5 text-white shadow-lg">
+        <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-5 text-[#121212] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Repair Job</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold">{ticket.brand} {ticket.model}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#767676]">Repair Job</p>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                <h1 className="text-[22px] leading-[26px] font-bold text-[#121212] tracking-tight">{ticket.brand} {ticket.model}</h1>
                 {ticket.photos && ticket.photos.length > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-xs px-2.5 py-0.5 text-xs font-semibold text-white shadow-2xs">
-                    <Camera className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#F0F0F2] px-2 py-0.5 text-[11px] font-semibold text-[#121212]">
+                    <Camera className="h-3 w-3 text-[#767676]" />
                     {ticket.photos.length} Photo{ticket.photos.length === 1 ? "" : "s"}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="font-mono text-sm opacity-90">{ticket.trackingNumber}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <p className="font-mono text-[13px] text-[#767676]">{ticket.trackingNumber}</p>
                 {ticket.store && (
-                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold backdrop-blur-xs">
+                  <span className="rounded-[4px] bg-[#F0F0F2] px-2 py-0.5 text-[11px] font-semibold text-[#121212]">
                     {ticket.store.displayName || ticket.store.name} ({ticket.store.code})
                   </span>
                 )}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1.5">
-              <Badge className="bg-white/20 text-white border-0 text-sm">{formatStatus(ticket.status)}</Badge>
+              <Badge variant={statusVariant(ticket.status)}>{formatStatus(ticket.status)}</Badge>
               {ticket.reopenCount && ticket.reopenCount > 0 ? (
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-900 border border-amber-300 shadow-xs flex items-center gap-1">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-[4px] bg-[#FFF4EB] text-[#B35300] border border-[#B35300]/20 flex items-center gap-1">
                   <RotateCcw className="h-3 w-3" />
                   Re-Check ({ticket.reopenCount}x)
                 </span>
               ) : null}
               {getWarrantyStatus(ticket).status !== "NONE" && (
-                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] bg-[#F0F0F2] text-[#121212] border border-[#EBEBEB]">
                   {getWarrantyStatus(ticket).label}
                 </span>
               )}
             </div>
           </div>
-          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            <span className="flex items-center gap-2"><User className="h-4 w-4 opacity-70" />{ticket.customer.fullName}</span>
-            <a href={`tel:${ticket.customer.mobile}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4 opacity-70" />{formatCustomerMobiles(ticket.customer)}</a>
-            <span className="flex items-center gap-2"><Wrench className="h-4 w-4 opacity-70" />{ticket.assignedTechnicianName ?? "Unassigned"}</span>
-            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 opacity-70" />EDD: {formatDate(ticket.estimatedDeliveryDate)}</span>
+          <div className="mt-4 grid gap-2.5 text-[13px] sm:grid-cols-2 pt-3 border-t border-[#EBEBEB]">
+            <span className="flex items-center gap-2 text-[#121212]"><User className="h-4 w-4 text-[#767676]" />{ticket.customer.fullName}</span>
+            <a href={`tel:${ticket.customer.mobile}`} className="flex items-center gap-2 text-[#121212] hover:underline"><Phone className="h-4 w-4 text-[#767676]" />{formatCustomerMobiles(ticket.customer)}</a>
+            <span className="flex items-center gap-2 text-[#121212]"><Wrench className="h-4 w-4 text-[#767676]" />{ticket.assignedTechnicianName ?? "Unassigned"}</span>
+            <span className="flex items-center gap-2 text-[#121212]"><Calendar className="h-4 w-4 text-[#767676]" />EDD: {formatDate(ticket.estimatedDeliveryDate)}</span>
           </div>
-          {overdue && <p className="mt-3 rounded-lg bg-red-500/30 px-3 py-1.5 text-xs font-bold">⚠ Overdue repair</p>}
-          <div className="mt-4 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+          {overdue && <p className="mt-3 rounded-[8px] bg-[#FDE8E8] border border-[#FDE8E8] px-3 py-1.5 text-xs font-semibold text-[#C5221F]">Overdue repair</p>}
+          <div className="mt-4 rounded-[10px] bg-[#F7F7F8] p-3 border border-[#EBEBEB]">
             <StatusProgress status={ticket.status} compact />
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm flex items-center gap-1.5"
+              variant="primary"
+              className="h-9 text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
               onClick={() => openWhatsApp("auto")}
             >
               <MessageCircle className="h-4 w-4" />
               {ticket.status === "READY_FOR_PICKUP"
-                ? "WhatsApp: Ready for Pickup 🚀"
+                ? "WhatsApp: Ready for Pickup"
                 : ticket.status === "WAITING_FOR_APPROVAL"
-                ? "WhatsApp: Request Approval 💬"
+                ? "WhatsApp: Request Approval"
                 : ticket.status === "RETURNED_UNREPAIRED"
-                ? "WhatsApp: Return Notice 📦"
+                ? "WhatsApp: Return Notice"
                 : "WhatsApp Update"}
             </Button>
-            <Button size="sm" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={downloadReceipt}><Download className="h-4 w-4" /> PDF</Button>
-            <Button size="sm" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={printReceipt}><Printer className="h-4 w-4" /> Print</Button>
+            <Button size="sm" variant="secondary" className="h-9 text-xs border border-[#EBEBEB] cursor-pointer" onClick={downloadReceipt}><Download className="h-4 w-4" /> PDF</Button>
+            <Button size="sm" variant="secondary" className="h-9 text-xs border border-[#EBEBEB] cursor-pointer" onClick={printReceipt}><Printer className="h-4 w-4" /> Print</Button>
           </div>
         </div>
 
         {/* Cost summary */}
-        <div ref={estimateSectionRef} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
+        <div ref={estimateSectionRef} className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Repair Cost & Balance</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#767676]">Repair Cost & Balance</h3>
             {canUpdateStatus && !editingEstimate && (
               <button
                 type="button"
@@ -550,7 +559,7 @@ export default function TicketDetailPage() {
                   setNewEstimateWarrantyDays(ticket.warrantyDays ?? 0);
                   setEditingEstimate(true);
                 }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#121212] bg-[#F0F0F2] hover:bg-[#EBEBEB] border border-[#EBEBEB] px-2.5 py-1 rounded-[8px] transition-colors cursor-pointer"
               >
                 <Pencil className="h-3 w-3" />
                 {Number(ticket.estimatedCost) === 0 ? "Add Estimate & Warranty +" : "Edit Estimate & Warranty"}
@@ -559,42 +568,42 @@ export default function TicketDetailPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
-              <p className="text-xs text-slate-500">Estimated Cost</p>
+            <div className="rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-3 text-center">
+              <p className="text-[12px] text-[#767676]">Estimated Cost</p>
               {Number(ticket.estimatedCost) === 0 ? (
                 <div className="mt-1">
-                  <span className="inline-block rounded bg-amber-100 text-amber-900 text-xs font-semibold px-2 py-0.5">
+                  <span className="inline-block rounded-[4px] bg-[#FFF4EB] text-[#B35300] text-xs font-semibold px-2 py-0.5">
                     Pending Diagnosis
                   </span>
                 </div>
               ) : (
-                <p className="text-lg font-bold text-slate-900">{formatCurrency(Number(ticket.estimatedCost))}</p>
+                <p className="text-lg font-bold text-[#121212]">{formatCurrency(Number(ticket.estimatedCost))}</p>
               )}
             </div>
-            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
-              <p className="text-xs text-slate-500">Advance Paid</p>
-              <p className="text-lg font-bold text-emerald-700">{formatCurrency(Number(ticket.advancePaid))}</p>
+            <div className="rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-3 text-center">
+              <p className="text-[12px] text-[#767676]">Advance Paid</p>
+              <p className="text-lg font-bold text-[#0E8345]">{formatCurrency(Number(ticket.advancePaid))}</p>
             </div>
-            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
-              <p className="text-xs text-slate-500">
+            <div className="rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-3 text-center">
+              <p className="text-[12px] text-[#767676]">
                 {Number(ticket.estimatedCost) > 0 && Number(ticket.balanceAmount) <= 0
                   ? "Payment Status"
                   : "Balance Due"}
               </p>
               {Number(ticket.estimatedCost) === 0 ? (
                 <div className="mt-1">
-                  <span className="inline-block rounded bg-slate-100 text-slate-600 text-xs font-medium px-2 py-0.5">
+                  <span className="inline-block rounded-[4px] bg-[#F0F0F2] text-[#767676] text-xs font-medium px-2 py-0.5">
                     To be quoted
                   </span>
                 </div>
               ) : Number(ticket.balanceAmount) <= 0 ? (
                 <div className="mt-1">
-                  <span className="inline-block rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 border border-emerald-300">
+                  <span className="inline-block rounded-[6px] bg-[#EAF6EE] text-[#0E8345] text-xs font-bold px-2.5 py-1">
                     Paid in Full ✓
                   </span>
                 </div>
               ) : (
-                <p className="text-lg font-bold text-slate-900">{formatCurrency(Number(ticket.balanceAmount))}</p>
+                <p className="text-lg font-bold text-[#B35300]">{formatCurrency(Number(ticket.balanceAmount))}</p>
               )}
             </div>
           </div>
@@ -1235,10 +1244,10 @@ export default function TicketDetailPage() {
               <button
                 type="button"
                 onClick={assignSelf}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
               >
                 <User className="h-3.5 w-3.5" />
-                Claim Job (Assign to Me)
+                Claim Job
               </button>
             )}
 
@@ -1247,15 +1256,15 @@ export default function TicketDetailPage() {
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("REPAIR_IN_PROGRESS")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                 >
                   <Wrench className="h-3.5 w-3.5" />
-                  Start Repair (In Progress)
+                  Start Repair
                 </button>
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("WAITING_FOR_APPROVAL")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] active:scale-95 touch-target cursor-pointer"
                 >
                   Need Approval
                 </button>
@@ -1267,7 +1276,7 @@ export default function TicketDetailPage() {
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("READY_FOR_PICKUP")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#0E8345] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Ready for Pickup
@@ -1275,7 +1284,7 @@ export default function TicketDetailPage() {
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("WAITING_FOR_PARTS")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-800 active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] active:scale-95 touch-target cursor-pointer"
                 >
                   Wait for Parts
                 </button>
@@ -1287,7 +1296,7 @@ export default function TicketDetailPage() {
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("REPAIR_IN_PROGRESS")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                 >
                   <Wrench className="h-3.5 w-3.5" />
                   Resume Repair
@@ -1295,7 +1304,7 @@ export default function TicketDetailPage() {
                 <button
                   type="button"
                   onClick={() => quickUpdateStatus("READY_FOR_PICKUP")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#0E8345] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                 >
                   Mark Ready
                 </button>
@@ -1308,15 +1317,15 @@ export default function TicketDetailPage() {
                   <button
                     type="button"
                     onClick={() => scrollToPaymentSection(true)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                   >
-                    💵 Collect Balance ({formatCurrency(Number(ticket.balanceAmount))})
+                    Collect Balance ({formatCurrency(Number(ticket.balanceAmount))})
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => quickUpdateStatus("DELIVERED")}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-700 px-4 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target"
+                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#0E8345] px-4 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Hand Over & Deliver
@@ -1327,8 +1336,8 @@ export default function TicketDetailPage() {
 
             {ticket.status === "DELIVERED" && (
               <div className="flex items-center gap-1.5">
-                <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="flex shrink-0 items-center gap-1.5 rounded-[8px] bg-[#EAF6EE] px-3 py-1.5 text-xs font-bold text-[#0E8345]">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#0E8345]" />
                   Delivered ✓
                 </span>
                 <button
@@ -1339,7 +1348,7 @@ export default function TicketDetailPage() {
                     }
                     setRecheckModalOpen(true);
                   }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs active:scale-95 touch-target cursor-pointer"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] hover:bg-[#222222] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Re-Check / Return
@@ -1349,18 +1358,18 @@ export default function TicketDetailPage() {
           </div>
 
           {/* Row 2: Secondary Quick-Touch Bench Actions */}
-          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#EBEBEB]">
             <button
               type="button"
               onClick={() => openWhatsApp("auto")}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 touch-target"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-[#EAF6EE] px-2 py-2 text-xs font-semibold text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 touch-target cursor-pointer"
             >
               <MessageCircle className="h-4 w-4" />
               <span>WhatsApp</span>
             </button>
             <a
               href={`tel:${ticket.customer.mobile}`}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-2 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-95 touch-target"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-[#F0F0F2] px-2 py-2 text-xs font-semibold text-[#121212] hover:bg-[#EBEBEB] active:scale-95 touch-target"
             >
               <Phone className="h-4 w-4" />
               <span>Call</span>
@@ -1376,7 +1385,7 @@ export default function TicketDetailPage() {
                   estimateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }, 120);
               }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 active:scale-95 touch-target"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-[#F0F0F2] px-2 py-2 text-xs font-semibold text-[#121212] hover:bg-[#EBEBEB] active:scale-95 touch-target cursor-pointer"
             >
               <Pencil className="h-4 w-4" />
               <span>Quote</span>
@@ -1385,7 +1394,7 @@ export default function TicketDetailPage() {
               <button
                 type="button"
                 onClick={() => scrollToPaymentSection(true)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 active:scale-95 touch-target"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-[#FFF4EB] px-2 py-2 text-xs font-semibold text-[#B35300] hover:bg-[#ffe3cf] active:scale-95 touch-target cursor-pointer"
               >
                 <span>Pay ₹</span>
               </button>

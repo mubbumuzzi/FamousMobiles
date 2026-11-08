@@ -2,27 +2,27 @@
 
 :root {
   color-scheme: light;
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --secondary: #06b6d4;
-  --secondary-foreground: #ffffff;
-  --muted: #64748b;
-  --muted-foreground: #475569;
-  --accent: #8b5cf6;
-  --accent-foreground: #ffffff;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --destructive: #ef4444;
-  --border: #e2e8f0;
-  --ring: #93c5fd;
-  --radius: 1rem;
-  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.06);
-  --shadow-md: 0 4px 16px rgb(15 23 42 / 0.08);
-  --shadow-lg: 0 12px 40px rgb(15 23 42 / 0.12);
+  --background: #F7F7F8;
+  --foreground: #121212;
+  --card: #FFFFFF;
+  --card-foreground: #121212;
+  --primary: #121212;
+  --primary-foreground: #FFFFFF;
+  --secondary: #666666;
+  --secondary-foreground: #FFFFFF;
+  --muted: #767676;
+  --muted-foreground: #767676;
+  --accent: #2B59FF;
+  --accent-foreground: #FFFFFF;
+  --success: #0E8345;
+  --warning: #B35300;
+  --destructive: #C5221F;
+  --border: #EBEBEB;
+  --ring: #121212;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
@@ -100,23 +100,24 @@
   }
 
   .gradient-header {
-    background: linear-gradient(135deg, #2563eb 0%, #8b5cf6 100%);
+    background: #121212;
   }
 
   .gradient-hero {
-    background: linear-gradient(135deg, #2563eb 0%, #06b6d4 55%, #8b5cf6 100%);
+    background: #121212;
   }
 
   .premium-card {
-    border-radius: 1rem;
-    border: 1px solid rgb(226 232 240 / 0.8);
-    background: white;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s, transform 0.2s;
+    border-radius: 12px;
+    border: 1px solid #EBEBEB;
+    background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s, border-color 0.2s;
   }
 
   .premium-card:hover {
-    box-shadow: var(--shadow-md);
+    border-color: #DFDFDF;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .touch-target {

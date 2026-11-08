@@ -69,20 +69,30 @@ export default function CustomersPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="space-y-4">
+      <div className="space-y-4 animate-fade-in text-[#121212]">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-          {user?.role !== "TECHNICIAN" && <Button size="sm" onClick={() => { setShowForm(!showForm); setFormError(""); }}>Add Customer</Button>}
+          <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">Customers</h1>
+          {user?.role !== "TECHNICIAN" && (
+            <Button variant="primary" size="sm" className="cursor-pointer" onClick={() => { setShowForm(!showForm); setFormError(""); }}>
+              Add Customer
+            </Button>
+          )}
         </div>
-        <Input placeholder="Search by name or mobile..." value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search customers" />
+        <Input
+          placeholder="Search by name or mobile..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search customers"
+          className="h-11 rounded-[10px] border-[#EBEBEB] text-sm"
+        />
         {showForm && (
-          <Card>
+          <Card className="rounded-[12px] border-[#EBEBEB] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <CardContent className="grid gap-3 p-4 md:grid-cols-2">
               <div>
                 <div className="flex items-center justify-between">
                   <Label>Name *</Label>
                   {form.fullName.trim().length > 0 && form.fullName.trim().length < 4 && (
-                    <span className="text-xs text-amber-600">Min 4 chars</span>
+                    <span className="text-xs text-[#B35300]">Min 4 chars</span>
                   )}
                 </div>
                 <Input
@@ -90,6 +100,7 @@ export default function CustomersPage() {
                   minLength={4}
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  className="rounded-[10px] border-[#EBEBEB]"
                   required
                 />
               </div>
@@ -103,6 +114,7 @@ export default function CustomersPage() {
                   placeholder="10-digit mobile"
                   value={form.mobile}
                   onChange={(e) => setForm({ ...form, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                  className="rounded-[10px] border-[#EBEBEB]"
                   required
                 />
               </div>
@@ -116,11 +128,21 @@ export default function CustomersPage() {
                   placeholder="10-digit alternate"
                   value={form.alternateMobile}
                   onChange={(e) => setForm({ ...form, alternateMobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                  className="rounded-[10px] border-[#EBEBEB]"
                 />
               </div>
-              <div><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-              {formError && <p className="text-xs text-red-600 md:col-span-2">{formError}</p>}
-              <Button onClick={create} className="md:col-span-2">Save Customer</Button>
+              <div>
+                <Label>Address</Label>
+                <Input
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  className="rounded-[10px] border-[#EBEBEB]"
+                />
+              </div>
+              {formError && <p className="text-xs text-[#C5221F] md:col-span-2">{formError}</p>}
+              <Button variant="primary" onClick={create} className="md:col-span-2 cursor-pointer">
+                Save Customer
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -134,22 +156,22 @@ export default function CustomersPage() {
               <div
                 key={c.id}
                 onClick={() => router.push(`/customers/view?id=${c.id}`)}
-                className="group relative rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md touch-active active:scale-[0.98] cursor-pointer transition-all flex items-center justify-between gap-3"
+                className="group relative rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[#DFDFDF] hover:bg-[#F7F7F8] active:scale-[0.99] cursor-pointer transition-all flex items-center justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                    <p className="font-bold text-[#121212] truncate">
                       {c.fullName}
                     </p>
-                    <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-600">
+                    <span className="shrink-0 rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-mono font-medium text-[#121212]">
                       {c.customerCode}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-500 font-medium">
+                  <p className="mt-0.5 text-xs text-[#767676] font-medium">
                     {formatCustomerMobiles(c)}
                   </p>
                   {c.address && (
-                    <p className="mt-0.5 text-[11px] text-slate-400 truncate">
+                    <p className="mt-0.5 text-[11px] text-[#767676] truncate">
                       {c.address}
                     </p>
                   )}
@@ -161,24 +183,24 @@ export default function CustomersPage() {
                     <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <a
                         href={`tel:${cleanMobile}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 touch-active transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
                         title={`Call ${c.fullName}`}
                       >
-                        <Phone className="h-4 w-4" />
+                        <Phone className="h-3.5 w-3.5" />
                       </a>
                       <a
                         href={`https://wa.me/91${cleanMobile}?text=${waText}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 touch-active transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
                         title="Chat on WhatsApp"
                       >
-                        <MessageCircle className="h-4 w-4" />
+                        <MessageCircle className="h-3.5 w-3.5" />
                       </a>
                     </div>
                   )}
 
-                  <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="h-4 w-4 text-[#767676] group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </div>
             );

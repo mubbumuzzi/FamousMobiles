@@ -16,8 +16,16 @@ interface StockOrderModalProps {
 }
 
 const COMMON_ACCESSORIES = [
-  "Backcover",
-  "Glass",
+  "Display / Combo",
+  "Battery",
+  "Back Cover",
+  "Tempered Glass",
+  "Charging Sub-board",
+  "Camera Lens",
+  "Speaker / Mic",
+  "UV Curved Glass",
+  "Watch Strap",
+  "Type-C Cable",
 ];
 
 const ADVANCE_PRESETS = [0, 100, 200, 500];
@@ -295,17 +303,17 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
                 placeholder="e.g. S25 Edge fancy case, lens protector, matte glass or Watch charger"
                 rows={2}
                 required
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-[10px] border border-[#EBEBEB] px-3.5 py-2 text-sm text-[#121212] placeholder-[#767676] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212]"
               />
 
-              {/* Quick chips */}
+              {/* Quick suggestions chips */}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {COMMON_ACCESSORIES.map((chip) => (
                   <button
                     key={chip}
                     type="button"
                     onClick={() => handleAddChip(chip)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-800 touch-active transition-colors"
+                    className="rounded-[6px] border border-[#EBEBEB] bg-[#F7F7F8] px-2.5 py-1 text-[11px] font-medium text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all cursor-pointer"
                   >
                     + {chip}
                   </button>

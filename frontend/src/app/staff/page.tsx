@@ -84,23 +84,22 @@ export default function StaffPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-5 animate-fade-in text-[#121212]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Staff</h1>
-            <p className="text-sm text-slate-600">
-              Add or remove salesman and technician accounts. Login is by mobile number; passwords can be the same.
-              Technicians added here also appear on the Technicians page for job assignment.
+            <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">Staff</h1>
+            <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5 max-w-xl">
+              Add or remove salesman and technician accounts. Technicians added here also appear on the Technicians page for job assignment.
             </p>
           </div>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)} className="h-9 px-3 text-xs font-semibold">
             {showForm ? "Cancel" : "Add Staff"}
           </Button>
         </div>
 
         {showForm && (
-          <Card>
-            <CardContent className="grid gap-4 p-4 md:grid-cols-2">
+          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="grid gap-3.5 md:grid-cols-2">
               <Field>
                 <Label>Full Name</Label>
                 <Input
@@ -140,32 +139,32 @@ export default function StaffPage() {
                   ))}
                 </select>
               </Field>
-              <Button className="md:col-span-2" onClick={create}>
+              <Button variant="primary" className="md:col-span-2 h-10 text-xs font-semibold" onClick={create}>
                 Save Staff Member
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-xs text-[#C5221F]">{error}</p>}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[640px] text-sm">
+        <div className="overflow-x-auto rounded-[12px] border border-[#EBEBEB] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <table className="w-full min-w-[640px] text-[13px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                <th className="px-4 py-3 font-semibold text-slate-700">Name</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Mobile</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Role</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Status</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Actions</th>
+              <tr className="border-b border-[#EBEBEB] bg-[#F7F7F8] text-left">
+                <th className="px-4 py-2.5 font-semibold text-[#767676] text-xs">Name</th>
+                <th className="px-4 py-2.5 font-semibold text-[#767676] text-xs">Mobile</th>
+                <th className="px-4 py-2.5 font-semibold text-[#767676] text-xs">Role</th>
+                <th className="px-4 py-2.5 font-semibold text-[#767676] text-xs">Status</th>
+                <th className="px-4 py-2.5 font-semibold text-[#767676] text-xs">Actions</th>
               </tr>
             </thead>
             <tbody>
               {staffMembers.map((member) => (
-                <tr key={member.id} className="border-b border-slate-100 last:border-0">
-                  <td className="px-4 py-3 font-medium text-slate-900">{member.fullName}</td>
-                  <td className="px-4 py-3 text-slate-900">{member.mobile}</td>
-                  <td className="px-4 py-3 text-slate-900">{formatRole(member.role)}</td>
+                <tr key={member.id} className="border-b border-[#EBEBEB] last:border-0 hover:bg-[#F7F7F8] transition-colors">
+                  <td className="px-4 py-3 font-medium text-[#121212]">{member.fullName}</td>
+                  <td className="px-4 py-3 text-[#767676] font-mono text-xs">{member.mobile}</td>
+                  <td className="px-4 py-3 text-[#121212]">{formatRole(member.role)}</td>
                   <td className="px-4 py-3">
                     <Badge variant={member.active ? "success" : "destructive"}>
                       {member.active ? "Active" : "Removed"}
@@ -174,12 +173,12 @@ export default function StaffPage() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       {member.active && (
-                        <Button size="sm" variant="outline" onClick={() => remove(member)}>
+                        <Button size="sm" variant="secondary" className="h-8 text-xs border border-[#EBEBEB]" onClick={() => remove(member)}>
                           Remove
                         </Button>
                       )}
                       {!member.active && (
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => permanentDelete(member)}>
+                        <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={() => permanentDelete(member)}>
                           Permanent Delete
                         </Button>
                       )}
@@ -190,7 +189,7 @@ export default function StaffPage() {
             </tbody>
           </table>
           {staffMembers.length === 0 && (
-            <p className="py-8 text-center text-slate-500">No staff members yet</p>
+            <p className="py-8 text-center text-xs text-[#767676]">No staff members yet</p>
           )}
         </div>
       </div>

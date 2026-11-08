@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle } from "lucide-react";
+import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle, AlertTriangle } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "des
   if (status === "DELIVERED") return "success";
   if (status === "READY_FOR_PICKUP") return "warning";
   if (status.includes("WAITING")) return "warning";
+  if (status === "RETURNED_UNREPAIRED") return "destructive";
   return "default";
 }
 
@@ -30,7 +31,7 @@ export default function TicketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status");
-  const { activeStoreId } = useStore();
+  const { activeStore, activeStoreId } = useStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,120 +77,200 @@ export default function TicketsPageContent() {
     ? tickets.filter((t) => t.status === "DELIVERED")
     : tickets;
 
-  const activeCount = tickets.filter((t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED").length;
+  const activeCount = tickets.filter(
+    (t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED"
+  ).length;
   const readyCount = tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
   const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
   const deliveredCount = tickets.filter((t) => t.status === "DELIVERED").length;
 
+  const storeDisplay =
+    activeStoreId === "ALL"
+      ? "All Stores"
+      : activeStore?.displayName || activeStore?.name || "Main Store";
+
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-5 animate-fade-in text-[#121212]">
+        {/* Page Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Repairs</h1>
+            <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">
+              Repairs
+            </h1>
+            <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">
+              {storeDisplay} · {tickets.length} total tickets
+            </p>
             {statusFilter && (
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-xs text-slate-500">Filtered: <strong>{formatStatus(statusFilter)}</strong></span>
+                <span className="text-xs text-[#767676]">
+                  Filtered: <strong className="text-[#121212]">{formatStatus(statusFilter)}</strong>
+                </span>
                 <button
                   type="button"
                   onClick={() => router.push("/tickets")}
-                  className="text-xs text-blue-600 font-semibold hover:underline"
+                  className="text-xs text-[#121212] font-semibold underline hover:no-underline cursor-pointer"
                 >
                   Clear filter ×
                 </button>
               </div>
             )}
           </div>
+
           <div className="flex items-center gap-2">
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
+            {/* View Switcher */}
+            <div className="flex rounded-[10px] border border-[#EBEBEB] bg-white p-0.5 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setView("cards")}
-                className={cn("rounded-lg p-2 touch-target transition-all", view === "cards" ? "bg-blue-100 text-blue-700 font-bold" : "text-slate-500 hover:text-slate-700")}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-[8px] transition-colors cursor-pointer",
+                  view === "cards"
+                    ? "bg-[#F0F0F2] text-[#121212]"
+                    : "text-[#767676] hover:text-[#121212]"
+                )}
                 aria-label="Card view"
+                title="Card view"
               >
                 <List className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setView("board")}
-                className={cn("rounded-lg p-2 touch-target transition-all", view === "board" ? "bg-blue-100 text-blue-700 font-bold" : "text-slate-500 hover:text-slate-700")}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-[8px] transition-colors cursor-pointer",
+                  view === "board"
+                    ? "bg-[#F0F0F2] text-[#121212]"
+                    : "text-[#767676] hover:text-[#121212]"
+                )}
                 aria-label="Board view"
+                title="Board view"
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
             </div>
-            <Link href="/tickets/new"><Button size="lg"><Plus className="h-5 w-5" /> New</Button></Link>
+
+            <Link href="/tickets/new">
+              <Button variant="primary" className="h-10 px-4 text-[13px] font-semibold gap-1.5 shadow-xs cursor-pointer">
+                <Plus className="h-4 w-4" />
+                <span>New Repair</span>
+              </Button>
+            </Link>
           </div>
         </div>
 
-        {/* Quick Filter Chips for Card View */}
+        {/* Filter Chips for Card View */}
         {view === "cards" && !statusFilter && (
-          <div className="flex gap-2 overflow-x-auto kanban-scroll pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 kanban-scroll">
             <button
               type="button"
               onClick={() => setCardFilter("ALL")}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all touch-target",
-                cardFilter === "ALL" ? "bg-slate-900 text-white shadow-xs" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                cardFilter === "ALL"
+                  ? "bg-[#121212] text-white shadow-2xs"
+                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
               )}
             >
               <span>All</span>
-              <span className={cn("rounded-full px-1.5 py-0.2 text-[10px]", cardFilter === "ALL" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  cardFilter === "ALL" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                )}
+              >
                 {tickets.length}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setCardFilter("ACTIVE")}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all touch-target",
-                cardFilter === "ACTIVE" ? "bg-blue-600 text-white shadow-xs" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                cardFilter === "ACTIVE"
+                  ? "bg-[#121212] text-white shadow-2xs"
+                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
               )}
             >
               <span>Active</span>
-              <span className={cn("rounded-full px-1.5 py-0.2 text-[10px]", cardFilter === "ACTIVE" ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700")}>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  cardFilter === "ACTIVE" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                )}
+              >
                 {activeCount}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setCardFilter("READY")}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all touch-target",
-                cardFilter === "READY" ? "bg-emerald-600 text-white shadow-xs" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                cardFilter === "READY"
+                  ? "bg-[#121212] text-white shadow-2xs"
+                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
               )}
             >
-              <span>Ready for Pickup</span>
-              <span className={cn("rounded-full px-1.5 py-0.2 text-[10px]", cardFilter === "READY" ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700")}>
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#0E8345]" />
+                Ready for Pickup
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  cardFilter === "READY" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                )}
+              >
                 {readyCount}
               </span>
             </button>
+
             {overdueCount > 0 && (
               <button
                 type="button"
                 onClick={() => setCardFilter("OVERDUE")}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all touch-target",
-                  cardFilter === "OVERDUE" ? "bg-red-600 text-white shadow-xs" : "bg-white text-red-700 border border-red-200 hover:bg-red-50"
+                  "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                  cardFilter === "OVERDUE"
+                    ? "bg-[#C5221F] text-white shadow-2xs"
+                    : "bg-[#FDE8E8]/60 text-[#C5221F] border border-[#FDE8E8] hover:bg-[#FDE8E8]"
                 )}
               >
-                <span>⚠️ Overdue</span>
-                <span className={cn("rounded-full px-1.5 py-0.2 text-[10px]", cardFilter === "OVERDUE" ? "bg-white/20 text-white" : "bg-red-100 text-red-800")}>
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#C5221F]" />
+                  Overdue
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.2 text-[10px]",
+                    cardFilter === "OVERDUE" ? "bg-white/20 text-white" : "bg-[#FDE8E8] text-[#C5221F]"
+                  )}
+                >
                   {overdueCount}
                 </span>
               </button>
             )}
+
             <button
               type="button"
               onClick={() => setCardFilter("DELIVERED")}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all touch-target",
-                cardFilter === "DELIVERED" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                "flex shrink-0 items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                cardFilter === "DELIVERED"
+                  ? "bg-[#121212] text-white shadow-2xs"
+                  : "bg-white text-[#121212] border border-[#EBEBEB] hover:bg-[#F7F7F8]"
               )}
             >
               <span>Delivered</span>
-              <span className={cn("rounded-full px-1.5 py-0.2 text-[10px]", cardFilter === "DELIVERED" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  cardFilter === "DELIVERED" ? "bg-white/20 text-white" : "bg-[#F0F0F2] text-[#767676]"
+                )}
+              >
                 {deliveredCount}
               </span>
             </button>
@@ -199,90 +280,128 @@ export default function TicketsPageContent() {
         {error && <Alert variant="error">{error}</Alert>}
 
         {loading ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}</div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-36 rounded-[12px]" />
+            ))}
+          </div>
         ) : view === "board" ? (
-          <RepairKanban tickets={filtered} onUpdate={load} />
+          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3 sm:p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <RepairKanban tickets={filtered} onUpdate={load} />
+          </div>
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Plus} title="No repair tickets yet" description="Create your first repair ticket to get started." actionLabel="New Repair" onAction={() => (window.location.href = "/tickets/new")} />
+          <EmptyState
+            icon={Plus}
+            title="No repair tickets yet"
+            description="Create your first repair ticket to get started."
+            actionLabel="New Repair"
+            onAction={() => (window.location.href = "/tickets/new")}
+          />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((t) => {
-              const cleanMobile = t.customer?.mobile ? t.customer.mobile.replace(/\D/g, "").slice(-10) : "";
+              const cleanMobile = t.customer?.mobile
+                ? t.customer.mobile.replace(/\D/g, "").slice(-10)
+                : "";
               const waText = encodeURIComponent(
                 `Hello ${t.customer?.fullName || "Customer"}, regarding your ${t.brand} ${t.model} (${t.trackingNumber}) at Famous Mobiles:`
               );
+              const overdueItem = isOverdue(t.estimatedDeliveryDate, t.status);
+
               return (
                 <div
                   key={t.id}
                   onClick={() => router.push(`/tickets/view?id=${t.id}`)}
                   className={cn(
-                    "group relative premium-card block p-4 cursor-pointer touch-active active:scale-[0.98] transition-all hover:shadow-md",
-                    isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200"
+                    "group relative flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[#DFDFDF] hover:bg-[#F7F7F8] active:scale-[0.99] transition-all cursor-pointer",
+                    overdueItem && "border-[#FDE8E8] bg-[#FDE8E8]/10"
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
-                      {t.store && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
-                          {t.store.code}
+                  <div>
+                    {/* Header: Tracking + Badges */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-[13px] font-bold text-[#121212]">
+                          {t.trackingNumber}
                         </span>
-                      )}
-                      {t.reopenCount && t.reopenCount > 0 ? (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
-                          🔁 Re-Check
-                        </span>
-                      ) : null}
-                      {((t.photos && t.photos.length > 0) || (t.photoCount && t.photoCount > 0)) && (
-                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200 flex items-center gap-1" title="Device photo stored for shelf verification">
-                          <Camera className="h-3 w-3 text-blue-600" /> Photo
-                        </span>
-                      )}
-                    </div>
-                    <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
-                  </div>
-
-                  <p className="mt-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                    {t.brand} {t.model}
-                    {t.color && (
-                      <span className="ml-1 text-xs font-semibold text-slate-500">· {t.color}</span>
-                    )}
-                  </p>
-
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">{t.customer.fullName}</p>
-                      {cleanMobile && (
-                        <p className="text-xs text-slate-400 font-mono">{cleanMobile}</p>
-                      )}
-                    </div>
-
-                    {/* 1-Tap Direct Call & WhatsApp Actions */}
-                    {cleanMobile && (
-                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <a
-                          href={`tel:${cleanMobile}`}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 touch-active transition-all"
-                          title={`Call ${t.customer.fullName}`}
-                        >
-                          <Phone className="h-4 w-4" />
-                        </a>
-                        <a
-                          href={`https://wa.me/91${cleanMobile}?text=${waText}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 touch-active transition-all"
-                          title="Chat on WhatsApp"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </a>
+                        {t.store && (
+                          <span className="rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-bold text-[#121212]">
+                            {t.store.code}
+                          </span>
+                        )}
+                        {t.reopenCount && t.reopenCount > 0 ? (
+                          <span className="rounded-[4px] bg-[#FFF4EB] px-1.5 py-0.5 text-[10px] font-semibold text-[#B35300] border border-[#B35300]/20">
+                            Re-Check ({t.reopenCount}x)
+                          </span>
+                        ) : null}
+                        {((t.photos && t.photos.length > 0) || (t.photoCount && t.photoCount > 0)) && (
+                          <span
+                            className="rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[10px] font-medium text-[#767676] flex items-center gap-1"
+                            title="Device photo stored for shelf verification"
+                          >
+                            <Camera className="h-3 w-3 text-[#767676]" /> Photo
+                          </span>
+                        )}
                       </div>
-                    )}
+
+                      <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+                    </div>
+
+                    {/* Device */}
+                    <p className="mt-2 text-[15px] font-bold text-[#121212] leading-tight">
+                      {t.brand} {t.model}
+                      {t.color && (
+                        <span className="ml-1 text-[12px] font-medium text-[#767676]">· {t.color}</span>
+                      )}
+                    </p>
+
+                    {/* Customer */}
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-medium text-[#767676] truncate">
+                          {t.customer.fullName}
+                        </p>
+                        {cleanMobile && (
+                          <p className="text-[11px] text-[#767676] font-mono mt-0.5">{cleanMobile}</p>
+                        )}
+                      </div>
+
+                      {/* Direct Call & WhatsApp Actions */}
+                      {cleanMobile && (
+                        <div
+                          className="flex items-center gap-1.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <a
+                            href={`tel:${cleanMobile}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
+                            title={`Call ${t.customer.fullName}`}
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                          </a>
+                          <a
+                            href={`https://wa.me/91${cleanMobile}?text=${waText}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
+                            title="Chat on WhatsApp"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs text-slate-500">
-                    <span>{t.assignedTechnicianName ?? "Unassigned"}</span>
-                    <span className={cn("font-bold text-sm", Number(t.balanceAmount) > 0 ? "text-amber-700" : "text-emerald-700")}>
+                  {/* Footer: Technician & Balance */}
+                  <div className="mt-3.5 pt-2.5 border-t border-[#EBEBEB] flex items-center justify-between text-[11px] text-[#767676]">
+                    <span className="truncate">{t.assignedTechnicianName ?? "Unassigned"}</span>
+                    <span
+                      className={cn(
+                        "font-bold text-[13px]",
+                        Number(t.balanceAmount) > 0 ? "text-[#B35300]" : "text-[#0E8345]"
+                      )}
+                    >
                       {formatCurrency(Number(t.balanceAmount))}
                     </span>
                   </div>

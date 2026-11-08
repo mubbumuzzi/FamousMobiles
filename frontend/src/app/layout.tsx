@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  themeColor: "#121212",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -45,7 +45,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-[#F7F7F8] text-[#121212]" suppressHydrationWarning>
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>

@@ -1,6 +1,6 @@
 import { ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { KpiTone, kpiTones } from "@/lib/design-tokens";
+import { KpiTone } from "@/lib/design-tokens";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type KpiCardProps = {
@@ -18,7 +18,6 @@ type KpiCardProps = {
 export function KpiCard({
   label,
   value,
-  icon: Icon,
   tone = "primary",
   subtitle,
   className,
@@ -26,7 +25,6 @@ export function KpiCard({
   isSelected,
   badge,
 }: KpiCardProps) {
-  const colors = kpiTones[tone];
   const isClickable = Boolean(onClick);
 
   return (
@@ -41,39 +39,42 @@ export function KpiCard({
         }
       }}
       className={cn(
-        "premium-card relative p-4 transition-all duration-200 animate-fade-in text-left select-none",
-        isClickable && "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] group",
-        isSelected && "ring-2 ring-blue-600 shadow-md bg-blue-50/30 border-blue-200",
+        "relative flex min-h-[96px] flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 text-left transition-all select-none",
+        isClickable && "cursor-pointer hover:border-[#DFDFDF] hover:bg-[#F7F7F8] active:scale-[0.99] group",
+        isSelected && "border-[#121212] bg-[#F7F7F8] ring-1 ring-[#121212]",
         className
       )}
     >
-      {badge && (
-        <span className="absolute top-2 right-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-          {badge}
+      <div className="flex items-center justify-between gap-1">
+        <span className="flex items-center gap-1.5 truncate text-[12px] font-medium text-[#767676]">
+          {tone === "success" && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#0E8345]" />}
+          {tone === "warning" && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#B35300]" />}
+          {tone === "danger" && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#C5221F]" />}
+          <span className="truncate">{label}</span>
         </span>
-      )}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          {value === null ? (
-            <Skeleton className="mb-2 h-9 w-20" />
-          ) : (
-            <p className={cn("text-3xl font-bold tracking-tight", colors.text)}>{value}</p>
-          )}
-          <div className="mt-1 flex items-center gap-1">
-            <p className="text-sm font-medium text-slate-700 group-hover:text-blue-600 transition-colors">
-              {label}
-            </p>
-            {isClickable && (
-              <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
-            )}
-          </div>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
-        </div>
-        {Icon && (
-          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform group-hover:scale-105", colors.bg)}>
-            <Icon className={cn("h-5 w-5", colors.icon)} />
-          </div>
+        {isClickable && (
+          <ChevronRight className="h-3.5 w-3.5 text-[#767676] opacity-0 transition-opacity group-hover:opacity-100" />
         )}
+      </div>
+
+      <div>
+        {value === null ? (
+          <Skeleton className="my-1 h-7 w-16" />
+        ) : (
+          <p className="text-[28px] font-bold tracking-tight text-[#121212] leading-none">
+            {value}
+          </p>
+        )}
+      </div>
+
+      <div className="min-h-[14px]">
+        {badge ? (
+          <span className="inline-block rounded-full bg-[#FDE8E8] px-1.5 py-0.5 text-[10px] font-semibold text-[#C5221F]">
+            {badge}
+          </span>
+        ) : subtitle ? (
+          <p className="truncate text-[11px] text-[#767676]">{subtitle}</p>
+        ) : null}
       </div>
     </div>
   );

@@ -26,10 +26,10 @@ export default function StockOrdersPage() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+          <h1 className="text-[20px] leading-[24px] font-bold tracking-tight text-[#121212]">
             Stock & Accessories
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">
             Customer special requests, distributor orders & WhatsApp notifications
           </p>
         </div>

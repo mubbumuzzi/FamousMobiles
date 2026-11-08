@@ -383,19 +383,19 @@ export default function NewTicketPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="mx-auto max-w-2xl animate-fade-in space-y-6 pb-8">
+      <div className="mx-auto max-w-2xl animate-fade-in space-y-6 pb-8 text-[#121212]">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">New Repair</h1>
-            <p className="text-sm text-slate-500">Fast intake — under 30 seconds</p>
+            <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">New Repair</h1>
+            <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Fast intake — under 30 seconds</p>
           </div>
           {stores.length > 1 && (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-2xs">
-              <span className="text-xs font-semibold text-slate-500">Branch:</span>
+            <div className="flex items-center gap-2 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 shadow-2xs">
+              <span className="text-[11px] font-semibold text-[#767676]">Branch:</span>
               <select
                 value={selectedStoreId}
                 onChange={(e) => setSelectedStoreId(e.target.value)}
-                className="rounded-lg border-0 bg-transparent py-0.5 pl-1 pr-6 text-xs font-bold text-blue-700 focus:outline-none focus:ring-0 cursor-pointer"
+                className="rounded-lg border-0 bg-transparent py-0.5 pl-1 pr-6 text-xs font-bold text-[#121212] focus:outline-none focus:ring-0 cursor-pointer"
               >
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -409,7 +409,7 @@ export default function NewTicketPage() {
 
         <WizardSteps steps={STEPS} current={step} />
 
-        <div className="premium-card p-5">
+        <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           {step === 0 && (
             <div className="space-y-4">
               <Field>

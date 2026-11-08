@@ -145,21 +145,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F8FAFC]">
-      <div className="gradient-hero px-6 py-12 text-white">
-        <div className="mx-auto flex max-w-md items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
-            <Smartphone className="h-7 w-7" />
+    <div className="flex min-h-[100dvh] flex-col justify-center bg-[#F7F7F8] px-4 py-8 text-[#121212]">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-[#121212] text-white shadow-2xs">
+            <Smartphone className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Famous Mobiles</h1>
-            <p className="text-sm opacity-90">Staff Portal</p>
+            <h1 className="text-xl font-bold tracking-tight text-[#121212]">Famous Mobiles</h1>
+            <p className="text-xs text-[#767676]">Staff Portal</p>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto -mt-8 w-full max-w-md flex-1 px-4 pb-8">
-        <div className="premium-card p-6 shadow-lg animate-slide-up">
+        <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <form onSubmit={handleLogin} className="space-y-4">
             <Field>
               <Label htmlFor="mobile">Mobile Number</Label>
@@ -170,7 +168,7 @@ export default function LoginPage() {
                 placeholder="Enter your mobile number"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="h-12 text-base"
+                className="h-11 text-sm rounded-[10px]"
                 required
               />
             </Field>
@@ -182,18 +180,18 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 text-base"
+                className="h-11 text-sm rounded-[10px]"
                 required
               />
             </Field>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 space-y-1.5">
+              <div className="rounded-[10px] border border-[#FDE8E8] bg-[#FDE8E8]/60 p-3 text-xs text-[#C5221F] space-y-1.5">
                 <p className="font-semibold">{error}</p>
                 <button
                   type="button"
                   onClick={() => setShowServerModal(true)}
-                  className="font-bold text-red-800 underline hover:no-underline flex items-center gap-1 mt-1 touch-active"
+                  className="font-bold underline hover:no-underline flex items-center gap-1 mt-1 cursor-pointer"
                 >
                   <Settings2 className="h-3.5 w-3.5" />
                   Configure server IP / connection
@@ -201,16 +199,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" size="lg" className="w-full h-12 text-base touch-active" disabled={loading}>
+            <Button type="submit" variant="primary" size="lg" className="w-full h-11 text-sm font-semibold cursor-pointer" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
           {/* Current Target Server Status Bar */}
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex items-center justify-between text-xs text-[#767676]">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-              <span className="truncate max-w-[210px] font-mono text-[11px] text-slate-500">
+              <span className="inline-block h-2 w-2 rounded-full bg-[#0E8345] shrink-0 animate-pulse" />
+              <span className="truncate max-w-[210px] font-mono text-[11px] text-[#767676]">
                 {serverUrl.replace(/^https?:\/\//, "")}
               </span>
             </div>

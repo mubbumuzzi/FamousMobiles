@@ -20,26 +20,24 @@ export default function TechniciansPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900">Technicians</h1>
-        <p className="text-sm text-slate-600">
+      <div className="space-y-4 animate-fade-in text-[#121212]">
+        <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">Technicians</h1>
+        <p className="text-[12px] text-[#767676]">
           Technicians are added from Staff with the Technician role. They can log in and be assigned to repair jobs.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           {techs.length === 0 && (
-            <p className="text-sm text-slate-500 md:col-span-2">No technicians yet. Add one from the Staff page.</p>
+            <p className="text-sm text-[#767676] md:col-span-2">No technicians yet. Add one from the Staff page.</p>
           )}
           {techs.map((t) => (
-            <Card key={t.id}>
-              <CardContent className="p-4">
-                <p className="font-semibold text-slate-900">{t.name}</p>
-                <p className="text-sm text-slate-500">{t.mobile} · {t.skillLevel}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Assigned: {t.assignedJobs ?? 0} · Completed: {t.completedJobs ?? 0}
-                  {t.averageRepairTimeHours != null && ` · Avg: ${t.averageRepairTimeHours.toFixed(1)}h`}
-                </p>
-              </CardContent>
-            </Card>
+            <div key={t.id} className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <p className="font-bold text-[#121212]">{t.name}</p>
+              <p className="text-xs text-[#767676] font-mono mt-0.5">{t.mobile} · {t.skillLevel}</p>
+              <p className="text-[11px] text-[#767676] mt-2 pt-2 border-t border-[#EBEBEB]">
+                Assigned: {t.assignedJobs ?? 0} · Completed: {t.completedJobs ?? 0}
+                {t.averageRepairTimeHours != null && ` · Avg: ${t.averageRepairTimeHours.toFixed(1)}h`}
+              </p>
+            </div>
           ))}
         </div>
       </div>

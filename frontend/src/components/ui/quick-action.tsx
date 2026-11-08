@@ -12,38 +12,43 @@ type QuickActionProps = {
   className?: string;
 };
 
-const tones = {
-  primary: "from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
-  secondary: "from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700",
-  success: "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
-  accent: "from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800",
-};
-
 export function QuickAction({ href, onClick, icon: Icon, label, description, tone = "primary", className }: QuickActionProps) {
+  const isPrimary = tone === "primary";
+
   const classes = cn(
-    "group flex min-h-[72px] flex-col justify-center rounded-2xl bg-gradient-to-br p-4 text-left text-white shadow-md transition-all active:scale-[0.98] hover:shadow-lg",
-    tones[tone],
+    "group flex min-h-[76px] flex-col justify-center rounded-[12px] p-4 text-left transition-all active:scale-[0.98]",
+    isPrimary
+      ? "bg-[#121212] text-white hover:bg-[#222222] shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+      : "bg-white text-[#121212] border border-[#EBEBEB] hover:border-[#DFDFDF] hover:bg-[#F7F7F8] shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
     className
+  );
+
+  const content = (
+    <>
+      <div className={cn(
+        "mb-2.5 flex h-9 w-9 items-center justify-center rounded-[8px] transition-transform group-hover:scale-105",
+        isPrimary ? "bg-white/10 text-white" : "bg-[#F0F0F2] text-[#121212]"
+      )}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className={cn("text-[14px] font-bold leading-tight", isPrimary ? "text-white" : "text-[#121212]")}>{label}</span>
+      {description && (
+        <span className={cn("mt-0.5 text-[12px] leading-tight", isPrimary ? "text-white/70" : "text-[#767676]")}>{description}</span>
+      )}
+    </>
   );
 
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className={classes}>
-        <Icon className="mb-2 h-6 w-6 opacity-90" />
-        <span className="text-sm font-bold leading-tight">{label}</span>
-        {description && <span className="mt-0.5 text-xs opacity-80">{description}</span>}
+        {content}
       </button>
     );
   }
 
   return (
-    <Link
-      href={href || "#"}
-      className={classes}
-    >
-      <Icon className="mb-2 h-6 w-6 opacity-90" />
-      <span className="text-sm font-bold leading-tight">{label}</span>
-      {description && <span className="mt-0.5 text-xs opacity-80">{description}</span>}
+    <Link href={href || "#"} className={classes}>
+      {content}
     </Link>
   );
 }

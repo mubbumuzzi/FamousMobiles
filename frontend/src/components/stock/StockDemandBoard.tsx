@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   ShoppingBag,
   Package,
@@ -13,6 +13,10 @@ import {
   Check,
   Plus,
   Copy,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { StockOrder, StockOrderStatus } from "@/lib/types";
@@ -26,6 +30,17 @@ interface StockDemandBoardProps {
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+const PAGE_SIZE = 8;
+
+const SUGGESTION_CATEGORIES = [
+  { label: "All Items", key: "" },
+  { label: "Display / Screen", key: "display", match: ["display", "combo", "screen", "folder", "lcd", "oled"] },
+  { label: "Battery", key: "battery", match: ["battery", "batt"] },
+  { label: "Back Cover", key: "cover", match: ["cover", "back", "case", "panel", "body"] },
+  { label: "Tempered Glass", key: "glass", match: ["glass", "tempered", "uv", "matte"] },
+  { label: "Charging", key: "charg", match: ["charg", "cc", "port", "subboard", "connector"] },
+  { label: "Camera", key: "camera", match: ["camera", "lens", "cam"] },
+];
 
 function isExpiredArrived(arrivedAt?: string | null, createdAt?: string): boolean {
   const d = arrivedAt || createdAt;
@@ -56,10 +71,27 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   const [orders, setOrders] = useState<StockOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeTab, setActiveTab] = useState<"ACTIVE" | "PENDING" | "ARRIVED" | "UNCLAIMED" | "FULFILLED">("ACTIVE");
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [copiedWholesale, setCopiedWholesale] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [showAll, setShowAll] = useState(false);
+
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -146,21 +178,92 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
     });
   };
 
-  // Filter orders
-  const filteredOrders = useMemo(() => {
-    let list = orders;
+  // Scope orders by status tab
+  const statusScopedOrders = useMemo(() => {
     if (activeTab === "ACTIVE") {
-      list = list.filter((o) => o.status === "PENDING" || (o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt)));
+      return orders.filter((o) => o.status === "PENDING" || (o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt)));
     } else if (activeTab === "PENDING") {
-      list = list.filter((o) => o.status === "PENDING");
+      return orders.filter((o) => o.status === "PENDING");
     } else if (activeTab === "ARRIVED") {
-      list = list.filter((o) => o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt));
+      return orders.filter((o) => o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt));
     } else if (activeTab === "UNCLAIMED") {
-      list = list.filter((o) => o.status === "ARRIVED" && isExpiredArrived(o.arrivedAt, o.createdAt));
+      return orders.filter((o) => o.status === "ARRIVED" && isExpiredArrived(o.arrivedAt, o.createdAt));
     } else if (activeTab === "FULFILLED") {
-      list = list.filter((o) => o.status === "FULFILLED" && !isExpiredFulfilled(o.fulfilledAt, o.updatedAt));
+      return orders.filter((o) => o.status === "FULFILLED" && !isExpiredFulfilled(o.fulfilledAt, o.updatedAt));
+    }
+    return orders;
+  }, [orders, activeTab]);
+
+  // Compute live typeahead suggestions based on currently typed search
+  const liveSuggestions = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+
+    const suggestions: { label: string; sub: string; type: "item" | "customer" | "mobile" }[] = [];
+    const seen = new Set<string>();
+
+    for (const o of statusScopedOrders) {
+      // Check item
+      if (o.itemDetails && o.itemDetails.toLowerCase().includes(q)) {
+        const key = `item:${o.itemDetails.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({ label: o.itemDetails, sub: `${o.customerName} · ${o.orderCode}`, type: "item" });
+        }
+      }
+      // Check customer name
+      if (o.customerName && o.customerName.toLowerCase().includes(q)) {
+        const key = `cust:${o.customerName.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({ label: o.customerName, sub: `Customer · ${o.itemDetails}`, type: "customer" });
+        }
+      }
+      // Check mobile
+      if (o.customerMobile && o.customerMobile.includes(q)) {
+        const key = `mob:${o.customerMobile}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({ label: o.customerMobile, sub: `${o.customerName} · ${o.itemDetails}`, type: "mobile" });
+        }
+      }
+      if (suggestions.length >= 6) break;
+    }
+    return suggestions;
+  }, [statusScopedOrders, search]);
+
+  // Dynamic Category Suggestion Tag counts
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const cat of SUGGESTION_CATEGORIES) {
+      if (!cat.key) {
+        counts[cat.key] = statusScopedOrders.length;
+      } else {
+        counts[cat.key] = statusScopedOrders.filter((o) => {
+          const text = (o.itemDetails || "").toLowerCase();
+          return cat.match ? cat.match.some((m) => text.includes(m)) : true;
+        }).length;
+      }
+    }
+    return counts;
+  }, [statusScopedOrders]);
+
+  // Filter orders by category tag and text search
+  const filteredOrders = useMemo(() => {
+    let list = statusScopedOrders;
+
+    // Filter by tag
+    if (selectedTag) {
+      const cat = SUGGESTION_CATEGORIES.find((c) => c.key === selectedTag);
+      if (cat && cat.match) {
+        list = list.filter((o) => {
+          const text = (o.itemDetails || "").toLowerCase();
+          return cat.match.some((m) => text.includes(m));
+        });
+      }
     }
 
+    // Filter by search query
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -172,7 +275,15 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
       );
     }
     return list;
-  }, [orders, activeTab, search]);
+  }, [statusScopedOrders, selectedTag, search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedTag, activeTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const pagedOrders = showAll ? filteredOrders : filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const pendingCount = orders.filter((o) => o.status === "PENDING").length;
   const arrivedActiveCount = orders.filter((o) => o.status === "ARRIVED" && !isExpiredArrived(o.arrivedAt, o.createdAt)).length;
@@ -181,7 +292,7 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
   const fulfilledCount = orders.filter((o) => o.status === "FULFILLED" && !isExpiredFulfilled(o.fulfilledAt, o.updatedAt)).length;
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3.5">
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-[10px] bg-[#121212] px-4 py-3 text-[12px] font-medium text-white shadow-xl animate-fade-in">
@@ -226,22 +337,70 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
         </div>
       </div>
 
-      {/* Controls: Segmented Filter Chips + Search Input (Desktop: row, Mobile: search on top, chips below) */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        {/* Mobile Search input placed on top for single-handed thumb typing */}
-        <div className="relative w-full sm:hidden">
+      {/* Controls: Segmented Filter Chips + Search Input with Live Suggestions */}
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between" ref={searchBoxRef}>
+        {/* Search input with live suggestion popover */}
+        <div className="relative w-full sm:w-[320px] shrink-0 sm:order-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#767676]" />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search mobile or item..."
-            className="w-full rounded-[10px] border border-[#EBEBEB] bg-white pl-9 pr-3 py-2 text-[14px] text-[#121212] placeholder:text-[#767676] focus:border-[#121212] focus:outline-none min-h-[44px]"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            placeholder="Search mobile, item, or customer..."
+            className="w-full rounded-[10px] border border-[#EBEBEB] bg-white pl-9 pr-8 py-2 text-[13px] text-[#121212] placeholder:text-[#767676] focus:border-[#121212] focus:outline-none min-h-[40px]"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setShowSuggestions(false);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#767676] hover:text-[#121212] p-1 cursor-pointer"
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          {/* Live Typeahead Suggestions Dropdown */}
+          {showSuggestions && liveSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-[12px] border border-[#EBEBEB] bg-white p-1.5 shadow-xl animate-in fade-in-50 zoom-in-95">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#767676] flex items-center justify-between">
+                <span>Matching Suggestions</span>
+                <span className="text-[9px] font-normal lowercase">{liveSuggestions.length} found</span>
+              </div>
+              <div className="space-y-0.5">
+                {liveSuggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSearch(s.label);
+                      setShowSuggestions(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-[8px] px-2.5 py-1.5 text-left text-xs hover:bg-[#F7F7F8] cursor-pointer transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[#121212] truncate">{s.label}</p>
+                      <p className="text-[10px] text-[#767676] truncate">{s.sub}</p>
+                    </div>
+                    <span className="ml-2 rounded-[4px] bg-[#F0F0F2] px-1.5 py-0.5 text-[9px] font-semibold text-[#767676] shrink-0 uppercase">
+                      {s.type}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Segmented Filter Chips (text only, counts in muted) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+        {/* Segmented Status Filter Chips (text only, counts in muted) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0 sm:order-1">
           <button
             type="button"
             onClick={() => setActiveTab("ACTIVE")}
@@ -317,18 +476,35 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
             </span>
           </button>
         </div>
+      </div>
 
-        {/* Desktop Search input: right-aligned at 280px */}
-        <div className="relative hidden sm:block w-[280px] shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#767676]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search mobile or item..."
-            className="w-full rounded-[10px] border border-[#EBEBEB] bg-white pl-8 pr-3 py-1.5 text-[13px] text-[#121212] placeholder:text-[#767676] focus:border-[#121212] focus:outline-none min-h-[38px]"
-          />
-        </div>
+      {/* Dynamic Item Category Suggestions (Quick 1-tap filters) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <span className="text-[11px] font-semibold text-[#767676] shrink-0 mr-1 flex items-center gap-1">
+          <Sparkles className="h-3 w-3 text-[#2B59FF]" /> Suggestions:
+        </span>
+        {SUGGESTION_CATEGORIES.map((cat) => {
+          const count = categoryCounts[cat.key] || 0;
+          if (cat.key && count === 0) return null; // Only show relevant tags with active items
+          const isSelected = selectedTag === cat.key;
+          return (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => setSelectedTag(isSelected ? "" : cat.key)}
+              className={`rounded-[6px] px-2.5 py-1 text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                isSelected
+                  ? "bg-[#121212] text-white shadow-2xs font-semibold"
+                  : "bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB]"
+              }`}
+            >
+              <span>{cat.label}</span>
+              <span className={isSelected ? "text-white/70" : "text-[#767676]"}>
+                ({count})
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {activeTab === "UNCLAIMED" && (
@@ -338,26 +514,40 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
       )}
 
       {/* Orders List: List of clean white order cards */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {loading ? (
           <div className="py-8 text-center text-[12px] text-[#767676]">Loading stock orders...</div>
         ) : filteredOrders.length === 0 ? (
           <div className="rounded-[12px] border border-dashed border-[#EBEBEB] bg-white py-8 text-center">
             <ShoppingBag className="mx-auto h-7 w-7 text-[#767676]" />
             <p className="mt-2 text-[13px] font-medium text-[#767676]">
-              {search ? "No stock requests match your search" : "No active stock requests"}
+              {search || selectedTag ? "No stock requests match your filter" : "No active stock requests"}
             </p>
-            <button
-              type="button"
-              onClick={onOpenNewStockOrder}
-              className="mt-3 inline-flex items-center gap-1 rounded-[8px] bg-[#F7F7F8] border border-[#EBEBEB] px-3 py-1.5 text-[12px] font-semibold text-[#121212] hover:bg-slate-200/50 transition-colors cursor-pointer min-h-[36px]"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Create First Order</span>
-            </button>
+            {(search || selectedTag) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setSelectedTag("");
+                }}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#121212] underline hover:no-underline cursor-pointer"
+              >
+                Clear filters
+              </button>
+            )}
+            {!search && !selectedTag && (
+              <button
+                type="button"
+                onClick={onOpenNewStockOrder}
+                className="mt-3 inline-flex items-center gap-1 rounded-[8px] bg-[#F7F7F8] border border-[#EBEBEB] px-3 py-1.5 text-[12px] font-semibold text-[#121212] hover:bg-slate-200/50 transition-colors cursor-pointer min-h-[36px]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Create First Order</span>
+              </button>
+            )}
           </div>
         ) : (
-          filteredOrders.map((order) => {
+          pagedOrders.map((order) => {
             const isArrived = order.status === "ARRIVED";
             const isFulfilled = order.status === "FULFILLED";
             const isPending = order.status === "PENDING";
@@ -514,6 +704,55 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
           })
         )}
       </div>
+
+      {/* Pagination & Progressive View Controls (for 8+ items) */}
+      {!loading && filteredOrders.length > PAGE_SIZE && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#EBEBEB] text-xs text-[#767676]">
+          <div>
+            Showing{" "}
+            <strong className="text-[#121212]">
+              {showAll ? `all ${filteredOrders.length}` : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredOrders.length)}`}
+            </strong>{" "}
+            of <strong className="text-[#121212]">{filteredOrders.length}</strong> items
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
+              className="rounded-[6px] border border-[#EBEBEB] bg-white px-2.5 py-1 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] cursor-pointer transition-colors"
+            >
+              {showAll ? "Paginate (8 per view)" : `Show All (${filteredOrders.length})`}
+            </button>
+
+            {!showAll && totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="rounded-[6px] border border-[#EBEBEB] bg-white p-1 text-[#121212] disabled:opacity-40 hover:bg-[#F7F7F8] cursor-pointer"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="px-2 font-medium text-[#121212]">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="rounded-[6px] border border-[#EBEBEB] bg-white p-1 text-[#121212] disabled:opacity-40 hover:bg-[#F7F7F8] cursor-pointer"
+                  title="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

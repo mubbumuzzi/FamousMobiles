@@ -36,9 +36,9 @@ export function StatusProgress({ status, compact }: { status: RepairStatus; comp
           <span>Progress</span>
           <span>{percent}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-2 overflow-hidden rounded-full bg-[#EBEBEB]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-500"
+            className="h-full rounded-full bg-[#121212] transition-all duration-500"
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -48,9 +48,9 @@ export function StatusProgress({ status, compact }: { status: RepairStatus; comp
 
   return (
     <div className="space-y-3">
-      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+      <div className="h-2.5 overflow-hidden rounded-full bg-[#EBEBEB]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-violet-500 transition-all duration-700"
+          className="h-full rounded-full bg-[#121212] transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -60,10 +60,10 @@ export function StatusProgress({ status, compact }: { status: RepairStatus; comp
             <div
               className={cn(
                 "h-2 w-2 rounded-full transition-all",
-                i <= currentIndex ? "bg-blue-600 scale-125" : "bg-slate-200"
+                i <= currentIndex ? "bg-[#121212] scale-125" : "bg-[#EBEBEB]"
               )}
             />
-            <span className={cn("hidden text-[9px] font-medium leading-tight text-center sm:block", i === currentIndex ? "text-blue-700" : "text-slate-400")}>
+            <span className={cn("hidden text-[9px] font-medium leading-tight text-center sm:block", i === currentIndex ? "text-[#121212] font-semibold" : "text-[#767676]")}>
               {formatStatus(s).split(" ")[0]}
             </span>
           </div>
