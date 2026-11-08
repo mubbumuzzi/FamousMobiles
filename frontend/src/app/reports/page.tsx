@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { getApiUrl, getAccessToken, api } from "@/lib/api";
+import { getApiUrl, getAccessToken, api, getCachedApi } from "@/lib/api";
 import { useStore } from "@/context/StoreContext";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -112,13 +112,14 @@ export default function ReportsPage() {
 
   const loadSummary = useCallback(async () => {
     if (!from || !to) return;
-    setLoadingSummary(true);
+    const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
+    const statusParam = statusFilter ? `&status=${statusFilter}` : "";
+    const key = `/reports/repairs/summary?from=${from}&to=${to}${statusParam}${storeParam}`;
+    if (!getCachedApi(key)) {
+      setLoadingSummary(true);
+    }
     try {
-      const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
-      const statusParam = statusFilter ? `&status=${statusFilter}` : "";
-      const data = await api<ReportSummary>(
-        `/reports/repairs/summary?from=${from}&to=${to}${statusParam}${storeParam}`
-      );
+      const data = await api<ReportSummary>(key);
       setSummary(data);
     } catch {
       // Graceful fallback if summary fails

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { PageLoading } from "@/components/ui/skeleton";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { DashboardMetrics, Ticket } from "@/lib/types";
 import { ReceptionDashboard } from "@/components/dashboard/ReceptionDashboard";
 import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
@@ -14,18 +14,31 @@ import { useStore } from "@/context/StoreContext";
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuthGuard();
   const { activeStoreId } = useStore();
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+  const metricsKey = `/dashboard/metrics${query}`;
+  const ticketsKey = `/tickets${query}`;
+
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(
+    () => getCachedApi<DashboardMetrics>(metricsKey) ?? null
+  );
+  const [tickets, setTickets] = useState<Ticket[]>(
+    () => getCachedApi<Ticket[]>(ticketsKey) ?? []
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !getCachedApi<DashboardMetrics>(metricsKey)
+  );
   const [error, setError] = useState("");
 
   const load = () => {
-    setLoading(true);
+    const currentQuery = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+    const mKey = `/dashboard/metrics${currentQuery}`;
+    if (!getCachedApi(mKey)) {
+      setLoading(true);
+    }
     setError("");
-    const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
     Promise.all([
-      api<DashboardMetrics>(`/dashboard/metrics${query}`),
-      api<Ticket[]>(`/tickets${query}`),
+      api<DashboardMetrics>(mKey),
+      api<Ticket[]>(`/tickets${currentQuery}`),
     ])
       .then(([m, t]) => {
         setMetrics(m);

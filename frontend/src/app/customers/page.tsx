@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { Customer } from "@/lib/types";
 import { formatCustomerMobiles } from "@/lib/utils";
 
@@ -31,14 +31,28 @@ function formatJoinedDate(dateStr?: string | null): string {
 export default function CustomersPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const customersKey = "/customers";
+  const [customers, setCustomers] = useState<Customer[]>(
+    () => getCachedApi<Customer[]>(customersKey) ?? []
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !getCachedApi<Customer[]>(customersKey)
+  );
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ fullName: "", mobile: "", alternateMobile: "", address: "" });
   const [showForm, setShowForm] = useState(false);
 
   const debouncedQuery = useDebounce(query, 350);
 
-  const load = (q?: string) => api<Customer[]>(`/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`).then(setCustomers);
+  const load = (q?: string) => {
+    const path = `/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+    if (!q && !getCachedApi(customersKey)) {
+      setLoading(true);
+    }
+    return api<Customer[]>(path)
+      .then(setCustomers)
+      .finally(() => setLoading(false));
+  };
   useEffect(() => {
     if (authLoading || !user) return;
     load();

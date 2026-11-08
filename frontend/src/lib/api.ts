@@ -6,6 +6,14 @@ import {
   storeTokens,
   removeAuthData,
 } from "./storage";
+import {
+  getCachedApi,
+  setCachedApi,
+  invalidateApiCache,
+  clearApiCache,
+} from "./api-cache";
+
+export { getCachedApi, setCachedApi, invalidateApiCache, clearApiCache };
 
 export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8080/api";
 
@@ -118,6 +126,9 @@ export async function logoutUser(): Promise<void> {
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   await loadTokens();
   const url = getApiUrl();
+  const method = (options.method || "GET").toUpperCase();
+  const isGet = method === "GET";
+
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -133,6 +144,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   try {
     res = await fetch(`${url}${path}`, { ...options, headers });
   } catch {
+    // If network fails during a GET request and we have cached data, return it seamlessly
+    if (isGet) {
+      const cached = getCachedApi<T>(path);
+      if (cached !== undefined) {
+        return cached;
+      }
+    }
     throw new Error(
       `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
     );
@@ -149,6 +167,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       try {
         res = await fetch(`${url}${path}`, { ...options, headers });
       } catch {
+        if (isGet) {
+          const cached = getCachedApi<T>(path);
+          if (cached !== undefined) return cached;
+        }
         throw new Error(
           `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
         );
@@ -164,10 +186,35 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     throw new Error(message);
   }
 
+  // Auto-invalidate matching caches on successful data mutations (POST, PUT, PATCH, DELETE)
+  if (!isGet) {
+    if (path.includes("/tickets")) {
+      invalidateApiCache("/tickets");
+      invalidateApiCache("/dashboard");
+      invalidateApiCache("/reports");
+    } else if (path.includes("/stock-orders")) {
+      invalidateApiCache("/stock-orders");
+      invalidateApiCache("/dashboard");
+    } else if (path.includes("/customers")) {
+      invalidateApiCache("/customers");
+      invalidateApiCache("/tickets");
+    } else if (path.includes("/payments")) {
+      invalidateApiCache("/dashboard");
+      invalidateApiCache("/tickets");
+      invalidateApiCache("/reports");
+    } else {
+      invalidateApiCache();
+    }
+  }
+
   if (res.status === 204) return undefined as T;
   const contentType = res.headers.get("content-type");
   if (contentType?.includes("application/json")) {
-    return res.json();
+    const json = await res.json();
+    if (isGet) {
+      setCachedApi(path, json);
+    }
+    return json as T;
   }
   return res.blob() as T;
 }

@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { StockOrder, StockOrderStatus } from "@/lib/types";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { sanitizeItemForSupplier } from "@/lib/supplier-list-sanitizer";
@@ -73,15 +73,22 @@ export function StockDemandSnapshot({
   refreshTrigger = 0,
   waitingPartsCount = 0,
 }: StockDemandSnapshotProps) {
-  const [orders, setOrders] = useState<StockOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const stockCacheKey = "/stock-orders?status=ALL";
+  const [orders, setOrders] = useState<StockOrder[]>(
+    () => getCachedApi<StockOrder[]>(stockCacheKey) ?? []
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !getCachedApi<StockOrder[]>(stockCacheKey)
+  );
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
-      const data = await api<StockOrder[]>(`/stock-orders?status=ALL`);
+      if (!getCachedApi(stockCacheKey)) {
+        setLoading(true);
+      }
+      const data = await api<StockOrder[]>(stockCacheKey);
       setOrders(data);
     } catch (err) {
       console.error("Failed to load stock orders snapshot", err);

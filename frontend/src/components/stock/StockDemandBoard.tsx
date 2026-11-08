@@ -21,7 +21,7 @@ import {
   Store,
   AlertCircle,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { StockOrder, StockOrderStatus } from "@/lib/types";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { formatSupplierOrderList, sanitizeItemForSupplier } from "@/lib/supplier-list-sanitizer";
@@ -111,8 +111,13 @@ function getWhatsAppUrl(order: StockOrder): string {
 }
 
 export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: StockDemandBoardProps) {
-  const [orders, setOrders] = useState<StockOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const stockCacheKey = "/stock-orders?status=ALL";
+  const [orders, setOrders] = useState<StockOrder[]>(
+    () => getCachedApi<StockOrder[]>(stockCacheKey) ?? []
+  );
+  const [loading, setLoading] = useState(
+    () => !getCachedApi<StockOrder[]>(stockCacheKey)
+  );
   const [search, setSearch] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -137,8 +142,10 @@ export function StockDemandBoard({ onOpenNewStockOrder, refreshTrigger = 0 }: St
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
-      const data = await api<StockOrder[]>(`/stock-orders?status=ALL`);
+      if (!getCachedApi(stockCacheKey)) {
+        setLoading(true);
+      }
+      const data = await api<StockOrder[]>(stockCacheKey);
       setOrders(data);
     } catch (err) {
       console.error("Failed to load stock orders", err);
