@@ -18,7 +18,7 @@ CREATE TABLE stores (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Seed Store 1 (Main Branch - Manikonda) and Store 2 (Shaikpet Branch)
+-- Seed Store 1 (Main Branch - Manikonda) and Store 2 (New Famous)
 INSERT INTO stores (
     code, name, display_name, mobile, alternate_mobile, owner_name,
     address_line1, address_line2, city, pincode, terms, active
@@ -37,8 +37,8 @@ INSERT INTO stores (
     TRUE
 ), (
     'FM2',
-    'Famous Mobiles (Shaikpet Branch)',
-    'Shaikpet',
+    'New Famous',
+    'New Famous',
     '9063786751',
     NULL,
     'Basheer Uddin',

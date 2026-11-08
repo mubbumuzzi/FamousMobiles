@@ -98,8 +98,8 @@ public class MultiStoreServiceTest {
         store2 = new Store();
         store2.setId(UUID.randomUUID());
         store2.setCode("FM2");
-        store2.setName("Famous Mobiles (Shaikpet Branch)");
-        store2.setDisplayName("Shaikpet");
+        store2.setName("New Famous");
+        store2.setDisplayName("New Famous");
         store2.setMobile("9876543210");
         store2.setOwnerName("Basheer Uddin");
         store2.setAddressLine1("Shaikpet Main Road");
@@ -141,13 +141,13 @@ public class MultiStoreServiceTest {
         assertEquals("FM2-2026-000001", response.trackingNumber());
         assertNotNull(response.store());
         assertEquals("FM2", response.store().code());
-        assertEquals("Shaikpet", response.store().displayName());
+        assertEquals("New Famous", response.store().displayName());
     }
 
     @Test
     void shopInfoResolve_usesStoreSpecificBranding() {
         ShopInfo.Resolved resolvedStore2 = ShopInfo.resolve(store2, null);
-        assertEquals("Famous Mobiles (Shaikpet Branch)", resolvedStore2.name());
+        assertEquals("New Famous", resolvedStore2.name());
         assertEquals("9876543210", resolvedStore2.mobile());
         assertTrue(resolvedStore2.addressLines().contains("Shaikpet Main Road"));
     }

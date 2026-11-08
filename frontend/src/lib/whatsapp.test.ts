@@ -20,8 +20,8 @@ describe("Multi-Store WhatsApp Message Formatting Tests", () => {
   const store2: Store = {
     id: "s2",
     code: "FM2",
-    name: "Famous Mobiles (Shaikpet Branch)",
-    displayName: "Shaikpet",
+    name: "New Famous",
+    displayName: "New Famous",
     mobile: "9876543210",
     ownerName: "Basheer Uddin",
     addressLine1: "Shaikpet Main Road",
@@ -55,7 +55,7 @@ describe("Multi-Store WhatsApp Message Formatting Tests", () => {
     const url = buildWhatsAppPickupUrl(ticket);
     const decoded = decodeURIComponent(url);
 
-    assert.ok(decoded.includes("Famous Mobiles (Shaikpet Branch)"), "Must include Store 2 name");
+    assert.ok(decoded.includes("New Famous"), "Must include Store 2 name");
     assert.ok(decoded.includes("Shaikpet Main Road, Hyderabad"), "Must include Store 2 address");
     assert.ok(decoded.includes("9876543210"), "Must include Store 2 mobile");
     assert.ok(decoded.includes("FM2-2026-000001"), "Must include Store 2 tracking number");
