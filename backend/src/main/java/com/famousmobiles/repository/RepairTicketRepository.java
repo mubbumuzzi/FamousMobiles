@@ -92,6 +92,39 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
     long countByStatus(RepairStatus status);
 
     @Query("""
+        SELECT COUNT(t) FROM RepairTicket t
+        WHERE t.createdAt >= :start AND t.createdAt < :end
+          AND (:storeId IS NULL OR t.store.id = :storeId)
+        """)
+    long countReceivedBetween(@Param("start") Instant start, @Param("end") Instant end, @Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT COUNT(t) FROM RepairTicket t
+        WHERE t.status NOT IN (
+            com.famousmobiles.domain.enums.RepairStatus.DELIVERED,
+            com.famousmobiles.domain.enums.RepairStatus.READY_FOR_PICKUP,
+            com.famousmobiles.domain.enums.RepairStatus.RETURNED_UNREPAIRED
+        )
+        AND (:storeId IS NULL OR t.store.id = :storeId)
+        """)
+    long countUnderRepair(@Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT COUNT(t) FROM RepairTicket t
+        WHERE t.status = com.famousmobiles.domain.enums.RepairStatus.DELIVERED
+          AND t.deliveredAt >= :start AND t.deliveredAt < :end
+          AND (:storeId IS NULL OR t.store.id = :storeId)
+        """)
+    long countDeliveredBetween(@Param("start") Instant start, @Param("end") Instant end, @Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT t.status, COUNT(t) FROM RepairTicket t
+        WHERE (:storeId IS NULL OR t.store.id = :storeId)
+        GROUP BY t.status
+        """)
+    List<Object[]> countGroupByStatus(@Param("storeId") UUID storeId);
+
+    @Query("""
         SELECT DISTINCT t FROM RepairTicket t
         JOIN t.customer c
         LEFT JOIN c.phones p
