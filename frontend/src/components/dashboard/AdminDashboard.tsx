@@ -22,7 +22,7 @@ import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
 import { formatCurrency, formatStatus, formatDate, isSameDay, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
-import { StockDemandBoard } from "@/components/stock/StockDemandBoard";
+import { StockDemandSnapshot } from "@/components/dashboard/StockDemandSnapshot";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
 import { useStore } from "@/context/StoreContext";
 
@@ -343,10 +343,11 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
         )}
       </section>
 
-      {/* 6. Stock & Accessory Demands Board */}
-      <StockDemandBoard
+      {/* 6. Stock & Accessory Demands Snapshot */}
+      <StockDemandSnapshot
         onOpenNewStockOrder={() => setIsStockModalOpen(true)}
         refreshTrigger={stockRefreshTrigger}
+        waitingPartsCount={metrics?.waitingForParts ?? 0}
       />
 
       {/* Charts & Analytics Breakdown: clean white cards, 12px radius, 15px titles */}
