@@ -5,7 +5,13 @@ import { Store as StoreIcon, Check, ChevronDown, Layers } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { cn } from "@/lib/utils";
 
-export function StoreSwitcher({ role }: { role?: string }) {
+export function StoreSwitcher({
+  role,
+  align = "left",
+}: {
+  role?: string;
+  align?: "left" | "right";
+}) {
   const { stores, activeStore, activeStoreId, setActiveStoreId } = useStore();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -42,24 +48,29 @@ export function StoreSwitcher({ role }: { role?: string }) {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 active:scale-95",
-          open && "ring-2 ring-blue-500/20 border-blue-400"
+          "flex items-center gap-2 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-medium text-[#121212] shadow-2xs transition-all hover:bg-[#F7F7F8] hover:border-[#DFDFDF] focus:outline-none focus:ring-2 focus:ring-[#121212]/10 active:scale-95 cursor-pointer",
+          open && "ring-2 ring-[#121212]/10 border-[#121212]"
         )}
         aria-haspopup="true"
         aria-expanded={open}
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-[#F0F0F2] text-[#121212]">
           <StoreIcon className="h-3 w-3" />
         </span>
-        <span className="max-w-[120px] truncate sm:max-w-[160px] font-medium text-slate-800">
+        <span className="max-w-[150px] sm:max-w-[220px] truncate font-medium text-[#121212]">
           {displayName}
         </span>
-        <ChevronDown className={cn("h-3.5 w-3.5 text-slate-400 transition-transform duration-200", open && "rotate-180")} />
+        <ChevronDown className={cn("h-3.5 w-3.5 text-[#767676] transition-transform duration-200", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-1.5 w-60 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95">
-          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <div
+          className={cn(
+            "absolute z-50 mt-1.5 w-[280px] sm:w-[300px] max-w-[calc(100vw-24px)] rounded-[12px] border border-[#EBEBEB] bg-white p-1.5 shadow-xl animate-in fade-in-50 zoom-in-95",
+            align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"
+          )}
+        >
+          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#767676]">
             Switch Store Branch
           </div>
 
@@ -72,22 +83,22 @@ export function StoreSwitcher({ role }: { role?: string }) {
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs font-medium transition-colors",
+                  "flex w-full items-center justify-between rounded-[8px] px-2.5 py-2 text-left text-xs transition-colors cursor-pointer",
                   activeStoreId === "ALL"
-                    ? "bg-blue-50/80 text-blue-700 font-semibold"
-                    : "text-slate-700 hover:bg-slate-50"
+                    ? "bg-[#F0F0F2] text-[#121212] font-semibold"
+                    : "text-[#121212] hover:bg-[#F7F7F8]"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#EBEBEB] text-[#121212]">
                     <Layers className="h-3.5 w-3.5" />
                   </span>
-                  <div>
-                    <p className="font-semibold text-slate-800">All Stores</p>
-                    <p className="text-[10px] text-slate-400">Combined overview</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[#121212] truncate">All Stores</p>
+                    <p className="text-[10px] text-[#767676] truncate">Combined overview</p>
                   </div>
                 </div>
-                {activeStoreId === "ALL" && <Check className="h-4 w-4 text-blue-600" />}
+                {activeStoreId === "ALL" && <Check className="h-4 w-4 shrink-0 text-[#121212] ml-2" />}
               </button>
             )}
 
@@ -102,25 +113,27 @@ export function StoreSwitcher({ role }: { role?: string }) {
                     setOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs font-medium transition-colors",
+                    "flex w-full items-center justify-between rounded-[8px] px-2.5 py-2 text-left text-xs transition-colors cursor-pointer",
                     isSelected
-                      ? "bg-blue-50/80 text-blue-700 font-semibold"
-                      : "text-slate-700 hover:bg-slate-50"
+                      ? "bg-[#F0F0F2] text-[#121212] font-semibold"
+                      : "text-[#121212] hover:bg-[#F7F7F8]"
                   )}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold",
-                      isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
-                    )}>
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-[10px] font-bold",
+                        isSelected ? "bg-[#121212] text-white" : "bg-[#F0F0F2] text-[#121212]"
+                      )}
+                    >
                       {s.code}
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{s.displayName || s.name}</p>
-                      <p className="truncate text-[10px] text-slate-400">{s.city} · {s.mobile}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[#121212]">{s.displayName || s.name}</p>
+                      <p className="truncate text-[10px] text-[#767676]">{s.city} · {s.mobile}</p>
                     </div>
                   </div>
-                  {isSelected && <Check className="h-4 w-4 shrink-0 text-blue-600 ml-2" />}
+                  {isSelected && <Check className="h-4 w-4 shrink-0 text-[#121212] ml-2" />}
                 </button>
               );
             })}

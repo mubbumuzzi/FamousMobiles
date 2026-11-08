@@ -4,27 +4,34 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#121212] focus-visible:ring-offset-2 active:scale-[0.98] select-none cursor-pointer",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:from-blue-700 hover:to-blue-800",
-        outline: "border border-slate-200 bg-white hover:bg-slate-50 hover:shadow-sm",
-        ghost: "hover:bg-slate-100",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+        primary: "bg-[#121212] text-white hover:bg-black shadow-xs",
+        default: "bg-[#121212] text-white hover:bg-black shadow-xs",
+        secondary: "border border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8] hover:border-[#DFDFDF]",
+        outline: "border border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8] hover:border-[#DFDFDF]",
+        ghost: "text-[#121212] hover:bg-[#F7F7F8]",
+        destructive: "bg-[#C5221F] text-white hover:bg-[#A81D1A] shadow-xs",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3",
-        lg: "h-12 px-6 text-base",
-        icon: "h-10 w-10",
+        default: "min-h-[44px] h-11 px-4 py-2 text-[14px] leading-[20px]",
+        sm: "min-h-[36px] h-9 px-3 text-[12px] leading-[16px]",
+        lg: "min-h-[48px] h-12 px-6 text-[15px] leading-[20px]",
+        icon: "min-h-[44px] h-11 w-11 p-0",
       },
     },
-    defaultVariants: { variant: "default", size: "default" },
+    defaultVariants: {
+      variant: "primary",
+      size: "default",
+    },
   }
 );
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
