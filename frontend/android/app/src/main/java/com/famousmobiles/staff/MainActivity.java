@@ -12,24 +12,17 @@ public class MainActivity extends BridgeActivity {
         configureWebView();
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        configureWebView();
-    }
-
     private void configureWebView() {
         try {
             WebView webView = getBridge() != null ? getBridge().getWebView() : null;
             if (webView != null) {
-                webView.clearCache(true);
                 WebSettings settings = webView.getSettings();
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                 settings.setDomStorageEnabled(true);
                 settings.setLoadsImagesAutomatically(true);
                 settings.setBlockNetworkImage(false);
                 settings.setBlockNetworkLoads(false);
-                settings.setAllowFileAccess(true);
+                settings.setAllowFileAccess(false);
                 settings.setAllowContentAccess(true);
             }
         } catch (Exception e) {
