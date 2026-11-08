@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Textarea, selectClassName } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { Payment, REPAIR_STATUSES, RepairStatus, Technician, Ticket, TimelineEntry } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, formatStatus, formatCustomerMobiles, getWarrantyStatus, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
@@ -46,11 +46,19 @@ export default function TicketDetailPage() {
   const rawId = params?.id || searchParams.get("id");
   const id = rawId && rawId !== "view" ? rawId : searchParams.get("id") || "";
   const { user, loading: authLoading } = useAuthGuard();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(
+    () => (id ? getCachedApi<Ticket>(`/tickets/${id}`) ?? null : null)
+  );
   const [loadError, setLoadError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState<boolean>(
+    () => (id ? !getCachedApi<Ticket>(`/tickets/${id}`) : true)
+  );
+  const [timeline, setTimeline] = useState<TimelineEntry[]>(
+    () => (id ? getCachedApi<TimelineEntry[]>(`/tickets/${id}/timeline`) ?? [] : [])
+  );
+  const [payments, setPayments] = useState<Payment[]>(
+    () => (id ? getCachedApi<Payment[]>(`/tickets/${id}/payments`) ?? [] : [])
+  );
   const [note, setNote] = useState("");
   const [nextStatus, setNextStatus] = useState<RepairStatus | "">("");
   const [justUpdatedStatus, setJustUpdatedStatus] = useState<RepairStatus | "">("");
@@ -88,7 +96,9 @@ export default function TicketDetailPage() {
   const estimateSectionRef = useRef<HTMLDivElement>(null);
 
   const load = () => {
-    setLoading(true);
+    if (!id || !getCachedApi(`/tickets/${id}`)) {
+      setLoading(true);
+    }
     setLoadError("");
     Promise.all([
       api<Ticket>(`/tickets/${id}`),

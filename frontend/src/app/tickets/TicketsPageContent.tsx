@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { RepairKanban } from "@/components/kanban/RepairKanban";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { api, getCachedApi } from "@/lib/api";
 import { Ticket } from "@/lib/types";
 import { cn, formatCurrency, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
@@ -68,18 +68,28 @@ export default function TicketsPageContent() {
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status");
   const { activeStore, activeStoreId } = useStore();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+  const ticketsKey = `/tickets${query}`;
+
+  const [tickets, setTickets] = useState<Ticket[]>(
+    () => getCachedApi<Ticket[]>(ticketsKey) ?? []
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !getCachedApi<Ticket[]>(ticketsKey)
+  );
   const [error, setError] = useState("");
   const [view, setView] = useState<"cards" | "board">("cards");
   const [cardFilter, setCardFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
   const load = () => {
-    setLoading(true);
+    const currentQuery = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+    const key = `/tickets${currentQuery}`;
+    if (!getCachedApi(key)) {
+      setLoading(true);
+    }
     setError("");
-    const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
-    api<Ticket[]>(`/tickets${query}`)
+    api<Ticket[]>(key)
       .then(setTickets)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load tickets"))
       .finally(() => setLoading(false));
