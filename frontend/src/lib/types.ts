@@ -55,10 +55,27 @@ export interface Customer {
   createdAt?: string;
 }
 
+export interface Store {
+  id: string;
+  code: string;
+  name: string;
+  displayName: string;
+  mobile: string;
+  alternateMobile?: string;
+  ownerName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  pincode?: string;
+  terms?: string[];
+  active: boolean;
+}
+
 export interface Ticket {
   id: string;
   trackingNumber: string;
   customer: Customer;
+  store?: Store;
   assignedTechnicianId?: string;
   assignedTechnicianName?: string;
   status: RepairStatus;
@@ -77,6 +94,26 @@ export interface Ticket {
   createdAt: string;
   deliveredAt?: string;
   warrantyDays?: number;
+  reopenCount?: number;
+  lastReopenedAt?: string;
+  reopenReason?: string;
+  daysSinceDelivery?: number;
+  eligibleForFreeRecheck?: boolean;
+  photos?: DevicePhoto[];
+  photoCount?: number;
+  primaryPhotoUrl?: string;
+}
+
+export interface DevicePhoto {
+  id: string;
+  ticketId: string;
+  photoType: "FRONT" | "BACK" | "DAMAGE" | "REPAIR" | "DEVICE";
+  fileName: string;
+  fileUrl: string;
+  contentType: string;
+  fileSize: number;
+  uploadedByName?: string;
+  createdAt: string;
 }
 
 export interface TimelineEntry {
@@ -102,6 +139,9 @@ export interface PublicTracking {
   timeline: TimelineEntry[];
   allStatuses: RepairStatus[];
   warrantyDays?: number;
+  reopenCount?: number;
+  lastReopenedAt?: string;
+  reopenReason?: string;
 }
 
 export interface DashboardMetrics {
@@ -187,3 +227,36 @@ export const REPAIR_STATUSES: RepairStatus[] = [
 
 export const ACCESSORIES = ["Battery", "SIM Card", "Memory Card", "Charger", "Earphones", "Box", "Stylus", "Other"];
 export const CONDITIONS = ["Screen Cracked", "Back Glass Broken", "Water Damage", "Camera Damage", "Touch Not Working", "Bent Frame"];
+
+export type StockOrderStatus = "PENDING" | "ARRIVED" | "FULFILLED" | "CANCELLED";
+
+export interface StockOrder {
+  id: string;
+  orderCode: string;
+  customerId?: string | null;
+  customerName: string;
+  customerMobile: string;
+  itemDetails: string;
+  quantity: number;
+  advanceAmount: number;
+  expectedPrice?: number | null;
+  status: StockOrderStatus;
+  notes?: string | null;
+  createdByName?: string | null;
+  arrivedAt?: string | null;
+  fulfilledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStockOrderRequest {
+  customerId?: string;
+  customerName?: string;
+  customerMobile: string;
+  itemDetails: string;
+  quantity?: number;
+  advanceAmount?: number;
+  expectedPrice?: number;
+  notes?: string;
+}
+

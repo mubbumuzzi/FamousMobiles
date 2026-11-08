@@ -14,29 +14,33 @@ import com.famousmobiles.domain.enums.RepairStatus;
 public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID> {
     Optional<RepairTicket> findByTrackingNumber(String trackingNumber);
 
-    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.trackingNumber = :trackingNumber")
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician LEFT JOIN FETCH t.store WHERE t.trackingNumber = :trackingNumber")
     Optional<RepairTicket> findByTrackingNumberWithDetails(@Param("trackingNumber") String trackingNumber);
 
     List<RepairTicket> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
 
-    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.id = :id")
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician LEFT JOIN FETCH t.store WHERE t.id = :id")
     Optional<RepairTicket> findByIdWithDetails(@Param("id") UUID id);
 
-    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician LEFT JOIN FETCH t.store ORDER BY t.createdAt DESC")
     List<RepairTicket> findAllWithDetailsOrderByCreatedAtDesc();
 
-    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician WHERE t.assignedTechnician.id = :technicianId ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician LEFT JOIN FETCH t.store WHERE t.store.id = :storeId ORDER BY t.createdAt DESC")
+    List<RepairTicket> findByStoreIdWithDetailsOrderByCreatedAtDesc(@Param("storeId") UUID storeId);
+
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.assignedTechnician LEFT JOIN FETCH t.store WHERE t.assignedTechnician.id = :technicianId ORDER BY t.createdAt DESC")
     List<RepairTicket> findByAssignedTechnicianIdWithDetailsOrderByCreatedAtDesc(@Param("technicianId") UUID technicianId);
 
     List<RepairTicket> findByAssignedTechnicianIdOrderByCreatedAtDesc(UUID technicianId);
 
-    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer WHERE t.customer.id = :customerId ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM RepairTicket t JOIN FETCH t.customer LEFT JOIN FETCH t.store WHERE t.customer.id = :customerId ORDER BY t.createdAt DESC")
     List<RepairTicket> findByCustomerIdWithDetailsOrderByCreatedAtDesc(@Param("customerId") UUID customerId);
 
     @Query("""
         SELECT DISTINCT t FROM RepairTicket t
         JOIN FETCH t.customer c
         LEFT JOIN FETCH t.assignedTechnician
+        LEFT JOIN FETCH t.store
         LEFT JOIN c.phones p
         WHERE LOWER(t.trackingNumber) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
@@ -47,6 +51,23 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
         ORDER BY t.createdAt DESC
         """)
     List<RepairTicket> searchWithDetails(@Param("q") String query);
+
+    @Query("""
+        SELECT DISTINCT t FROM RepairTicket t
+        JOIN FETCH t.customer c
+        LEFT JOIN FETCH t.assignedTechnician
+        LEFT JOIN FETCH t.store
+        LEFT JOIN c.phones p
+        WHERE (:storeId IS NULL OR t.store.id = :storeId)
+          AND (LOWER(t.trackingNumber) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR c.mobile LIKE CONCAT('%', :q, '%')
+           OR p.mobile LIKE CONCAT('%', :q, '%')
+           OR LOWER(t.model) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR t.imei LIKE CONCAT('%', :q, '%'))
+        ORDER BY t.createdAt DESC
+        """)
+    List<RepairTicket> searchWithDetailsAndStore(@Param("q") String query, @Param("storeId") UUID storeId);
 
     long countByStatus(RepairStatus status);
 

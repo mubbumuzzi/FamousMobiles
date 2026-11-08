@@ -12,6 +12,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles } from "@/lib/utils";
+import { useStore } from "@/context/StoreContext";
 
 interface SearchResult {
   tickets: Ticket[];
@@ -20,6 +21,7 @@ interface SearchResult {
 
 export default function SearchPage() {
   const { user, loading: authLoading } = useAuthGuard();
+  const { activeStoreId } = useStore();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 350);
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -35,11 +37,12 @@ export default function SearchPage() {
     }
     setSearching(true);
     setError("");
-    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery)}`)
+    const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
+    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery)}${storeParam}`)
       .then(setResults)
       .catch((err) => setError(err instanceof Error ? err.message : "Search failed"))
       .finally(() => setSearching(false));
-  }, [debouncedQuery, authLoading, user]);
+  }, [debouncedQuery, authLoading, user, activeStoreId]);
 
   if (authLoading) return <PageLoading />;
 
@@ -63,7 +66,7 @@ export default function SearchPage() {
             <div>
               <h2 className="mb-2 font-semibold">Tickets ({results.tickets.length})</h2>
               {results.tickets.map((t) => (
-                <Link key={t.id} href={`/tickets/${t.id}`}>
+                <Link key={t.id} href={`/tickets/view?id=${t.id}`}>
                   <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="grid gap-2 p-3 text-sm md:grid-cols-4">
                       <span className="font-medium text-blue-700">{t.trackingNumber}</span>
@@ -81,7 +84,7 @@ export default function SearchPage() {
             <div>
               <h2 className="mb-2 font-semibold">Customers ({results.customers.length})</h2>
               {results.customers.map((c) => (
-                <Link key={c.id} href={`/customers/${c.id}`}>
+                <Link key={c.id} href={`/customers/view?id=${c.id}`}>
                   <Card className="mb-2 transition-all hover:border-blue-300 hover:shadow-md">
                     <CardContent className="p-3 text-sm">
                       <p className="font-medium text-slate-900">{c.fullName}</p>

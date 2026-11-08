@@ -61,12 +61,18 @@ export function customerPhoneList(customer: {
 
 export function isSameDay(isoString?: string | null, targetDate = new Date()): boolean {
   if (!isoString) return false;
-  const d = new Date(isoString);
-  return (
-    d.getFullYear() === targetDate.getFullYear() &&
-    d.getMonth() === targetDate.getMonth() &&
-    d.getDate() === targetDate.getDate()
-  );
+  try {
+    const dStr = new Date(isoString).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const targetStr = targetDate.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    return dStr === targetStr;
+  } catch {
+    const d = new Date(isoString);
+    return (
+      d.getFullYear() === targetDate.getFullYear() &&
+      d.getMonth() === targetDate.getMonth() &&
+      d.getDate() === targetDate.getDate()
+    );
+  }
 }
 
 export function getWarrantyStatus(ticket: { warrantyDays?: number; deliveredAt?: string }) {

@@ -62,6 +62,32 @@ class DashboardServiceTest {
         assertNull(metrics.revenueThisMonth());
     }
 
+    @Test
+    void getMetrics_deliveredTodayOnlyCountsDeliveredStatusToday() {
+        RepairTicket deliveredToday = new RepairTicket();
+        deliveredToday.setStatus(RepairStatus.DELIVERED);
+        deliveredToday.setDeliveredAt(Instant.now());
+        deliveredToday.setCreatedAt(Instant.now());
+
+        RepairTicket returnedUnrepairedToday = new RepairTicket();
+        returnedUnrepairedToday.setStatus(RepairStatus.RETURNED_UNREPAIRED);
+        returnedUnrepairedToday.setDeliveredAt(Instant.now());
+        returnedUnrepairedToday.setCreatedAt(Instant.now());
+
+        RepairTicket deliveredYesterday = new RepairTicket();
+        deliveredYesterday.setStatus(RepairStatus.DELIVERED);
+        deliveredYesterday.setDeliveredAt(Instant.now().minus(2, java.time.temporal.ChronoUnit.DAYS));
+        deliveredYesterday.setCreatedAt(Instant.now().minus(2, java.time.temporal.ChronoUnit.DAYS));
+
+        when(ticketRepository.findAll()).thenReturn(List.of(deliveredToday, returnedUnrepairedToday, deliveredYesterday));
+        stubStatusCounts();
+
+        var metrics = dashboardService.getMetrics(false);
+
+        assertEquals(1, metrics.deliveredToday());
+        assertEquals(2, metrics.devicesReceivedToday());
+    }
+
     private void stubStatusCounts() {
         for (RepairStatus status : RepairStatus.values()) {
             when(ticketRepository.countByStatus(status)).thenReturn(0L);

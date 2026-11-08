@@ -7,6 +7,8 @@ import {
   findExactCustomerMatch,
   isCustomerMobileMatch,
   canProceedCustomerStep,
+  isValidIntakePhotoCount,
+  canProceedDeviceStep,
 } from "./new-ticket-validation.ts";
 import type { Customer } from "./types.ts";
 
@@ -144,6 +146,30 @@ describe("New Ticket Validation & Customer Matching Tests", () => {
     it("should allow proceeding for new customer when 10-digit mobile and 4+ char name are provided", () => {
       assert.equal(canProceedCustomerStep("", "9876543210", "John Doe"), true);
       assert.equal(canProceedCustomerStep("", "9876543210", "Sara"), true);
+    });
+  });
+
+  describe("Device Photo Intake Requirements (Min 1, Max 2)", () => {
+    it("isValidIntakePhotoCount should enforce min 1 and max 2 photos", () => {
+      assert.equal(isValidIntakePhotoCount(0), false);
+      assert.equal(isValidIntakePhotoCount(1), true);
+      assert.equal(isValidIntakePhotoCount(2), true);
+      assert.equal(isValidIntakePhotoCount(3), false);
+      assert.equal(isValidIntakePhotoCount(-1), false);
+    });
+
+    it("canProceedDeviceStep should require brand, model, and between 1 to 2 photos", () => {
+      // 0 photos -> cannot proceed
+      assert.equal(canProceedDeviceStep("Apple", "iPhone 13", 0), false);
+      // 1 photo -> can proceed
+      assert.equal(canProceedDeviceStep("Apple", "iPhone 13", 1), true);
+      // 2 photos -> can proceed
+      assert.equal(canProceedDeviceStep("Apple", "iPhone 13", 2), true);
+      // >2 photos -> cannot proceed
+      assert.equal(canProceedDeviceStep("Apple", "iPhone 13", 3), false);
+      // missing brand/model
+      assert.equal(canProceedDeviceStep("", "iPhone 13", 1), false);
+      assert.equal(canProceedDeviceStep("Apple", "", 1), false);
     });
   });
 });

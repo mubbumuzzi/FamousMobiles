@@ -62,6 +62,10 @@ public class DevicePhoto {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public RepairTicket getTicket() {
         return ticket;
     }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Calendar, GripVertical } from "lucide-react";
+import { Calendar, Camera, GripVertical } from "lucide-react";
 import { Ticket, RepairStatus } from "@/lib/types";
 import { cn, formatCurrency, formatDate, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
@@ -225,14 +225,29 @@ function KanbanCard({
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <Link
-              href={`/tickets/${ticket.id}`}
-              className="text-base font-extrabold text-blue-700 hover:underline"
-            >
-              {ticket.trackingNumber}
-            </Link>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link
+                href={`/tickets/view?id=${ticket.id}`}
+                className="text-base font-extrabold text-blue-700 hover:underline"
+              >
+                {ticket.trackingNumber}
+              </Link>
+              {ticket.reopenCount && ticket.reopenCount > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
+                  🔁 Re-Check
+                </span>
+              ) : null}
+              {((ticket.photos && ticket.photos.length > 0) || (ticket.photoCount && ticket.photoCount > 0)) && (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200 flex items-center gap-1" title="Device photo stored for shelf verification">
+                  <Camera className="h-3 w-3 text-blue-600" /> Photo
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-base font-bold text-slate-900">
               {ticket.brand} {ticket.model}
+              {ticket.color && (
+                <span className="ml-1 text-xs font-semibold text-slate-500">· {ticket.color}</span>
+              )}
             </p>
             <p className="text-xs text-slate-600">
               Customer: <strong className="text-slate-800">{ticket.customer.fullName}</strong>
@@ -283,7 +298,7 @@ function KanbanCard({
             ))}
           </select>
           <Link
-            href={`/tickets/${ticket.id}`}
+            href={`/tickets/view?id=${ticket.id}`}
             className="touch-target flex h-10 items-center justify-center rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all"
           >
             Workbench →
@@ -310,9 +325,16 @@ function KanbanCard({
       <div className="flex items-start gap-2">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
         <div className="min-w-0 flex-1">
-          <Link href={`/tickets/${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
-            {ticket.trackingNumber}
-          </Link>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Link href={`/tickets/view?id=${ticket.id}`} className="font-bold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>
+              {ticket.trackingNumber}
+            </Link>
+            {ticket.reopenCount && ticket.reopenCount > 0 ? (
+              <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-900 border border-amber-300">
+                🔁 Re-Check
+              </span>
+            ) : null}
+          </div>
           <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{ticket.brand} {ticket.model}</p>
           <p className="truncate text-xs text-slate-500">{ticket.customer.fullName}</p>
           {ticket.problemDescription && (
@@ -344,7 +366,7 @@ function KanbanCard({
               ))}
             </select>
             <Link
-              href={`/tickets/${ticket.id}`}
+              href={`/tickets/view?id=${ticket.id}`}
               className="touch-target flex items-center px-2 text-xs font-bold text-blue-600 hover:text-blue-800"
               onClick={(e) => e.stopPropagation()}
             >

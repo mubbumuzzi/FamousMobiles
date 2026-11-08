@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.famousmobiles.domain.DevicePhoto;
 import com.famousmobiles.domain.Payment;
 import com.famousmobiles.domain.RepairTicket;
+import com.famousmobiles.domain.Store;
 import com.famousmobiles.domain.TicketNote;
 import com.famousmobiles.domain.TicketStatusHistory;
 import com.famousmobiles.domain.User;
@@ -23,6 +24,7 @@ import com.famousmobiles.domain.enums.PaymentMode;
 import com.famousmobiles.domain.enums.PhotoType;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.domain.enums.UserRole;
+import com.famousmobiles.dto.DevicePhotoDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.exception.BadRequestException;
 import com.famousmobiles.exception.ForbiddenException;
@@ -30,6 +32,7 @@ import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.DevicePhotoRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
+import com.famousmobiles.repository.StoreRepository;
 import com.famousmobiles.repository.TicketNoteRepository;
 import com.famousmobiles.repository.TicketStatusHistoryRepository;
 import com.famousmobiles.repository.TechnicianRepository;
@@ -49,13 +52,16 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final PaymentRepository paymentRepository;
     private final SecurityUtils securityUtils;
+    private final StoreRepository storeRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TicketService(RepairTicketRepository ticketRepository,
             TicketStatusHistoryRepository historyRepository, TicketNoteRepository noteRepository,
             DevicePhotoRepository photoRepository, CustomerService customerService,
             TechnicianRepository technicianRepository, TrackingNumberService trackingNumberService,
             NotificationService notificationService, FileStorageService fileStorageService,
-            PaymentRepository paymentRepository, SecurityUtils securityUtils) {
+            PaymentRepository paymentRepository, SecurityUtils securityUtils,
+            StoreRepository storeRepository) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.noteRepository = noteRepository;
@@ -67,6 +73,18 @@ public class TicketService {
         this.fileStorageService = fileStorageService;
         this.paymentRepository = paymentRepository;
         this.securityUtils = securityUtils;
+        this.storeRepository = storeRepository;
+    }
+
+    public TicketService(RepairTicketRepository ticketRepository,
+            TicketStatusHistoryRepository historyRepository, TicketNoteRepository noteRepository,
+            DevicePhotoRepository photoRepository, CustomerService customerService,
+            TechnicianRepository technicianRepository, TrackingNumberService trackingNumberService,
+            NotificationService notificationService, FileStorageService fileStorageService,
+            PaymentRepository paymentRepository, SecurityUtils securityUtils) {
+        this(ticketRepository, historyRepository, noteRepository, photoRepository, customerService,
+                technicianRepository, trackingNumberService, notificationService, fileStorageService,
+                paymentRepository, securityUtils, null);
     }
 
     @Transactional
@@ -85,9 +103,26 @@ public class TicketService {
             throw new BadRequestException("Advance payment (₹" + advPaid + ") cannot exceed estimated cost (₹" + estCost + ")");
         }
 
+        Store store = null;
+        if (storeRepository != null) {
+            if (request.storeId() != null) {
+                store = storeRepository.findById(request.storeId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
+            } else if (user != null && user.getDefaultStore() != null) {
+                store = user.getDefaultStore();
+            } else {
+                store = storeRepository.findByCode("FM1").orElse(null);
+            }
+        }
+        String storeCode = store != null ? store.getCode() : "FM1";
+
         RepairTicket ticket = new RepairTicket();
-        ticket.setTrackingNumber(trackingNumberService.generateTrackingNumber());
+        String trackingNum = (store != null && store.getCode() != null)
+                ? trackingNumberService.generateTrackingNumber(store.getCode())
+                : trackingNumberService.generateTrackingNumber();
+        ticket.setTrackingNumber(trackingNum);
         ticket.setCustomer(customerService.getEntity(request.customerId()));
+        ticket.setStore(store);
         ticket.setCreatedBy(user);
         ticket.setStatus(RepairStatus.DEVICE_RECEIVED);
         applyDeviceDetails(ticket, request);
@@ -111,6 +146,7 @@ public class TicketService {
         if (advPaid.compareTo(BigDecimal.ZERO) > 0) {
             Payment payment = new Payment();
             payment.setTicket(ticket);
+            payment.setStore(store);
             payment.setAmount(advPaid);
             payment.setPaymentMode(PaymentMode.CASH);
             payment.setNotes("Advance collected at device intake");
@@ -128,13 +164,26 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public TicketDto.TicketResponse get(UUID id) {
-        return TicketDto.TicketResponse.from(getEntityWithAccess(id));
+        RepairTicket ticket = getEntityWithAccess(id);
+        List<DevicePhotoDto> photos = photoRepository.findByTicketIdOrderByCreatedAtAsc(id).stream()
+                .map(this::toPhotoDto).toList();
+        return TicketDto.TicketResponse.from(ticket, photos);
     }
 
     @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> list() {
-        return ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream()
-                .map(TicketDto.TicketResponse::from).toList();
+        return list(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketDto.TicketResponse> list(UUID storeId) {
+        List<RepairTicket> tickets;
+        if (storeId != null) {
+            tickets = ticketRepository.findByStoreIdWithDetailsOrderByCreatedAtDesc(storeId);
+        } else {
+            tickets = ticketRepository.findAllWithDetailsOrderByCreatedAtDesc();
+        }
+        return tickets.stream().map(TicketDto.TicketResponse::from).toList();
     }
 
     @Transactional
@@ -250,6 +299,73 @@ public class TicketService {
     }
 
     @Transactional
+    public TicketDto.TicketResponse reopenTicket(UUID id, TicketDto.ReopenTicketRequest request) {
+        RepairTicket ticket = getEntityWithAccess(id);
+        if (ticket.getStatus() != RepairStatus.DELIVERED) {
+            throw new BadRequestException("Only delivered tickets can be reopened for re-check or rework (Current status: " + formatStatus(ticket.getStatus()) + ")");
+        }
+        if (request.remarks() == null || request.remarks().trim().isEmpty()) {
+            throw new BadRequestException("Customer complaint / remarks are required when reopening a ticket");
+        }
+
+        User user = securityUtils.getCurrentUser();
+        long daysSinceDelivery = ticket.getDeliveredAt() != null
+                ? java.time.Duration.between(ticket.getDeliveredAt(), Instant.now()).toDays()
+                : 0;
+        int warranty = ticket.getWarrantyDays() != null ? ticket.getWarrantyDays() : 0;
+        boolean isFreeRecheck = daysSinceDelivery <= Math.max(7, warranty);
+
+        BigDecimal extraCost = request.additionalCost() != null ? request.additionalCost() : BigDecimal.ZERO;
+        if (extraCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Additional cost cannot be negative");
+        }
+
+        if (extraCost.compareTo(BigDecimal.ZERO) > 0) {
+            ticket.setEstimatedCost(ticket.getEstimatedCost().add(extraCost));
+            recalculateBalance(ticket);
+        }
+
+        if (request.technicianId() != null) {
+            var tech = technicianRepository.findById(request.technicianId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Technician not found"));
+            ticket.setAssignedTechnician(tech);
+        }
+
+        RepairStatus previousStatus = ticket.getStatus();
+        ticket.setStatus(RepairStatus.UNDER_DIAGNOSIS);
+        ticket.setReopenCount(ticket.getReopenCount() + 1);
+        ticket.setLastReopenedAt(Instant.now());
+
+        String reason = request.reason() != null && !request.reason().isBlank()
+                ? request.reason().trim()
+                : (isFreeRecheck ? "7-Day Free Re-Check" : "Post-Delivery Rework");
+        ticket.setReopenReason(reason);
+
+        ticket = ticketRepository.save(ticket);
+
+        StringBuilder historyNote = new StringBuilder();
+        if (isFreeRecheck) {
+            historyNote.append("Device returned for 7-Day Free Quality Re-Check / Warranty (Day ").append(daysSinceDelivery).append(")");
+        } else {
+            historyNote.append("Device returned for Post-Delivery Rework (Day ").append(daysSinceDelivery).append(")");
+        }
+        historyNote.append(" · Reason: ").append(reason);
+        if (extraCost.compareTo(BigDecimal.ZERO) > 0) {
+            historyNote.append(" · Additional Charge: ₹").append(extraCost);
+        } else {
+            historyNote.append(" · Free of Charge (₹0)");
+        }
+        if (ticket.getAssignedTechnician() != null) {
+            historyNote.append(" · Assigned to: ").append(ticket.getAssignedTechnician().getName());
+        }
+
+        recordStatusHistory(ticket, previousStatus, RepairStatus.UNDER_DIAGNOSIS, user, historyNote.toString(), request.remarks().trim());
+        notificationService.onStatusChange(ticket, RepairStatus.UNDER_DIAGNOSIS);
+
+        return TicketDto.TicketResponse.from(ticket);
+    }
+
+    @Transactional
     public TicketDto.TicketResponse assignTechnician(UUID id, TicketDto.AssignTechnicianRequest request) {
         if (!securityUtils.isAdmin()) {
             throw new ForbiddenException("Only admin can assign technicians");
@@ -307,24 +423,72 @@ public class TicketService {
         return entries;
     }
 
+    public DevicePhotoDto toPhotoDto(DevicePhoto p) {
+        String fileUrl = "/api/files/tickets/" + p.getTicket().getId() + "/photos/" + p.getId();
+        String uploader = p.getUploadedBy() != null ? p.getUploadedBy().getFullName() : null;
+        return new DevicePhotoDto(
+                p.getId(),
+                p.getTicket().getId(),
+                p.getPhotoType(),
+                p.getFileName(),
+                fileUrl,
+                p.getContentType(),
+                p.getFileSize(),
+                uploader,
+                p.getCreatedAt()
+        );
+    }
+
     @Transactional
-    public DevicePhoto uploadPhoto(UUID id, PhotoType photoType, MultipartFile file) {
+    public DevicePhotoDto uploadPhoto(UUID id, PhotoType photoType, MultipartFile file) {
         RepairTicket ticket = getEntityWithAccess(id);
-        var stored = fileStorageService.storeTicketPhoto(id, photoType.name().toLowerCase(), file);
+
+        // Maximum 2 photos policy: if 2 photos already exist, remove the oldest one
+        List<DevicePhoto> existing = photoRepository.findByTicketIdOrderByCreatedAtAsc(id);
+        if (existing.size() >= 2) {
+            DevicePhoto oldest = existing.get(0);
+            photoRepository.delete(oldest);
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(oldest.getFilePath()));
+            } catch (Exception ignored) {}
+        }
+
+        PhotoType effectiveType = photoType != null ? photoType : PhotoType.DEVICE;
+        var stored = fileStorageService.storeTicketPhoto(id, effectiveType.name().toLowerCase(), file);
         DevicePhoto photo = new DevicePhoto();
         photo.setTicket(ticket);
-        photo.setPhotoType(photoType);
+        photo.setPhotoType(effectiveType);
         photo.setFileName(stored.fileName());
         photo.setFilePath(stored.filePath());
         photo.setContentType(stored.contentType());
         photo.setFileSize(stored.fileSize());
-        photo.setUploadedBy(securityUtils.getCurrentUser());
-        return photoRepository.save(photo);
+        try {
+            photo.setUploadedBy(securityUtils.getCurrentUser());
+        } catch (Exception ignored) {}
+        DevicePhoto saved = photoRepository.save(photo);
+        return toPhotoDto(saved);
     }
 
-    public List<DevicePhoto> getPhotos(UUID id) {
+    public List<DevicePhotoDto> getPhotos(UUID id) {
         getEntityWithAccess(id);
-        return photoRepository.findByTicketIdOrderByCreatedAtAsc(id);
+        return photoRepository.findByTicketIdOrderByCreatedAtAsc(id).stream()
+                .map(this::toPhotoDto).toList();
+    }
+
+    public DevicePhoto getPhotoEntity(UUID ticketId, UUID photoId) {
+        return photoRepository.findByIdAndTicketId(photoId, ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found"));
+    }
+
+    @Transactional
+    public void deletePhoto(UUID ticketId, UUID photoId) {
+        getEntityWithAccess(ticketId);
+        DevicePhoto photo = photoRepository.findByIdAndTicketId(photoId, ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found"));
+        photoRepository.delete(photo);
+        try {
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(photo.getFilePath()));
+        } catch (Exception ignored) {}
     }
 
     public RepairTicket getEntity(UUID id) {

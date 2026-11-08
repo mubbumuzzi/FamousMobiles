@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
-import { API_URL, getAccessToken } from "@/lib/api";
+import { getApiUrl, getAccessToken } from "@/lib/api";
 
 export default function ReportsPage() {
   const { user, loading: authLoading } = useAuthGuard();
@@ -15,7 +15,7 @@ export default function ReportsPage() {
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
 
   const download = async (path: string, filename: string) => {
-    const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${getAccessToken()}` } });
+    const res = await fetch(`${getApiUrl()}${path}`, { headers: { Authorization: `Bearer ${getAccessToken()}` } });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

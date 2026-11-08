@@ -19,8 +19,8 @@ spring:
     validate-on-migrate: false
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 15MB
+      max-file-size: 25MB
+      max-request-size: 35MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -41,7 +41,7 @@ app:
     mobile: ${ADMIN_MOBILE:9000000000}
     sync-on-start: ${ADMIN_SYNC_ON_START:false}
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost,https://localhost,capacitor://localhost}
   shop:
     name: Famous Mobiles
     owner-name: Basheer Uddin

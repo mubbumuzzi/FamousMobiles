@@ -68,7 +68,7 @@ public class PdfReceiptService {
     }
 
     private byte[] buildPdf(RepairTicket ticket, boolean duplicate) throws Exception {
-        ShopInfo.Resolved shop = ShopInfo.resolve(appProperties.shop());
+        ShopInfo.Resolved shop = ShopInfo.resolve(ticket.getStore(), appProperties.shop());
 
         // A4 page (595 x 842 pt) with compact margins so Customer Copy occupies the top half (A5 dimensions: 210mm x 148.5mm)
         Document document = new Document(PageSize.A4, 20f, 20f, 16f, 16f);

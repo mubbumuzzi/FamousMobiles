@@ -5,9 +5,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,11 +18,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.famousmobiles.domain.DevicePhoto;
 import com.famousmobiles.domain.enums.PhotoType;
+import com.famousmobiles.dto.DevicePhotoDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.service.PdfReceiptService;
 import com.famousmobiles.service.TicketService;
@@ -38,8 +41,8 @@ public class TicketController {
     }
 
     @GetMapping
-    public List<TicketDto.TicketResponse> list() {
-        return ticketService.list();
+    public List<TicketDto.TicketResponse> list(@RequestParam(required = false) UUID storeId) {
+        return ticketService.list(storeId);
     }
 
     @GetMapping("/{id}")
@@ -60,6 +63,11 @@ public class TicketController {
     @PatchMapping("/{id}/status")
     public TicketDto.TicketResponse updateStatus(@PathVariable UUID id, @RequestBody TicketDto.StatusUpdateRequest request) {
         return ticketService.updateStatus(id, request);
+    }
+
+    @PostMapping("/{id}/reopen")
+    public TicketDto.TicketResponse reopen(@PathVariable UUID id, @RequestBody TicketDto.ReopenTicketRequest request) {
+        return ticketService.reopenTicket(id, request);
     }
 
     @PatchMapping("/{id}/estimation")
@@ -90,15 +98,21 @@ public class TicketController {
     }
 
     @PostMapping("/{id}/photos")
-    public DevicePhoto uploadPhoto(@PathVariable UUID id,
-            @RequestParam PhotoType photoType,
+    public DevicePhotoDto uploadPhoto(@PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "DEVICE") PhotoType photoType,
             @RequestParam("file") MultipartFile file) {
         return ticketService.uploadPhoto(id, photoType, file);
     }
 
     @GetMapping("/{id}/photos")
-    public List<DevicePhoto> photos(@PathVariable UUID id) {
+    public List<DevicePhotoDto> photos(@PathVariable UUID id) {
         return ticketService.getPhotos(id);
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePhoto(@PathVariable UUID id, @PathVariable UUID photoId) {
+        ticketService.deletePhoto(id, photoId);
     }
 
     @GetMapping("/{id}/receipt/pdf")

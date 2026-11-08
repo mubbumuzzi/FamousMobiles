@@ -1,13 +1,34 @@
 import { api } from "@/lib/api";
 
 /**
- * Fetches ticket receipt PDF with authenticated Bearer token and triggers print dialog.
+ * Fetches ticket receipt PDF with authenticated Bearer token and triggers print dialog or safe download on mobile.
  */
 export async function printTicketReceipt(ticketId: string): Promise<void> {
   const blob = await api<Blob>(`/tickets/${ticketId}/receipt/pdf`);
   const blobUrl = URL.createObjectURL(blob);
 
-  // Attempt iframe silent-print for desktop
+  // If in Android WebView or mobile environment without desktop print dialog, download the receipt safely
+  const isMobile = typeof window !== "undefined" && (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    typeof window.print !== "function"
+  );
+
+  if (isMobile) {
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `receipt-${ticketId.slice(0, 8)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(blobUrl);
+    }, 10000);
+    return;
+  }
+
+  // Desktop browser print via invisible iframe
   try {
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -21,8 +42,10 @@ export async function printTicketReceipt(ticketId: string): Promise<void> {
 
     iframe.onload = () => {
       setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
+        if (typeof iframe.contentWindow?.print === "function") {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }
         setTimeout(() => {
           if (document.body.contains(iframe)) {
             document.body.removeChild(iframe);
@@ -32,12 +55,17 @@ export async function printTicketReceipt(ticketId: string): Promise<void> {
       }, 300);
     };
   } catch {
-    // Mobile fallback: open blob in a new window/tab
-    const w = window.open(blobUrl, "_blank");
-    if (w) {
-      w.focus();
-      w.print();
-    }
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `receipt-${ticketId.slice(0, 8)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(blobUrl);
+    }, 10000);
   }
 }
 
@@ -49,6 +77,12 @@ export async function downloadTicketReceipt(ticketId: string, trackingNumber: st
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `${trackingNumber}.pdf`;
+  document.body.appendChild(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  setTimeout(() => {
+    if (document.body.contains(a)) {
+      document.body.removeChild(a);
+    }
+    URL.revokeObjectURL(a.href);
+  }, 10000);
 }

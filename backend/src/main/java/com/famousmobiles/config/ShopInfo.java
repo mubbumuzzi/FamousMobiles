@@ -1,6 +1,9 @@
 package com.famousmobiles.config;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import com.famousmobiles.domain.Store;
 
 /** Shop branding shown on receipts and customer-facing pages. */
 public final class ShopInfo {
@@ -25,6 +28,32 @@ public final class ShopInfo {
                 value(shop != null ? shop.mobile() : null, MOBILE),
                 list(shop != null ? shop.addressLines() : null, ADDRESS_LINES),
                 list(shop != null ? shop.terms() : null, TERMS));
+    }
+
+    public static Resolved resolve(Store store, AppProperties.Shop fallbackShop) {
+        if (store != null) {
+            String name = value(store.getName(), NAME);
+            String ownerName = value(store.getOwnerName(), OWNER_NAME);
+            String mobile = value(store.getMobile(), MOBILE);
+            List<String> addressLines = new ArrayList<>();
+            if (store.getAddressLine1() != null && !store.getAddressLine1().isBlank()) {
+                addressLines.add(store.getAddressLine1().trim());
+            }
+            if (store.getAddressLine2() != null && !store.getAddressLine2().isBlank()) {
+                addressLines.add(store.getAddressLine2().trim());
+            }
+            if (store.getCity() != null && !store.getCity().isBlank()) {
+                addressLines.add(store.getCity().trim());
+            }
+            if (addressLines.isEmpty()) {
+                addressLines = ADDRESS_LINES;
+            }
+            List<String> terms = (store.getTerms() != null && !store.getTerms().isEmpty())
+                    ? store.getTerms()
+                    : TERMS;
+            return new Resolved(name, ownerName, mobile, addressLines, terms);
+        }
+        return resolve(fallbackShop);
     }
 
     private static String value(String configured, String fallback) {

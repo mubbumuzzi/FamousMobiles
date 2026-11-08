@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { Camera, LayoutGrid, List, Plus, Phone, MessageCircle } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { Ticket } from "@/lib/types";
 import { cn, formatCurrency, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { PageLoading, Skeleton } from "@/components/ui/skeleton";
+import { useStore } from "@/context/StoreContext";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
@@ -29,6 +30,7 @@ export default function TicketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status");
+  const { activeStoreId } = useStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,7 +40,8 @@ export default function TicketsPageContent() {
   const load = () => {
     setLoading(true);
     setError("");
-    api<Ticket[]>("/tickets")
+    const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+    api<Ticket[]>(`/tickets${query}`)
       .then(setTickets)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load tickets"))
       .finally(() => setLoading(false));
@@ -48,7 +51,15 @@ export default function TicketsPageContent() {
     if (authLoading || !user) return;
     if (user.role === "TECHNICIAN") setView("board");
     load();
-  }, [authLoading, user]);
+  }, [authLoading, user, activeStoreId]);
+
+  useEffect(() => {
+    const handleFmRefresh = () => {
+      load();
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, [activeStoreId]);
 
   if (authLoading) return <PageLoading />;
 
@@ -195,20 +206,89 @@ export default function TicketsPageContent() {
           <EmptyState icon={Plus} title="No repair tickets yet" description="Create your first repair ticket to get started." actionLabel="New Repair" onAction={() => (window.location.href = "/tickets/new")} />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((t) => (
-              <Link key={t.id} href={`/tickets/${t.id}`} className={cn("premium-card block p-4 transition-transform hover:-translate-y-0.5", isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200")}>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-blue-700">{t.trackingNumber}</p>
-                  <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+            {filtered.map((t) => {
+              const cleanMobile = t.customer?.mobile ? t.customer.mobile.replace(/\D/g, "").slice(-10) : "";
+              const waText = encodeURIComponent(
+                `Hello ${t.customer?.fullName || "Customer"}, regarding your ${t.brand} ${t.model} (${t.trackingNumber}) at Famous Mobiles:`
+              );
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => router.push(`/tickets/view?id=${t.id}`)}
+                  className={cn(
+                    "group relative premium-card block p-4 cursor-pointer touch-active active:scale-[0.98] transition-all hover:shadow-md",
+                    isOverdue(t.estimatedDeliveryDate, t.status) && "border-red-200"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
+                      {t.store && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                          {t.store.code}
+                        </span>
+                      )}
+                      {t.reopenCount && t.reopenCount > 0 ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
+                          🔁 Re-Check
+                        </span>
+                      ) : null}
+                      {((t.photos && t.photos.length > 0) || (t.photoCount && t.photoCount > 0)) && (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200 flex items-center gap-1" title="Device photo stored for shelf verification">
+                          <Camera className="h-3 w-3 text-blue-600" /> Photo
+                        </span>
+                      )}
+                    </div>
+                    <Badge variant={statusVariant(t.status)}>{formatStatus(t.status)}</Badge>
+                  </div>
+
+                  <p className="mt-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    {t.brand} {t.model}
+                    {t.color && (
+                      <span className="ml-1 text-xs font-semibold text-slate-500">· {t.color}</span>
+                    )}
+                  </p>
+
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{t.customer.fullName}</p>
+                      {cleanMobile && (
+                        <p className="text-xs text-slate-400 font-mono">{cleanMobile}</p>
+                      )}
+                    </div>
+
+                    {/* 1-Tap Direct Call & WhatsApp Actions */}
+                    {cleanMobile && (
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <a
+                          href={`tel:${cleanMobile}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 touch-active transition-all"
+                          title={`Call ${t.customer.fullName}`}
+                        >
+                          <Phone className="h-4 w-4" />
+                        </a>
+                        <a
+                          href={`https://wa.me/91${cleanMobile}?text=${waText}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 touch-active transition-all"
+                          title="Chat on WhatsApp"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs text-slate-500">
+                    <span>{t.assignedTechnicianName ?? "Unassigned"}</span>
+                    <span className={cn("font-bold text-sm", Number(t.balanceAmount) > 0 ? "text-amber-700" : "text-emerald-700")}>
+                      {formatCurrency(Number(t.balanceAmount))}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{t.brand} {t.model}</p>
-                <p className="text-sm text-slate-600">{t.customer.fullName}</p>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
-                  <span className="text-slate-500">{t.assignedTechnicianName ?? "Unassigned"}</span>
-                  <span className="font-semibold">{formatCurrency(Number(t.balanceAmount))}</span>
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

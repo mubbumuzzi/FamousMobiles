@@ -1,4 +1,5 @@
 export const ISSUE_TEMPLATES = [
+  "Dead / Not turning on",
   "Screen not working / cracked display",
   "Battery draining fast / not charging",
   "Charging port issue",

@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { BarChart3, IndianRupee, Package, TrendingUp, Users, Wrench } from "lucide-react";
+import { BarChart3, IndianRupee, Package, Plus, Search, ShoppingBag, TrendingUp, Truck, Users, Wrench } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { QuickAction } from "@/components/ui/quick-action";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
-import { formatCurrency, formatStatus } from "@/lib/utils";
+import { formatCurrency, formatStatus, isSameDay } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
+import { StockDemandBoard } from "@/components/stock/StockDemandBoard";
+import { StockOrderModal } from "@/components/stock/StockOrderModal";
 
 const StatusPieChart = dynamic(
   () => import("@/components/dashboard/StatusPieChart").then((m) => m.StatusPieChart),
@@ -26,6 +29,8 @@ type AdminDashboardProps = {
 
 export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: AdminDashboardProps) {
   const [activeMetric, setActiveMetric] = useState<MetricDrilldownType | null>(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockRefreshTrigger, setStockRefreshTrigger] = useState(0);
 
   const statusData = metrics
     ? Object.entries(metrics.statusBreakdown).map(([name, value]) => ({ name: formatStatus(name), value }))
@@ -39,6 +44,8 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   const topBrands = Object.entries(brandBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const delivered = tickets.filter((t) => t.status === "DELIVERED").length;
+  const deliveredTodayCount = tickets.filter((t) => t.status === "DELIVERED" && isSameDay(t.deliveredAt)).length;
+  const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
   const active = tickets.filter(
     (t) =>
       t.status !== "DELIVERED" &&
@@ -96,7 +103,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
           label="Received Today"
-          value={loading ? null : metrics?.devicesReceivedToday ?? 0}
+          value={loading ? null : (tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0)}
           tone="secondary"
           onClick={() => setActiveMetric("receivedToday")}
           isSelected={activeMetric === "receivedToday"}
@@ -117,13 +124,26 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
         />
         <KpiCard
           label="Delivered Today"
-          value={loading ? null : metrics?.deliveredToday ?? 0}
+          value={loading ? null : (tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0)}
           tone="primary"
           subtitle="Delivered today"
           onClick={() => setActiveMetric("deliveredToday")}
           isSelected={activeMetric === "deliveredToday"}
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <QuickAction href="/tickets/new" icon={Plus} label="New Repair" description="Start intake" tone="primary" />
+        <QuickAction onClick={() => setIsStockModalOpen(true)} icon={ShoppingBag} label="Order Stock" description="Cases, chargers, parts" tone="success" />
+        <QuickAction href="/tickets?status=READY_FOR_PICKUP" icon={Truck} label="Deliver Device" description="Ready pickups" tone="accent" />
+        <QuickAction href="/search" icon={Search} label="Search" description="Find customer" tone="secondary" />
+      </div>
+
+      {/* Stock & Accessory Demands Board */}
+      <StockDemandBoard
+        onOpenNewStockOrder={() => setIsStockModalOpen(true)}
+        refreshTrigger={stockRefreshTrigger}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="premium-card p-4">
@@ -165,8 +185,14 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
         tickets={tickets}
         role="ADMIN"
         onTicketUpdated={onRefresh || (() => {})}
-        devicesReceivedToday={metrics?.devicesReceivedToday ?? 0}
-        devicesDeliveredToday={metrics?.deliveredToday ?? 0}
+        devicesReceivedToday={tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0}
+        devicesDeliveredToday={tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0}
+      />
+
+      <StockOrderModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onSuccess={() => setStockRefreshTrigger((t) => t + 1)}
       />
     </div>
   );

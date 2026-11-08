@@ -53,7 +53,10 @@ public class PublicTrackingService {
                 ticket.getBalanceAmount(),
                 timeline,
                 TicketService.allStatuses(),
-                ticket.getWarrantyDays()
+                ticket.getWarrantyDays(),
+                ticket.getReopenCount(),
+                ticket.getLastReopenedAt() != null ? ticket.getLastReopenedAt().toString() : null,
+                ticket.getReopenReason()
         );
     }
 

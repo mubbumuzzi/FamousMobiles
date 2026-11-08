@@ -14,18 +14,29 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
   const message = getCustomerStatusMessage(data.currentStatus);
   const isReady = data.currentStatus === "READY_FOR_PICKUP";
   const isDelivered = data.currentStatus === "DELIVERED";
+  const isRecheck = Boolean(data.reopenCount && data.reopenCount > 0 && !isDelivered);
+  const displayMessage = isRecheck
+    ? "Device received back for quality re-check & inspection under shop service assurance. Our technicians are currently inspecting it."
+    : message;
 
   return (
     <div className="animate-slide-up space-y-4">
       {/* Hero status card */}
       <div className={cn(
         "overflow-hidden rounded-2xl text-white shadow-lg",
-        isDelivered ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : isReady ? "bg-gradient-to-br from-amber-500 to-orange-500" : "gradient-hero"
+        isDelivered ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : isReady ? "bg-gradient-to-br from-amber-500 to-orange-500" : isRecheck ? "bg-gradient-to-br from-indigo-600 to-blue-700" : "gradient-hero"
       )}>
         <div className="p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Current Status</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Current Status</p>
+            {isRecheck && (
+              <span className="rounded-full bg-amber-400 text-slate-950 px-2.5 py-0.5 text-[10px] font-bold shadow-xs">
+                🔁 Quality Re-Check
+              </span>
+            )}
+          </div>
           <h2 className="mt-1 text-2xl font-bold">{formatStatus(data.currentStatus)}</h2>
-          <p className="mt-2 text-sm leading-relaxed opacity-95">{message}</p>
+          <p className="mt-2 text-sm leading-relaxed opacity-95">{displayMessage}</p>
           <div className="mt-4 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
             <StatusProgress status={data.currentStatus} compact />
           </div>
@@ -44,6 +55,11 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
           </span>
         </div>
         {data.imeiMasked && <p className="mt-2 text-sm text-slate-500">IMEI: {data.imeiMasked}</p>}
+        {data.reopenCount && data.reopenCount > 0 && !isDelivered ? (
+          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 border border-amber-200">
+            🔁 Quality Re-Check ({data.reopenReason || "7-Day Assurance"})
+          </div>
+        ) : null}
         {data.warrantyDays && data.warrantyDays > 0 ? (
           <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200">
             🛡️ {data.warrantyDays} Days Service Warranty Included

@@ -1,5 +1,7 @@
 package com.famousmobiles.service;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,19 @@ public class SearchService {
 
     @Transactional(readOnly = true)
     public MiscDto.SearchResult search(String query) {
+        return search(query, null);
+    }
+
+    @Transactional(readOnly = true)
+    public MiscDto.SearchResult search(String query, UUID storeId) {
         if (query == null || query.isBlank()) {
             return new MiscDto.SearchResult(java.util.List.of(), java.util.List.of());
         }
         String q = query.trim();
-        var tickets = ticketRepository.searchWithDetails(q).stream().map(TicketDto.TicketResponse::from).toList();
+        var tickets = (storeId != null
+                ? ticketRepository.searchWithDetailsAndStore(q, storeId)
+                : ticketRepository.searchWithDetails(q))
+                .stream().map(TicketDto.TicketResponse::from).toList();
         var customers = customerRepository.search(q).stream().map(CustomerDto.CustomerResponse::from).toList();
         return new MiscDto.SearchResult(tickets, customers);
     }

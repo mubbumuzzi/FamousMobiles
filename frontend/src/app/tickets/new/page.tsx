@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Smartphone, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Image as ImageIcon, Loader2, RotateCcw, Smartphone, Wrench, X } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { DEVICE_BRANDS } from "@/lib/device-brands";
 import { ISSUE_TEMPLATES } from "@/lib/issue-templates";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { api } from "@/lib/api";
 import { ACCESSORIES, CONDITIONS, Customer, DeviceType, Ticket } from "@/lib/types";
 import { formatCurrency, formatDate, formatStatus, formatCustomerMobiles, getVipStatus, cn } from "@/lib/utils";
@@ -26,7 +27,10 @@ import {
   findExactCustomerMatch,
   isCustomerMobileMatch,
   canProceedCustomerStep,
+  canProceedDeviceStep,
 } from "@/lib/new-ticket-validation";
+import { compressImage } from "@/lib/image-compressor";
+import { useStore } from "@/context/StoreContext";
 
 const STEPS = ["Customer", "Device", "Issue", "Cost", "Preview"];
 const emptyNewCustomer = { fullName: "", mobile: "", alternateMobile: "", address: "", city: "" };
@@ -34,7 +38,27 @@ const emptyNewCustomer = { fullName: "", mobile: "", alternateMobile: "", addres
 export default function NewTicketPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
+  const { activeStore, stores } = useStore();
+  const [selectedStoreId, setSelectedStoreId] = useState("");
+
+  useEffect(() => {
+    if (activeStore && !selectedStoreId) {
+      setSelectedStoreId(activeStore.id);
+    } else if (!selectedStoreId && stores.length > 0) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [activeStore, stores, selectedStoreId]);
+
   const [step, setStep] = useState(0);
+
+  // Intercept Android hardware back button: step back in wizard before leaving page
+  useAndroidBackButton(() => {
+    if (step > 0) {
+      setStep((s) => s - 1);
+      return true;
+    }
+    return false;
+  }, true, 10);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -56,9 +80,53 @@ export default function NewTicketPage() {
   const [quoteAfterDiagnosis, setQuoteAfterDiagnosis] = useState(false);
   const [advancePaid, setAdvancePaid] = useState("");
   const [edd, setEdd] = useState("");
-  const [warrantyDays, setWarrantyDays] = useState(30);
+  const [warrantyDays, setWarrantyDays] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  interface IntakePhoto {
+    file: File;
+    previewUrl: string;
+    photoType: "DEVICE";
+  }
+  const [pendingPhotos, setPendingPhotos] = useState<IntakePhoto[]>([]);
+  const [compressingPhoto, setCompressingPhoto] = useState(false);
+  const intakeCameraInputRef = useRef<HTMLInputElement>(null);
+  const intakeGalleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleIntakePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+    e.target.value = "";
+    if (pendingPhotos.length >= 2) {
+      setError("Maximum 2 photos allowed. Please remove a photo first to replace it.");
+      return;
+    }
+    setError("");
+    setCompressingPhoto(true);
+    try {
+      // Compress & normalize image on-device (fixes camera >5MB limit & HEIC on iPhone/Samsung)
+      const file = await compressImage(rawFile);
+      const previewUrl = URL.createObjectURL(file);
+      setPendingPhotos((prev) => [...prev, { file, previewUrl, photoType: "DEVICE" }]);
+    } catch (err) {
+      console.warn("Failed to optimize photo, using original:", err);
+      const previewUrl = URL.createObjectURL(rawFile);
+      setPendingPhotos((prev) => [...prev, { file: rawFile, previewUrl, photoType: "DEVICE" }]);
+    } finally {
+      setCompressingPhoto(false);
+    }
+  };
+
+  const removePendingPhoto = (index: number) => {
+    setPendingPhotos((prev) => {
+      const target = prev[index];
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -133,6 +201,15 @@ export default function NewTicketPage() {
     [repairHistory, selectedPastTicketId]
   );
 
+  const recentDeliveredTicket = useMemo(() => {
+    return repairHistory.find((t) => {
+      if (t.status !== "DELIVERED" || !t.deliveredAt) return false;
+      const days = Math.floor((Date.now() - new Date(t.deliveredAt).getTime()) / (1000 * 60 * 60 * 24));
+      const maxDays = Math.max(7, t.warrantyDays ?? 0);
+      return days <= maxDays;
+    });
+  }, [repairHistory]);
+
   const applyPastDevice = (ticket: Ticket) => {
     setSelectedPastTicketId(ticket.id);
     if (ticket.deviceType) setDeviceType(ticket.deviceType);
@@ -192,7 +269,7 @@ export default function NewTicketPage() {
     if (step === 0) {
       return canProceedCustomerStep(customerId, mobile, newCustomer.fullName);
     }
-    if (step === 1) return Boolean(brand.trim() && model.trim());
+    if (step === 1) return canProceedDeviceStep(brand, model, pendingPhotos.length);
     if (step === 2) return Boolean(problem.trim());
     if (step === 3) {
       const est = Number(estimatedCost || 0);
@@ -205,6 +282,11 @@ export default function NewTicketPage() {
   };
 
   const handleNext = () => {
+    if (step === 1 && pendingPhotos.length < 1) {
+      setError("Please capture at least 1 photo of the device before continuing.");
+      return;
+    }
+    setError("");
     if (step === 0 && selectedPastTicketId && brand.trim() && model.trim()) {
       // Both Customer and Device are selected from previous repair history: skip Step 1 and go straight to Step 2
       setStep(2);
@@ -226,6 +308,12 @@ export default function NewTicketPage() {
       }
       if (quoteAfterDiagnosis && advNum > 0) {
         setError("Cannot accept advance payment when repair cost is pending diagnosis");
+        setLoading(false);
+        return;
+      }
+
+      if (pendingPhotos.length < 1) {
+        setError("At least 1 device photo is required for intake");
         setLoading(false);
         return;
       }
@@ -252,6 +340,7 @@ export default function NewTicketPage() {
         method: "POST",
         body: JSON.stringify({
           customerId: cid,
+          storeId: selectedStoreId || activeStore?.id || undefined,
           deviceType,
           brand,
           model,
@@ -266,7 +355,23 @@ export default function NewTicketPage() {
           warrantyDays: Number(warrantyDays),
         }),
       });
-      router.push(`/tickets/${ticket.id}`);
+
+      // Upload captured intake device photos (at least 1, max 2)
+      for (const p of pendingPhotos) {
+        try {
+          const formData = new FormData();
+          formData.append("file", p.file);
+          formData.append("photoType", "DEVICE");
+          await api(`/tickets/${ticket.id}/photos?photoType=DEVICE`, {
+            method: "POST",
+            body: formData,
+          });
+        } catch (uploadErr) {
+          console.error("Failed to upload intake photo", uploadErr);
+        }
+      }
+
+      router.push(`/tickets/view?id=${ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create ticket");
     } finally {
@@ -279,9 +384,27 @@ export default function NewTicketPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="mx-auto max-w-2xl animate-fade-in space-y-6 pb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">New Repair</h1>
-          <p className="text-sm text-slate-500">Fast intake — under 30 seconds</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">New Repair</h1>
+            <p className="text-sm text-slate-500">Fast intake — under 30 seconds</p>
+          </div>
+          {stores.length > 1 && (
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-2xs">
+              <span className="text-xs font-semibold text-slate-500">Branch:</span>
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="rounded-lg border-0 bg-transparent py-0.5 pl-1 pr-6 text-xs font-bold text-blue-700 focus:outline-none focus:ring-0 cursor-pointer"
+              >
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code} — {s.displayName || s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <WizardSteps steps={STEPS} current={step} />
@@ -378,6 +501,41 @@ export default function NewTicketPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* 7-Day Re-Check / Guarantee Banner */}
+                  {recentDeliveredTicket && (
+                    <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-4 shadow-sm space-y-2.5 animate-fade-in">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+                          <RotateCcw className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-emerald-950 text-sm">
+                              Recent Repair: {recentDeliveredTicket.brand} {recentDeliveredTicket.model}
+                            </span>
+                            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+                              Within 7-Day Guarantee Window
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                            Delivered on {formatDate(recentDeliveredTicket.deliveredAt)} ({recentDeliveredTicket.trackingNumber}).
+                            If the customer returned with a recurring problem, re-check is <strong>FREE (₹0)</strong> under shop assurance.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-emerald-200/80">
+                        <Link
+                          href={`/tickets/${recentDeliveredTicket.id}?recheck=true`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-colors"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Reopen for 7-Day Re-Check (No New Booking)
+                        </Link>
+                        <span className="text-[11px] text-emerald-700">or continue below for a brand new repair</span>
+                      </div>
+                    </div>
+                  )}
 
                   {repairHistory.length > 0 && (
                     <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4 space-y-3">
@@ -612,8 +770,125 @@ export default function NewTicketPage() {
               </Field>
               <Field><Label>Brand *</Label><SearchableSelect placeholder="Search brand..." value={brand} onChange={setBrand} options={DEVICE_BRANDS} /></Field>
               <Field><Label>Model *</Label><Input placeholder="e.g. A14" value={model} onChange={(e) => setModel(e.target.value)} /></Field>
-              <Field><Label>Color</Label><Input value={color} onChange={(e) => setColor(e.target.value)} /></Field>
-              <Field><Label>IMEI</Label><Input value={imei} onChange={(e) => setImei(e.target.value)} /></Field>
+
+              {/* Phone Photo Capture for Shelf ID & Return Check (Min 1, Max 2) */}
+              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-800">Device Photos *</span>
+                    <span
+                      className={cn(
+                        "rounded-md px-2 py-0.5 text-[10px] font-bold",
+                        pendingPhotos.length >= 1
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                      )}
+                    >
+                      {pendingPhotos.length === 0
+                        ? "At least 1 photo required *"
+                        : `${pendingPhotos.length} of 2 photos attached ✓`}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">Min 1, max 2 photos for shelf ID & delivery check</span>
+                </div>
+
+                <input
+                  ref={intakeCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleIntakePhotoCapture}
+                />
+                <input
+                  ref={intakeGalleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleIntakePhotoCapture}
+                />
+
+                {compressingPhoto && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-2.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+                    <span>Optimizing photo for fast upload...</span>
+                  </div>
+                )}
+
+                {/* Thumbnails of attached photos */}
+                {pendingPhotos.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {pendingPhotos.map((p, idx) => (
+                      <div key={idx} className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-emerald-500/70 bg-black/5 shadow-2xs group shrink-0">
+                        <img src={p.previewUrl} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
+                        <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.2 text-[9px] font-bold text-white">
+                          #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removePendingPhoto(idx)}
+                          className="absolute top-1 right-1 rounded-full bg-black/75 p-1 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                          title={`Remove photo ${idx + 1}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {pendingPhotos.length < 2 && (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-700">Add 2nd Photo (Optional):</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => intakeCameraInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>Take Photo 2</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => intakeGalleryInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                          >
+                            <ImageIcon className="h-3 w-3 text-slate-400" />
+                            <span>Gallery</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* If 0 photos attached, show primary prompt */}
+                {pendingPhotos.length === 0 && (
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => intakeCameraInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                        <span>Snap Device Photo (Photo 1)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => intakeGalleryInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Choose from Gallery</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] font-semibold text-amber-700">
+                      ⚠️ At least 1 photo is required to complete device intake (up to 2 photos allowed).
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -845,9 +1120,16 @@ export default function NewTicketPage() {
           {step === 4 && (
             <div className="space-y-4 text-sm">
               <div className="rounded-xl gradient-hero p-4 text-white">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  <span className="font-bold">{SHOP.name}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5" />
+                    <span className="font-bold">
+                      {stores.find((s) => s.id === selectedStoreId)?.displayName || activeStore?.displayName || SHOP.name}
+                    </span>
+                  </div>
+                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-bold">
+                    {stores.find((s) => s.id === selectedStoreId)?.code || activeStore?.code || "FM1"}
+                  </span>
                 </div>
                 <p className="mt-2 text-lg font-bold">{brand} {model}</p>
                 <p className="opacity-90">{customerDisplay?.fullName} · {customerDisplay ? formatCustomerMobiles(customerDisplay) : ""}</p>
@@ -866,6 +1148,30 @@ export default function NewTicketPage() {
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
                 <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "No Warranty"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
+                {pendingPhotos.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200/70">
+                    <span className="text-[11px] font-bold text-slate-700 block mb-2">
+                      Device Intake Photos ({pendingPhotos.length}/2 attached) ✓
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {pendingPhotos.map((p, idx) => (
+                        <div key={idx} className="relative">
+                          <img
+                            src={p.previewUrl}
+                            alt={`Intake preview ${idx + 1}`}
+                            className="h-14 w-14 rounded-xl object-cover border border-slate-300 shadow-2xs"
+                          />
+                          <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.2 text-[9px] font-bold text-white">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="text-[10px] text-slate-500">
+                        Will be stored for shelf matching & delivery check
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -873,14 +1179,15 @@ export default function NewTicketPage() {
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         </div>
 
-        <div className="flex gap-3">
+        {/* Sticky Mobile-first Action Bar */}
+        <div className="sticky bottom-0 -mx-4 -mb-5 sm:mx-0 sm:mb-0 sm:relative sm:bottom-auto border-t border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 sm:p-0 pb-safe sm:pb-0 z-30 shadow-lg sm:shadow-none flex gap-3">
           {step > 0 && (
-            <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => setStep((s) => s - 1)}>
+            <Button type="button" variant="outline" size="lg" className="flex-1 touch-active" onClick={() => setStep((s) => s - 1)}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <Button type="button" size="lg" className="flex-1" disabled={!canNext()} onClick={handleNext}>
+            <Button type="button" size="lg" className="flex-1 touch-active" disabled={!canNext()} onClick={handleNext}>
               {step === 0 && selectedPastTicketId ? (
                 <>Skip to Issue <ArrowRight className="h-4 w-4" /></>
               ) : (
@@ -888,7 +1195,7 @@ export default function NewTicketPage() {
               )}
             </Button>
           ) : (
-            <Button type="button" size="lg" className="flex-1" disabled={loading} onClick={submit}>
+            <Button type="button" size="lg" className="flex-1 touch-active bg-emerald-600 hover:bg-emerald-700" disabled={loading} onClick={submit}>
               {loading ? "Creating..." : <><Check className="h-4 w-4" /> Create & Print Receipt</>}
             </Button>
           )}

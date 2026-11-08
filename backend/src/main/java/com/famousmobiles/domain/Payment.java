@@ -45,6 +45,10 @@ public class Payment {
     @JoinColumn(name = "recorded_by_id")
     private User recordedBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -99,5 +103,13 @@ public class Payment {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 }
