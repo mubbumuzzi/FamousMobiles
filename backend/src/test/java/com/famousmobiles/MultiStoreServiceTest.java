@@ -154,20 +154,8 @@ public class MultiStoreServiceTest {
 
     @Test
     void dashboardMetrics_filtersByStoreId() {
-        RepairTicket t1 = new RepairTicket();
-        t1.setId(UUID.randomUUID());
-        t1.setStore(store1);
-        t1.setStatus(RepairStatus.DEVICE_RECEIVED);
-        t1.setCreatedAt(Instant.now());
-
-        RepairTicket t2 = new RepairTicket();
-        t2.setId(UUID.randomUUID());
-        t2.setStore(store2);
-        t2.setStatus(RepairStatus.DEVICE_RECEIVED);
-        t2.setCreatedAt(Instant.now());
-
-        when(ticketRepository.findAll()).thenReturn(List.of(t1, t2));
-        when(paymentRepository.findAll()).thenReturn(List.of());
+        when(ticketRepository.countReceivedBetween(any(Instant.class), any(Instant.class), org.mockito.ArgumentMatchers.eq(store1.getId()))).thenReturn(1L);
+        when(ticketRepository.countReceivedBetween(any(Instant.class), any(Instant.class), org.mockito.ArgumentMatchers.eq(store2.getId()))).thenReturn(1L);
 
         var metricsStore1 = dashboardService.getMetrics(true, store1.getId());
         assertEquals(1, metricsStore1.devicesReceivedToday());

@@ -227,9 +227,8 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="mt-5 text-center text-sm text-[#767676]">
-            <a href="/track" className="font-semibold text-[#121212] hover:underline">Track your device</a>
-            <span className="text-[#A3A3A3]"> · no login required</span>
+          <p className="mt-5 text-center text-xs text-[#767676]">
+            Customer Support: <a href="tel:+919063786751" className="font-semibold text-[#121212] hover:underline">+91 9063786751</a>
           </p>
           <p className="mt-3 text-center text-sm text-[#767676]">
             <a href="/install" className="font-semibold text-[#121212] hover:underline">Add to Home Screen</a>

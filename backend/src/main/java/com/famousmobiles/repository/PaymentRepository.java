@@ -1,5 +1,6 @@
 package com.famousmobiles.repository;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -34,4 +35,11 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             ORDER BY p.createdAt DESC
             """)
     List<Payment> findPaymentsSinceWithDetails(@Param("since") Instant since);
+
+    @Query("""
+            SELECT COALESCE(SUM(p.amount), 0) FROM Payment p
+            WHERE p.createdAt >= :since
+              AND (:storeId IS NULL OR p.store.id = :storeId)
+            """)
+    BigDecimal sumPaymentsSince(@Param("since") Instant since, @Param("storeId") UUID storeId);
 }

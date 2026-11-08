@@ -2,10 +2,14 @@ package com.famousmobiles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -14,7 +18,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.famousmobiles.domain.RepairTicket;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
@@ -30,21 +33,22 @@ class DashboardServiceTest {
 
     @Test
     void getMetrics_includesRevenueForAdmin() {
-        RepairTicket ticket = new RepairTicket();
-        ticket.setCreatedAt(Instant.now());
-        ticket.setStatus(RepairStatus.DEVICE_RECEIVED);
-        ticket.setEstimatedCost(BigDecimal.ZERO);
-        ticket.setAdvancePaid(BigDecimal.ZERO);
-        ticket.setBalanceAmount(BigDecimal.ZERO);
+        when(ticketRepository.countReceivedBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(1L);
+        when(ticketRepository.countUnderRepair(isNull())).thenReturn(1L);
+        when(ticketRepository.countDeliveredBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(0L);
 
-        PaymentView payment = new PaymentView(new BigDecimal("1500"), Instant.now());
-
-        when(ticketRepository.findAll()).thenReturn(List.of(ticket));
-        stubStatusCounts();
-        when(paymentRepository.findAll()).thenReturn(List.of(payment));
+        List<Object[]> statusCounts = new ArrayList<>();
+        statusCounts.add(new Object[]{RepairStatus.DEVICE_RECEIVED, 1L});
+        statusCounts.add(new Object[]{RepairStatus.WAITING_FOR_PARTS, 0L});
+        statusCounts.add(new Object[]{RepairStatus.READY_FOR_PICKUP, 0L});
+        when(ticketRepository.countGroupByStatus(isNull())).thenReturn(statusCounts);
+        when(paymentRepository.sumPaymentsSince(any(Instant.class), isNull())).thenReturn(new BigDecimal("1500"));
 
         var metrics = dashboardService.getMetrics(true);
 
+        assertEquals(1L, metrics.devicesReceivedToday());
+        assertEquals(1L, metrics.devicesUnderRepair());
+        assertEquals(0L, metrics.deliveredToday());
         assertEquals(new BigDecimal("1500"), metrics.revenueToday());
         assertEquals(new BigDecimal("1500"), metrics.revenueThisWeek());
         assertEquals(new BigDecimal("1500"), metrics.revenueThisMonth());
@@ -52,8 +56,10 @@ class DashboardServiceTest {
 
     @Test
     void getMetrics_hidesRevenueFromStaff() {
-        when(ticketRepository.findAll()).thenReturn(List.of());
-        stubStatusCounts();
+        when(ticketRepository.countReceivedBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(0L);
+        when(ticketRepository.countUnderRepair(isNull())).thenReturn(0L);
+        when(ticketRepository.countDeliveredBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(0L);
+        when(ticketRepository.countGroupByStatus(isNull())).thenReturn(new ArrayList<>());
 
         var metrics = dashboardService.getMetrics(false);
 
@@ -64,53 +70,17 @@ class DashboardServiceTest {
 
     @Test
     void getMetrics_deliveredTodayOnlyCountsDeliveredStatusToday() {
-        RepairTicket deliveredToday = new RepairTicket();
-        deliveredToday.setStatus(RepairStatus.DELIVERED);
-        deliveredToday.setDeliveredAt(Instant.now());
-        deliveredToday.setCreatedAt(Instant.now());
+        when(ticketRepository.countReceivedBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(2L);
+        when(ticketRepository.countUnderRepair(isNull())).thenReturn(0L);
+        when(ticketRepository.countDeliveredBetween(any(Instant.class), any(Instant.class), isNull())).thenReturn(1L);
 
-        RepairTicket returnedUnrepairedToday = new RepairTicket();
-        returnedUnrepairedToday.setStatus(RepairStatus.RETURNED_UNREPAIRED);
-        returnedUnrepairedToday.setDeliveredAt(Instant.now());
-        returnedUnrepairedToday.setCreatedAt(Instant.now());
-
-        RepairTicket deliveredYesterday = new RepairTicket();
-        deliveredYesterday.setStatus(RepairStatus.DELIVERED);
-        deliveredYesterday.setDeliveredAt(Instant.now().minus(2, java.time.temporal.ChronoUnit.DAYS));
-        deliveredYesterday.setCreatedAt(Instant.now().minus(2, java.time.temporal.ChronoUnit.DAYS));
-
-        when(ticketRepository.findAll()).thenReturn(List.of(deliveredToday, returnedUnrepairedToday, deliveredYesterday));
-        stubStatusCounts();
+        List<Object[]> statusCounts = new ArrayList<>();
+        statusCounts.add(new Object[]{RepairStatus.DELIVERED, 1L});
+        when(ticketRepository.countGroupByStatus(isNull())).thenReturn(statusCounts);
 
         var metrics = dashboardService.getMetrics(false);
 
-        assertEquals(1, metrics.deliveredToday());
-        assertEquals(2, metrics.devicesReceivedToday());
-    }
-
-    private void stubStatusCounts() {
-        for (RepairStatus status : RepairStatus.values()) {
-            when(ticketRepository.countByStatus(status)).thenReturn(0L);
-        }
-    }
-
-    private static final class PaymentView extends com.famousmobiles.domain.Payment {
-        private final BigDecimal amount;
-        private final Instant createdAt;
-
-        PaymentView(BigDecimal amount, Instant createdAt) {
-            this.amount = amount;
-            this.createdAt = createdAt;
-        }
-
-        @Override
-        public BigDecimal getAmount() {
-            return amount;
-        }
-
-        @Override
-        public Instant getCreatedAt() {
-            return createdAt;
-        }
+        assertEquals(1L, metrics.deliveredToday());
+        assertEquals(2L, metrics.devicesReceivedToday());
     }
 }

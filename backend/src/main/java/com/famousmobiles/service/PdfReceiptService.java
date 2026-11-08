@@ -76,8 +76,10 @@ public class PdfReceiptService {
         PdfWriter.getInstance(document, baos);
         document.open();
 
-        String trackUrl = appProperties.publicAppUrl() + "/track/" + ticket.getTrackingNumber();
-        Image qr = Image.getInstance(generateQrBytes(trackUrl));
+        String rawPhone = shop.mobile() != null && !shop.mobile().isBlank() ? shop.mobile().replaceAll("[^0-9+]", "") : "+919063786751";
+        String shopPhone = rawPhone.startsWith("+") ? rawPhone : (rawPhone.length() == 10 ? "+91" + rawPhone : "+" + rawPhone);
+        String callUrl = "tel:" + shopPhone;
+        Image qr = Image.getInstance(generateQrBytes(callUrl));
         qr.scaleAbsolute(46, 46);
         qr.setAlignment(Element.ALIGN_CENTER);
 
@@ -278,7 +280,7 @@ public class PdfReceiptService {
         qrCell.setHorizontalAlignment(Element.ALIGN_CENTER);
         qrCell.addElement(qr);
 
-        Paragraph qrText = new Paragraph("Scan to track status", smallFont);
+        Paragraph qrText = new Paragraph("Scan to call shop", smallFont);
         qrText.setAlignment(Element.ALIGN_CENTER);
         qrCell.addElement(qrText);
         footerTable.addCell(qrCell);
