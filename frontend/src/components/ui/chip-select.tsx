@@ -22,10 +22,10 @@ export function ChipSelect({ options, selected, onChange, className }: ChipSelec
             type="button"
             onClick={() => toggle(item)}
             className={cn(
-              "touch-target rounded-full border px-4 py-2 text-sm font-medium transition-all",
+              "touch-target rounded-[8px] border px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-95",
               active
-                ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"
+                ? "border-[#121212] bg-[#121212] text-white shadow-2xs"
+                : "border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8] hover:border-[#DFDFDF]"
             )}
           >
             {item}

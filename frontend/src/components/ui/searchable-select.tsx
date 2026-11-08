@@ -74,16 +74,16 @@ export function SearchableSelect({
         className={cn(inputClassName, "pr-9")}
       />
       <ChevronDown
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#767676]"
         aria-hidden
       />
       {open && (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-[12px] border border-[#EBEBEB] bg-white py-1 shadow-xl animate-in fade-in-50 zoom-in-95"
         >
           {filtered.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-slate-500">No matches</li>
+            <li className="px-3 py-2 text-xs text-[#767676]">No matches</li>
           ) : (
             filtered.map((opt) => (
               <li key={opt}>
@@ -94,8 +94,8 @@ export function SearchableSelect({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => select(opt)}
                   className={cn(
-                    "w-full px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-100",
-                    opt === value && "bg-blue-50 font-medium"
+                    "w-full px-3 py-2 text-left text-xs text-[#121212] hover:bg-[#F7F7F8] cursor-pointer transition-colors",
+                    opt === value && "bg-[#F0F0F2] font-semibold text-[#121212]"
                   )}
                 >
                   {opt}

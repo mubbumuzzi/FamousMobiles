@@ -85,17 +85,17 @@ export function DeliveryVerificationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
-      <div className="relative w-full max-w-xl max-h-[92vh] flex flex-col rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
+      <div className="relative w-full max-w-xl max-h-[92vh] flex flex-col rounded-[12px] bg-white shadow-2xl border border-[#EBEBEB] overflow-hidden my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-emerald-600 to-teal-700 px-5 py-3.5 text-white shrink-0">
+        <div className="flex items-center justify-between border-b border-[#EBEBEB] bg-[#121212] px-5 py-3.5 text-white shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-white/10">
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-bold">Delivery & Hand Over Verification</h2>
-              <p className="text-[11px] text-emerald-100">
+              <h2 className="text-[14px] font-bold">Delivery & Hand Over Verification</h2>
+              <p className="text-[11px] text-[#A3A3A3]">
                 Confirm phone appearance before handing over to customer
               </p>
             </div>
@@ -103,16 +103,16 @@ export function DeliveryVerificationModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
+            className="rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Scrollable Body */}
-        <div className="overflow-y-auto p-4 sm:p-5 space-y-4 text-slate-800">
+        <div className="overflow-y-auto p-4 sm:p-5 space-y-4 text-[#121212]">
           {/* Customer & Ticket ID banner */}
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 border border-slate-100">
+          <div className="flex items-center justify-between rounded-[10px] bg-[#F7F7F8] p-3 border border-[#EBEBEB]">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700 shrink-0">
                 <User className="h-4 w-4" />
@@ -316,7 +316,7 @@ export function DeliveryVerificationModal({
             type="button"
             disabled={submitting}
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-2 text-xs font-semibold text-[#767676] hover:bg-[#F0F0F2] hover:text-[#121212] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -325,7 +325,7 @@ export function DeliveryVerificationModal({
             type="button"
             disabled={submitting || !verifiedMatch}
             onClick={handleConfirm}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 rounded-[10px] bg-[#0E8345] px-5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#0B6B38] active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

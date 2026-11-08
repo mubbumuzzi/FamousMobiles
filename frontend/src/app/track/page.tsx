@@ -62,16 +62,16 @@ export default function TrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="gradient-hero px-4 py-8 text-white">
+    <div className="min-h-screen bg-[#F7F7F8]">
+      <header className="bg-[#121212] px-4 py-8 text-white">
         <div className="mx-auto max-w-lg">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-white/10">
               <Smartphone className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Famous Mobiles</h1>
-              <p className="text-sm opacity-90">Where is my phone?</p>
+              <h1 className="text-xl font-bold tracking-tight">Famous Mobiles</h1>
+              <p className="text-xs text-[#A3A3A3] mt-0.5">Where is my phone?</p>
             </div>
           </div>
         </div>

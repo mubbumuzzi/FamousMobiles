@@ -220,20 +220,20 @@ export default function LoginPage() {
                 setTestMessage("");
                 setShowServerModal(true);
               }}
-              className="font-semibold text-blue-600 hover:text-blue-800 touch-active flex items-center gap-1 shrink-0 px-2 py-1 rounded-lg hover:bg-blue-50"
+              className="font-semibold text-[#121212] hover:text-black touch-active flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-[8px] bg-[#F0F0F2] hover:bg-[#EBEBEB] text-xs transition-colors"
             >
               <Settings2 className="h-3.5 w-3.5" />
               Change Server
             </button>
           </div>
 
-          <p className="mt-5 text-center text-sm text-slate-500">
-            <a href="/track" className="font-medium text-blue-600 hover:underline">Track your device</a>
-            <span className="text-slate-400"> · no login required</span>
+          <p className="mt-5 text-center text-sm text-[#767676]">
+            <a href="/track" className="font-semibold text-[#121212] hover:underline">Track your device</a>
+            <span className="text-[#A3A3A3]"> · no login required</span>
           </p>
-          <p className="mt-3 text-center text-sm text-slate-500">
-            <a href="/install" className="font-medium text-blue-600 hover:underline">Add to Home Screen</a>
-            <span className="text-slate-400"> · use like an app</span>
+          <p className="mt-3 text-center text-sm text-[#767676]">
+            <a href="/install" className="font-semibold text-[#121212] hover:underline">Add to Home Screen</a>
+            <span className="text-[#A3A3A3]"> · use like an app</span>
           </p>
         </div>
         <ShopTerms className="mt-4" />
@@ -248,23 +248,23 @@ export default function LoginPage() {
             aria-hidden="true"
           />
 
-          <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-5 pb-safe sm:p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-fade-in sheet-container">
+          <div className="relative w-full max-w-lg rounded-t-[16px] sm:rounded-[12px] bg-white p-5 pb-safe sm:p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-fade-in sheet-container border border-[#EBEBEB]">
             <div className="sm:hidden sheet-handle" />
 
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EBEBEB]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212]">
                   <Settings2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Backend Server Settings</h3>
-                  <p className="text-xs text-slate-500">Select where the app connects to</p>
+                  <h3 className="text-[15px] font-bold text-[#121212]">Backend Server Settings</h3>
+                  <p className="text-[11px] text-[#767676]">Select where the app connects to</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowServerModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                className="rounded-full p-2 text-[#767676] hover:bg-[#F0F0F2] hover:text-[#121212] transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -273,7 +273,7 @@ export default function LoginPage() {
             <div className="mt-4 space-y-4">
               {/* Presets */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700">Quick Presets</Label>
+                <Label className="text-xs font-bold text-[#121212]">Quick Presets</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {PRESET_SERVERS.map((preset) => {
                     const isSelected = customUrlInput === preset.url;
@@ -286,30 +286,30 @@ export default function LoginPage() {
                           setCustomUrlInput(preset.url);
                           handleTestConnection(preset.url);
                         }}
-                        className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all touch-active ${
+                        className={`flex items-start gap-3 rounded-[10px] border p-3 text-left transition-all cursor-pointer ${
                           isSelected
-                            ? "border-blue-600 bg-blue-50/50 shadow-2xs"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                            ? "border-[#121212] bg-[#F7F7F8] shadow-2xs ring-1 ring-[#121212]"
+                            : "border-[#EBEBEB] bg-white hover:border-[#DFDFDF]"
                         }`}
                       >
                         <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                            isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] ${
+                            isSelected ? "bg-[#121212] text-white" : "bg-[#F0F0F2] text-[#121212]"
                           }`}
                         >
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-900">{preset.name}</span>
+                            <span className="text-xs font-bold text-[#121212]">{preset.name}</span>
                             {isSelected && (
-                              <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded-md">
+                              <span className="text-[10px] font-bold text-[#121212] bg-[#EBEBEB] px-1.5 py-0.2 rounded-[4px]">
                                 Selected
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500">{preset.description}</p>
-                          <p className="mt-0.5 font-mono text-[10.5px] text-slate-400 truncate">{preset.url}</p>
+                          <p className="text-[11px] text-[#767676]">{preset.description}</p>
+                          <p className="mt-0.5 font-mono text-[10.5px] text-[#A3A3A3] truncate">{preset.url}</p>
                         </div>
                       </button>
                     );
@@ -319,7 +319,7 @@ export default function LoginPage() {
 
               {/* Custom Input */}
               <div>
-                <Label htmlFor="custom-url" className="text-xs font-bold text-slate-700">
+                <Label htmlFor="custom-url" className="text-xs font-bold text-[#121212]">
                   Server API URL
                 </Label>
                 <div className="mt-1 flex gap-2">
@@ -340,7 +340,7 @@ export default function LoginPage() {
                     size="sm"
                     onClick={() => handleTestConnection(customUrlInput)}
                     disabled={testStatus === "testing"}
-                    className="shrink-0 text-xs touch-active"
+                    className="shrink-0 text-xs cursor-pointer"
                   >
                     {testStatus === "testing" ? (
                       <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -354,17 +354,17 @@ export default function LoginPage() {
               {/* Test Status feedback */}
               {testStatus !== "idle" && (
                 <div
-                  className={`rounded-xl p-3 text-xs flex items-start gap-2 ${
+                  className={`rounded-[10px] p-3 text-xs flex items-start gap-2 ${
                     testStatus === "success"
-                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      ? "bg-[#E6F4EA] text-[#0E8345] border border-[#0E8345]/20"
                       : testStatus === "error"
-                      ? "bg-red-50 text-red-800 border border-red-200"
-                      : "bg-blue-50 text-blue-800 border border-blue-200"
+                      ? "bg-[#FDE8E8] text-[#C5221F] border border-[#C5221F]/20"
+                      : "bg-[#F7F7F8] text-[#121212] border border-[#EBEBEB]"
                   }`}
                 >
-                  {testStatus === "success" && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />}
-                  {testStatus === "error" && <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />}
-                  {testStatus === "testing" && <RefreshCw className="h-4 w-4 shrink-0 text-blue-600 animate-spin mt-0.5" />}
+                  {testStatus === "success" && <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0E8345] mt-0.5" />}
+                  {testStatus === "error" && <AlertCircle className="h-4 w-4 shrink-0 text-[#C5221F] mt-0.5" />}
+                  {testStatus === "testing" && <RefreshCw className="h-4 w-4 shrink-0 text-[#121212] animate-spin mt-0.5" />}
                   <span className="font-medium">{testMessage}</span>
                 </div>
               )}
@@ -375,14 +375,14 @@ export default function LoginPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setShowServerModal(false)}
-                  className="flex-1 touch-active"
+                  className="flex-1 cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
                   onClick={() => handleSaveServer(customUrlInput)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold touch-active"
+                  className="flex-1 bg-[#121212] hover:bg-[#262626] text-white font-semibold cursor-pointer"
                 >
                   Save & Apply
                 </Button>

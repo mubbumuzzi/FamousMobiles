@@ -14,7 +14,27 @@ export function StoreSwitcher({
 }) {
   const { stores, activeStore, activeStoreId, setActiveStoreId } = useStore();
   const [open, setOpen] = useState(false);
+  const [dropdownAlign, setDropdownAlign] = useState<"left" | "right">(align);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-detect boundary overflow and dynamically align left or right
+  useEffect(() => {
+    if (open && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      // If align is right but button's right edge is closer than 300px to screen left,
+      // aligning right causes negative left offset (cut off). Force left alignment.
+      if (align === "right" && rect.right < 300) {
+        setDropdownAlign("left");
+      } else if (align === "left" && (viewportWidth - rect.left) < 300) {
+        // If align is left but button's left edge is closer than 300px to screen right,
+        // aligning left causes right screen overflow. Force right alignment.
+        setDropdownAlign("right");
+      } else {
+        setDropdownAlign(align);
+      }
+    }
+  }, [open, align]);
 
   // Close on outside click or Escape
   useEffect(() => {
@@ -67,7 +87,7 @@ export function StoreSwitcher({
         <div
           className={cn(
             "absolute z-50 mt-1.5 w-[280px] sm:w-[300px] max-w-[calc(100vw-24px)] rounded-[12px] border border-[#EBEBEB] bg-white p-1.5 shadow-xl animate-in fade-in-50 zoom-in-95",
-            align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"
+            dropdownAlign === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"
           )}
         >
           <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#767676]">

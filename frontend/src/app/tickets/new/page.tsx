@@ -417,7 +417,7 @@ export default function NewTicketPage() {
                   <Label>Mobile Number *</Label>
                   <span
                     className={`text-xs font-semibold ${
-                      mobile.length === 10 ? "text-emerald-600" : "text-slate-400"
+                      mobile.length === 10 ? "text-[#0E8345]" : "text-[#767676]"
                     }`}
                   >
                     {mobile.length}/10 digits
@@ -450,10 +450,10 @@ export default function NewTicketPage() {
                 />
               </Field>
 
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-[#767676]">
                 <span>Or select from existing customer directory</span>
                 <select
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 max-w-[220px] truncate"
+                  className="rounded-[8px] border border-[#EBEBEB] bg-white px-2 py-1 text-xs text-[#121212] max-w-[220px] truncate cursor-pointer"
                   value={customerId}
                   onChange={(e) => {
                     const id = e.target.value;
@@ -482,21 +482,21 @@ export default function NewTicketPage() {
               </div>
               {selectedCustomer && (
                 <div className="space-y-3">
-                  <div className="rounded-xl bg-blue-50 p-4 border border-blue-100">
+                  <div className="rounded-[12px] bg-[#F7F7F8] p-4 border border-[#EBEBEB]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-slate-900">{selectedCustomer.fullName}</p>
+                        <p className="font-bold text-[#121212]">{selectedCustomer.fullName}</p>
                         {getVipStatus(repairHistory.length).isRepeat && (
-                          <span className={cn("text-[10px] px-2 py-0.5 rounded-full border", getVipStatus(repairHistory.length).badgeClass)}>
+                          <span className={cn("text-[10px] px-2 py-0.5 rounded-[4px] border", getVipStatus(repairHistory.length).badgeClass)}>
                             {getVipStatus(repairHistory.length).label}
                           </span>
                         )}
                       </div>
-                      <Badge variant="default" className="bg-white border border-slate-200">{selectedCustomer.customerCode}</Badge>
+                      <Badge variant="default">{selectedCustomer.customerCode}</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mt-0.5">{formatCustomerMobiles(selectedCustomer)}</p>
+                    <p className="text-xs text-[#767676] mt-0.5">{formatCustomerMobiles(selectedCustomer)}</p>
                     {repairHistory.length > 0 && (
-                      <p className="mt-2 text-xs font-semibold text-blue-700">
+                      <p className="mt-2 text-xs font-semibold text-[#121212]">
                         {repairHistory.length} previous repair(s) found in system
                       </p>
                     )}
@@ -504,57 +504,57 @@ export default function NewTicketPage() {
 
                   {/* 7-Day Re-Check / Guarantee Banner */}
                   {recentDeliveredTicket && (
-                    <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-4 shadow-sm space-y-2.5 animate-fade-in">
+                    <div className="rounded-[12px] border border-[#D0ECD9] bg-[#EAF6EE] p-4 space-y-2.5 animate-fade-in">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
-                          <RotateCcw className="h-5 w-5" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#0E8345] text-white shrink-0 shadow-2xs">
+                          <RotateCcw className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-emerald-950 text-sm">
+                            <span className="font-bold text-[#121212] text-sm">
                               Recent Repair: {recentDeliveredTicket.brand} {recentDeliveredTicket.model}
                             </span>
-                            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+                            <span className="rounded-[4px] bg-[#0E8345]/15 px-2 py-0.5 text-[10px] font-bold text-[#0E8345]">
                               Within 7-Day Guarantee Window
                             </span>
                           </div>
-                          <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                          <p className="text-xs text-[#121212] mt-1 leading-relaxed">
                             Delivered on {formatDate(recentDeliveredTicket.deliveredAt)} ({recentDeliveredTicket.trackingNumber}).
                             If the customer returned with a recurring problem, re-check is <strong>FREE (₹0)</strong> under shop assurance.
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-emerald-200/80">
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#D0ECD9]">
                         <Link
                           href={`/tickets/${recentDeliveredTicket.id}?recheck=true`}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#0E8345] hover:bg-[#0B6B38] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-colors"
                         >
-                          <RotateCcw className="h-4 w-4" />
+                          <RotateCcw className="h-3.5 w-3.5" />
                           Reopen for 7-Day Re-Check (No New Booking)
                         </Link>
-                        <span className="text-[11px] text-emerald-700">or continue below for a brand new repair</span>
+                        <span className="text-[11px] text-[#767676]">or continue below for a brand new repair</span>
                       </div>
                     </div>
                   )}
 
                   {repairHistory.length > 0 && (
-                    <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4 space-y-3">
+                    <div className="rounded-[12px] border border-[#EBEBEB] bg-[#F7F7F8] p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600 text-white">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#121212] text-white">
                           <Wrench className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-violet-950">
+                          <h3 className="text-xs font-bold text-[#121212]">
                             Re-repair Previously Repaired Device
                           </h3>
-                          <p className="text-xs text-violet-700">
+                          <p className="text-[11px] text-[#767676]">
                             Select the phone to auto-fill device details and skip straight to Problem Description.
                           </p>
                         </div>
                       </div>
 
                       <Field>
-                        <Label className="text-xs font-semibold text-violet-900">
+                        <Label className="text-xs font-semibold text-[#121212]">
                           Select from previously repaired mobiles
                         </Label>
                         <select
@@ -572,25 +572,25 @@ export default function NewTicketPage() {
                       </Field>
 
                       {selectedPastTicket && (
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-3 border border-violet-300 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-white p-3 border border-[#EBEBEB] shadow-2xs">
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-                              <p className="text-sm font-bold text-slate-900">
+                              <span className="flex h-2 w-2 rounded-full bg-[#0E8345]" />
+                              <p className="text-xs font-bold text-[#121212]">
                                 {selectedPastTicket.brand} {selectedPastTicket.model}
                                 {selectedPastTicket.color && (
-                                  <span className="ml-1 text-xs font-normal text-slate-500">
+                                  <span className="ml-1 text-[11px] font-normal text-[#767676]">
                                     ({selectedPastTicket.color})
                                   </span>
                                 )}
                               </p>
                             </div>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-[11px] text-[#767676] mt-0.5">
                               Previous Ticket: {selectedPastTicket.trackingNumber} · Repaired: {formatDate(selectedPastTicket.createdAt)}
                               {selectedPastTicket.imei ? ` · IMEI: ${selectedPastTicket.imei}` : ""}
                             </p>
                             {selectedPastTicket.problemDescription && (
-                              <p className="text-xs text-slate-600 italic mt-0.5">
+                              <p className="text-[11px] text-[#767676] italic mt-0.5">
                                 Previous Issue: &ldquo;{selectedPastTicket.problemDescription}&rdquo;
                               </p>
                             )}
@@ -598,8 +598,9 @@ export default function NewTicketPage() {
                           <Button
                             type="button"
                             size="sm"
+                            variant="primary"
                             onClick={() => applyPastDeviceAndJump(selectedPastTicket)}
-                            className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                            className="h-8 text-xs font-semibold shadow-2xs"
                           >
                             Re-repair this device (Skip to Issue) <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                           </Button>
@@ -607,7 +608,7 @@ export default function NewTicketPage() {
                       )}
 
                       <div className="space-y-2 pt-1">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-violet-800">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#767676]">
                           Or 1-click select past device:
                         </p>
                         <div className="grid gap-2 sm:grid-cols-2">
@@ -616,26 +617,26 @@ export default function NewTicketPage() {
                             return (
                               <div
                                 key={t.id}
-                                className={`rounded-xl border p-3 transition-all ${
+                                className={`rounded-[10px] border p-3 transition-all ${
                                   isSelected
-                                    ? "border-violet-600 bg-white ring-2 ring-violet-400 shadow-sm"
-                                    : "border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm"
+                                    ? "border-[#121212] bg-white ring-2 ring-[#121212]/10 shadow-2xs"
+                                    : "border-[#EBEBEB] bg-white hover:border-[#DFDFDF]"
                                 }`}
                               >
                                 <div className="flex items-start justify-between gap-1">
-                                  <p className="font-semibold text-slate-900 text-sm">
+                                  <p className="font-semibold text-[#121212] text-xs">
                                     {t.brand} {t.model}
                                   </p>
                                   <Badge variant="default" className="text-[10px]">
                                     {formatStatus(t.status)}
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-[11px] text-[#767676] mt-0.5">
                                   {t.trackingNumber} · {formatDate(t.createdAt)}
                                 </p>
-                                {t.imei && <p className="text-[11px] text-slate-400">IMEI: {t.imei}</p>}
+                                {t.imei && <p className="text-[10px] text-[#767676]">IMEI: {t.imei}</p>}
                                 {t.problemDescription && (
-                                  <p className="text-xs text-slate-600 mt-1 line-clamp-1">
+                                  <p className="text-[11px] text-[#767676] mt-1 line-clamp-1">
                                     Prev: {t.problemDescription}
                                   </p>
                                 )}
@@ -643,12 +644,8 @@ export default function NewTicketPage() {
                                   <Button
                                     type="button"
                                     size="sm"
-                                    variant={isSelected ? "default" : "outline"}
-                                    className={`w-full text-xs ${
-                                      isSelected
-                                        ? "bg-violet-600 text-white"
-                                        : "border-violet-300 text-violet-700 hover:bg-violet-50"
-                                    }`}
+                                    variant={isSelected ? "primary" : "secondary"}
+                                    className="w-full h-8 text-xs font-semibold"
                                     onClick={() => applyPastDeviceAndJump(t)}
                                   >
                                     Re-repair this device <ArrowRight className="ml-1 h-3 w-3" />
@@ -660,7 +657,7 @@ export default function NewTicketPage() {
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-violet-700/80 italic">
+                      <p className="text-[11px] text-[#767676] italic">
                         Tip: If the customer brought a different/new device, simply click &quot;Next&quot; below without selecting a past device.
                       </p>
                     </div>
@@ -668,17 +665,17 @@ export default function NewTicketPage() {
                 </div>
               )}
               {!customerId && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 animate-fade-in">
+                <div className="rounded-[12px] border border-[#EBEBEB] bg-[#F7F7F8] p-4 space-y-3 animate-fade-in">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#767676]">
                       New Customer Details
                     </p>
                     {mobile.length === 10 ? (
-                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-semibold text-[#0E8345] bg-[#EAF6EE] border border-[#D0ECD9] px-2 py-0.5 rounded-[4px]">
                         Mobile: {mobile}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-[#767676]">
                         Enter 10-digit mobile above
                       </span>
                     )}
@@ -736,9 +733,9 @@ export default function NewTicketPage() {
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2">
               {selectedPastTicketId && (
-                <div className="sm:col-span-2 flex items-center justify-between rounded-xl bg-violet-50 p-3 border border-violet-200 text-sm">
-                  <div className="flex items-center gap-2 text-violet-900">
-                    <Wrench className="h-4 w-4 text-violet-600" />
+                <div className="sm:col-span-2 flex items-center justify-between rounded-[10px] bg-[#F7F7F8] p-3 border border-[#EBEBEB] text-xs">
+                  <div className="flex items-center gap-2 text-[#121212]">
+                    <Wrench className="h-3.5 w-3.5 text-[#767676]" />
                     <span>
                       Device pre-filled from past repair <strong>{selectedPastTicket?.trackingNumber}</strong>
                     </span>
@@ -747,7 +744,7 @@ export default function NewTicketPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-violet-700 hover:text-violet-900"
+                    className="text-xs text-[#767676] hover:text-[#121212]"
                     onClick={() => {
                       setSelectedPastTicketId("");
                       setBrand("");
@@ -772,17 +769,17 @@ export default function NewTicketPage() {
               <Field><Label>Model *</Label><Input placeholder="e.g. A14" value={model} onChange={(e) => setModel(e.target.value)} /></Field>
 
               {/* Phone Photo Capture for Shelf ID & Return Check (Min 1, Max 2) */}
-              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
+              <div className="sm:col-span-2 rounded-[12px] border border-[#EBEBEB] bg-[#F7F7F8] p-3.5 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Camera className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-bold text-slate-800">Device Photos *</span>
+                    <Camera className="h-4 w-4 text-[#121212]" />
+                    <span className="text-xs font-bold text-[#121212]">Device Photos *</span>
                     <span
                       className={cn(
-                        "rounded-md px-2 py-0.5 text-[10px] font-bold",
+                        "rounded-[4px] px-2 py-0.5 text-[10px] font-bold",
                         pendingPhotos.length >= 1
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                          ? "bg-[#EAF6EE] text-[#0E8345] border border-[#D0ECD9]"
+                          : "bg-[#FFF4EB] text-[#B35300] border border-[#FFE4CF]"
                       )}
                     >
                       {pendingPhotos.length === 0
@@ -790,7 +787,7 @@ export default function NewTicketPage() {
                         : `${pendingPhotos.length} of 2 photos attached ✓`}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500">Min 1, max 2 photos for shelf ID & delivery check</span>
+                  <span className="text-[11px] text-[#767676]">Min 1, max 2 photos for shelf ID & delivery check</span>
                 </div>
 
                 <input
@@ -810,8 +807,8 @@ export default function NewTicketPage() {
                 />
 
                 {compressingPhoto && (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-2.5">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#121212] bg-white border border-[#EBEBEB] rounded-[8px] p-2.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#121212] shrink-0" />
                     <span>Optimizing photo for fast upload...</span>
                   </div>
                 )}
@@ -820,7 +817,7 @@ export default function NewTicketPage() {
                 {pendingPhotos.length > 0 && (
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     {pendingPhotos.map((p, idx) => (
-                      <div key={idx} className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-emerald-500/70 bg-black/5 shadow-2xs group shrink-0">
+                      <div key={idx} className="relative h-20 w-20 overflow-hidden rounded-[10px] border-2 border-[#0E8345]/70 bg-black/5 shadow-2xs group shrink-0">
                         <img src={p.previewUrl} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
                         <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.2 text-[9px] font-bold text-white">
                           #{idx + 1}
@@ -828,7 +825,7 @@ export default function NewTicketPage() {
                         <button
                           type="button"
                           onClick={() => removePendingPhoto(idx)}
-                          className="absolute top-1 right-1 rounded-full bg-black/75 p-1 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                          className="absolute top-1 right-1 rounded-full bg-black/75 p-1 text-white hover:bg-[#C5221F] transition-colors cursor-pointer"
                           title={`Remove photo ${idx + 1}`}
                         >
                           <X className="h-3 w-3" />
@@ -838,12 +835,12 @@ export default function NewTicketPage() {
 
                     {pendingPhotos.length < 2 && (
                       <div className="flex flex-col gap-1.5">
-                        <span className="text-[11px] font-bold text-slate-700">Add 2nd Photo (Optional):</span>
+                        <span className="text-[11px] font-bold text-[#121212]">Add 2nd Photo (Optional):</span>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => intakeCameraInputRef.current?.click()}
-                            className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-[8px] bg-[#121212] px-2.5 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-black active:scale-95 transition-all cursor-pointer"
                           >
                             <Camera className="h-3 w-3" />
                             <span>Take Photo 2</span>
@@ -851,9 +848,9 @@ export default function NewTicketPage() {
                           <button
                             type="button"
                             onClick={() => intakeGalleryInputRef.current?.click()}
-                            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-[8px] border border-[#EBEBEB] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] hover:bg-[#F7F7F8] transition-all cursor-pointer"
                           >
-                            <ImageIcon className="h-3 w-3 text-slate-400" />
+                            <ImageIcon className="h-3 w-3 text-[#767676]" />
                             <span>Gallery</span>
                           </button>
                         </div>
@@ -869,7 +866,7 @@ export default function NewTicketPage() {
                       <button
                         type="button"
                         onClick={() => intakeCameraInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#121212] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-black active:scale-95 transition-all cursor-pointer"
                       >
                         <Camera className="h-3.5 w-3.5" />
                         <span>Snap Device Photo (Photo 1)</span>
@@ -877,14 +874,14 @@ export default function NewTicketPage() {
                       <button
                         type="button"
                         onClick={() => intakeGalleryInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-medium text-[#121212] hover:bg-[#F7F7F8] transition-all cursor-pointer"
                       >
-                        <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+                        <ImageIcon className="h-3.5 w-3.5 text-[#767676]" />
                         <span>Choose from Gallery</span>
                       </button>
                     </div>
-                    <p className="text-[11px] font-semibold text-amber-700">
-                      ⚠️ At least 1 photo is required to complete device intake (up to 2 photos allowed).
+                    <p className="text-[11px] font-semibold text-[#B35300]">
+                      At least 1 photo is required to complete device intake (up to 2 photos allowed).
                     </p>
                   </div>
                 )}
@@ -894,14 +891,14 @@ export default function NewTicketPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200 text-sm">
+              <div className="flex items-center justify-between rounded-[10px] bg-[#F7F7F8] p-3 border border-[#EBEBEB] text-xs">
                 <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-blue-600" />
-                  <span className="font-semibold text-slate-800">{brand} {model}</span>
-                  {color && <span className="text-xs text-slate-500">({color})</span>}
-                  {imei && <span className="text-xs text-slate-500">· IMEI: {imei}</span>}
+                  <Smartphone className="h-4 w-4 text-[#121212]" />
+                  <span className="font-semibold text-[#121212]">{brand} {model}</span>
+                  {color && <span className="text-[#767676]">({color})</span>}
+                  {imei && <span className="text-[#767676]">· IMEI: {imei}</span>}
                   {selectedPastTicketId && (
-                    <Badge variant="default" className="text-[10px] bg-violet-50 text-violet-700 border border-violet-200">
+                    <Badge variant="default" className="text-[10px]">
                       Re-repair
                     </Badge>
                   )}
@@ -909,7 +906,7 @@ export default function NewTicketPage() {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-xs font-medium text-blue-600 hover:underline"
+                  className="text-xs font-medium text-[#121212] underline hover:no-underline cursor-pointer"
                 >
                   Edit device details
                 </button>
@@ -918,7 +915,7 @@ export default function NewTicketPage() {
               <Field>
                 <div className="flex items-center justify-between mb-1">
                   <Label>Quick issue templates</Label>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-[#767676]">
                     {selectedTemplates.length > 0
                       ? `${selectedTemplates.length} selected · Click to toggle multiple`
                       : "Tap to select one or multiple"}
@@ -933,10 +930,10 @@ export default function NewTicketPage() {
                         type="button"
                         onClick={() => toggleIssueTemplate(t)}
                         className={cn(
-                          "touch-target flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all select-none",
+                          "touch-target flex items-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-xs font-semibold transition-all select-none cursor-pointer active:scale-95",
                           isSelected
-                            ? "border-blue-600 bg-blue-600 text-white shadow-xs scale-[1.02]"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50/50"
+                            ? "border-[#121212] bg-[#121212] text-white shadow-2xs"
+                            : "border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8] hover:border-[#DFDFDF]"
                         )}
                       >
                         {isSelected && <Check className="h-3 w-3 stroke-[2.5]" />}
@@ -972,7 +969,7 @@ export default function NewTicketPage() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 flex items-start gap-3">
+              <div className="rounded-[10px] border border-[#EBEBEB] bg-[#F7F7F8] p-3.5 text-xs text-[#121212] flex items-start gap-3">
                 <input
                   type="checkbox"
                   id="quoteAfterDiagnosis"
@@ -985,11 +982,11 @@ export default function NewTicketPage() {
                       setAdvancePaid("");
                     }
                   }}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="mt-0.5 h-4 w-4 rounded border-[#EBEBEB] text-[#121212] focus:ring-[#121212] cursor-pointer"
                 />
                 <label htmlFor="quoteAfterDiagnosis" className="cursor-pointer select-none space-y-1">
-                  <span className="font-bold text-blue-950 text-sm block">Quote after diagnosis (Issue unknown / inspection needed)</span>
-                  <p className="text-blue-800">
+                  <span className="font-bold text-[#121212] text-sm block">Quote after diagnosis (Issue unknown / inspection needed)</span>
+                  <p className="text-[#767676]">
                     Check this if the repair cost cannot be determined right now. The technician will diagnose the device and quote the estimate later. Customer tracking will show &quot;Pending Diagnosis&quot;.
                   </p>
                 </label>
@@ -1003,7 +1000,7 @@ export default function NewTicketPage() {
                       <button
                         type="button"
                         onClick={() => setEstimatedCost("")}
-                        className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                        className="text-[11px] font-medium text-[#767676] hover:text-[#121212] transition-colors cursor-pointer"
                       >
                         Clear
                       </button>
@@ -1035,7 +1032,7 @@ export default function NewTicketPage() {
                       <button
                         type="button"
                         onClick={() => setAdvancePaid("")}
-                        className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                        className="text-[11px] font-medium text-[#767676] hover:text-[#121212] transition-colors cursor-pointer"
                       >
                         Clear
                       </button>
@@ -1058,31 +1055,31 @@ export default function NewTicketPage() {
                 </Field>
                 <Field><Label>Delivery Date</Label><Input type="date" value={edd} onChange={(e) => setEdd(e.target.value)} /></Field>
                 <div className="sm:col-span-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-slate-600">
+                  <p className="text-sm font-medium text-[#767676]">
                     Balance to pay:{" "}
                     {quoteAfterDiagnosis || Number(estimatedCost || 0) === 0 ? (
-                      <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs">
+                      <span className="font-semibold text-[#B35300] bg-[#FFF4EB] px-2 py-0.5 rounded-[4px] border border-[#FFE4CF] text-xs">
                         Pending Diagnosis
                       </span>
                     ) : (
-                      <span className="font-bold text-slate-900">{formatCurrency(Math.max(0, Number(estimatedCost || 0) - Number(advancePaid || 0)))}</span>
+                      <span className="font-bold text-[#121212]">{formatCurrency(Math.max(0, Number(estimatedCost || 0) - Number(advancePaid || 0)))}</span>
                     )}
                   </p>
                   {Number(advancePaid || 0) > Number(estimatedCost || 0) && (
-                    <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
-                      ❌ Advance paid (₹{advancePaid}) cannot exceed estimated cost ({formatCurrency(Number(estimatedCost || 0))})
+                    <p className="text-xs font-semibold text-[#C5221F] bg-[#FDE8E8] border border-[#FDE8E8] px-2.5 py-1 rounded-[6px]">
+                      Advance paid (₹{advancePaid}) cannot exceed estimated cost ({formatCurrency(Number(estimatedCost || 0))})
                     </p>
                   )}
                   {quoteAfterDiagnosis && Number(advancePaid || 0) > 0 && (
-                    <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
-                      ❌ Uncheck &quot;Quote after diagnosis&quot; and enter an estimated cost to accept advance payment.
+                    <p className="text-xs font-semibold text-[#C5221F] bg-[#FDE8E8] border border-[#FDE8E8] px-2.5 py-1 rounded-[6px]">
+                      Uncheck &quot;Quote after diagnosis&quot; and enter an estimated cost to accept advance payment.
                     </p>
                   )}
                 </div>
 
-                <div className="sm:col-span-3 space-y-2 pt-3 border-t border-slate-100">
-                  <Label className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
-                    🛡️ Service Warranty Period
+                <div className="sm:col-span-3 space-y-2 pt-3 border-t border-[#EBEBEB]">
+                  <Label className="flex items-center gap-1.5 font-bold text-[#121212] text-xs">
+                    Service Warranty Period
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {[
@@ -1097,17 +1094,17 @@ export default function NewTicketPage() {
                         key={w.days}
                         type="button"
                         onClick={() => setWarrantyDays(w.days)}
-                        className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        className={`rounded-[8px] border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                           warrantyDays === w.days
-                            ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+                            ? "border-[#121212] bg-[#121212] text-white shadow-2xs"
+                            : "border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8]"
                         }`}
                       >
                         {w.label}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-[#767676]">
                     {warrantyDays > 0
                       ? `Customer will receive ${warrantyDays} days warranty starting from device collection date. Printed on receipt.`
                       : "No extended warranty coverage; counter testing warranty only."}
@@ -1119,22 +1116,22 @@ export default function NewTicketPage() {
 
           {step === 4 && (
             <div className="space-y-4 text-sm">
-              <div className="rounded-xl gradient-hero p-4 text-white">
+              <div className="rounded-[12px] bg-[#121212] border border-[#121212] p-4 text-white shadow-2xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5" />
+                    <Smartphone className="h-5 w-5 text-white" />
                     <span className="font-bold">
                       {stores.find((s) => s.id === selectedStoreId)?.displayName || activeStore?.displayName || SHOP.name}
                     </span>
                   </div>
-                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-bold">
+                  <span className="rounded-[4px] bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
                     {stores.find((s) => s.id === selectedStoreId)?.code || activeStore?.code || "FM1"}
                   </span>
                 </div>
                 <p className="mt-2 text-lg font-bold">{brand} {model}</p>
-                <p className="opacity-90">{customerDisplay?.fullName} · {customerDisplay ? formatCustomerMobiles(customerDisplay) : ""}</p>
+                <p className="opacity-80 text-xs">{customerDisplay?.fullName} · {customerDisplay ? formatCustomerMobiles(customerDisplay) : ""}</p>
               </div>
-              <div className="grid gap-2 rounded-xl bg-slate-50 p-4">
+              <div className="grid gap-2 rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-4">
                 <Row label="Problem" value={problem} />
                 <Row
                   label="Estimated"
@@ -1149,8 +1146,8 @@ export default function NewTicketPage() {
                 <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "No Warranty"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
                 {pendingPhotos.length > 0 && (
-                  <div className="pt-2 border-t border-slate-200/70">
-                    <span className="text-[11px] font-bold text-slate-700 block mb-2">
+                  <div className="pt-2 border-t border-[#EBEBEB]">
+                    <span className="text-[11px] font-bold text-[#121212] block mb-2">
                       Device Intake Photos ({pendingPhotos.length}/2 attached) ✓
                     </span>
                     <div className="flex items-center gap-3">
@@ -1159,14 +1156,14 @@ export default function NewTicketPage() {
                           <img
                             src={p.previewUrl}
                             alt={`Intake preview ${idx + 1}`}
-                            className="h-14 w-14 rounded-xl object-cover border border-slate-300 shadow-2xs"
+                            className="h-14 w-14 rounded-[8px] object-cover border border-[#EBEBEB] shadow-2xs"
                           />
                           <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.2 text-[9px] font-bold text-white">
                             #{idx + 1}
                           </span>
                         </div>
                       ))}
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[10px] text-[#767676]">
                         Will be stored for shelf matching & delivery check
                       </div>
                     </div>
@@ -1176,18 +1173,18 @@ export default function NewTicketPage() {
             </div>
           )}
 
-          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-4 text-xs font-semibold text-[#C5221F]">{error}</p>}
         </div>
 
         {/* Sticky Mobile-first Action Bar */}
-        <div className="sticky bottom-0 -mx-4 -mb-5 sm:mx-0 sm:mb-0 sm:relative sm:bottom-auto border-t border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 sm:p-0 pb-safe sm:pb-0 z-30 shadow-lg sm:shadow-none flex gap-3">
+        <div className="sticky bottom-0 -mx-4 -mb-5 sm:mx-0 sm:mb-0 sm:relative sm:bottom-auto border-t border-[#EBEBEB] bg-white/95 backdrop-blur-md p-3.5 sm:p-0 pb-safe sm:pb-0 z-30 shadow-lg sm:shadow-none flex gap-3">
           {step > 0 && (
-            <Button type="button" variant="outline" size="lg" className="flex-1 touch-active" onClick={() => setStep((s) => s - 1)}>
+            <Button type="button" variant="secondary" size="lg" className="flex-1 touch-active border border-[#EBEBEB]" onClick={() => setStep((s) => s - 1)}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <Button type="button" size="lg" className="flex-1 touch-active" disabled={!canNext()} onClick={handleNext}>
+            <Button type="button" variant="primary" size="lg" className="flex-1 touch-active" disabled={!canNext()} onClick={handleNext}>
               {step === 0 && selectedPastTicketId ? (
                 <>Skip to Issue <ArrowRight className="h-4 w-4" /></>
               ) : (
@@ -1195,7 +1192,7 @@ export default function NewTicketPage() {
               )}
             </Button>
           ) : (
-            <Button type="button" size="lg" className="flex-1 touch-active bg-emerald-600 hover:bg-emerald-700" disabled={loading} onClick={submit}>
+            <Button type="button" variant="primary" size="lg" className="flex-1 touch-active" disabled={loading} onClick={submit}>
               {loading ? "Creating..." : <><Check className="h-4 w-4" /> Create & Print Receipt</>}
             </Button>
           )}
@@ -1207,9 +1204,9 @@ export default function NewTicketPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-900 text-right">{value}</span>
+    <div className="flex justify-between gap-4 text-xs">
+      <span className="text-[#767676]">{label}</span>
+      <span className="font-semibold text-[#121212] text-right">{value}</span>
     </div>
   );
 }

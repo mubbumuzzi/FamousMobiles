@@ -406,14 +406,14 @@ export function StockOrderModal({ isOpen, onClose, onSuccess }: StockOrderModalP
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-xl px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 touch-active transition-colors"
+              className="rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#767676] hover:bg-[#F0F0F2] hover:text-[#121212] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:opacity-95 touch-active disabled:opacity-50 transition-all"
+              className="rounded-[10px] bg-[#121212] px-5 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#262626] active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
             >
               {loading ? "Saving Order..." : "Save & Track Order"}
             </button>

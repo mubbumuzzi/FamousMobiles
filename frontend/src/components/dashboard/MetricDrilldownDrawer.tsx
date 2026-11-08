@@ -453,11 +453,11 @@ export function MetricDrilldownDrawer({
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Smart Contextual Banner */}
           {metric === "revenueToday" && (
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/50 p-4 shadow-xs">
+            <div className="rounded-[12px] border border-[#EBEBEB] bg-[#F7F7F8] p-4 shadow-2xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-emerald-800">💵 Day-End Cash Drawer & Bank Reconciliation</p>
-                  <p className="text-2xl font-black text-emerald-950">
+                  <p className="text-[12px] font-semibold text-[#767676]">Day-End Cash Drawer & Bank Reconciliation</p>
+                  <p className="text-[24px] font-bold text-[#121212]">
                     {formatCurrency(Number(revenueSummary?.totalRevenue ?? 0))}
                   </p>
                 </div>

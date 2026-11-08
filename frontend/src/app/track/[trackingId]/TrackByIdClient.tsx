@@ -26,15 +26,15 @@ export default function TrackByIdClient() {
   }, [trackingId]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center gap-2 px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-header text-white">
+    <div className="min-h-screen bg-[#F7F7F8]">
+      <header className="sticky top-0 z-10 border-b border-[#EBEBEB] bg-white">
+        <div className="mx-auto flex max-w-lg items-center gap-2.5 px-4 py-3.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#121212] text-white">
             <Smartphone className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Track your repair</p>
-            <p className="font-bold text-slate-900">Famous Mobiles</p>
+            <p className="text-[11px] text-[#767676]">Track your repair</p>
+            <p className="font-bold text-[15px] text-[#121212]">Famous Mobiles</p>
           </div>
         </div>
       </header>

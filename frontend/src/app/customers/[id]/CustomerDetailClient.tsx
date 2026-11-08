@@ -9,6 +9,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles, getVipStatus, getWarrantyStatus, cn } from "@/lib/utils";
+import { RotateCcw } from "lucide-react";
 
 export default function CustomerDetailClient() {
   const params = useParams<{ id: string }>();
@@ -34,36 +35,36 @@ export default function CustomerDetailClient() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-4 max-w-2xl">
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-2xl font-bold text-slate-900">{customer.fullName}</h1>
+          <h1 className="text-[20px] font-bold text-[#121212] tracking-tight">{customer.fullName}</h1>
           {vip.isRepeat && (
-            <span className={cn("text-xs px-2.5 py-1 rounded-full border", vip.badgeClass)}>
+            <span className={cn("text-[11px] px-2.5 py-0.5 rounded-[6px] border font-semibold", vip.badgeClass)}>
               {vip.label}
             </span>
           )}
         </div>
-        <p className="text-slate-600">{formatCustomerMobiles(customer)} · {customer.customerCode}</p>
-        <h2 className="font-semibold text-slate-900 pt-2">Repair History ({repairs.length})</h2>
+        <p className="text-[13px] text-[#767676]">{formatCustomerMobiles(customer)} · {customer.customerCode}</p>
+        <h2 className="text-[14px] font-bold text-[#121212] pt-2">Repair History ({repairs.length})</h2>
         {repairs.map((t) => {
           const warranty = getWarrantyStatus(t);
           return (
             <Link key={t.id} href={`/tickets/view?id=${t.id}`}>
-              <Card className="mb-2 hover:border-blue-300 transition-all">
+              <Card className="mb-2 rounded-[12px] border border-[#EBEBEB] bg-white hover:border-[#121212] transition-colors shadow-2xs">
                 <CardContent className="flex items-center justify-between p-4">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-blue-700">{t.trackingNumber}</span>
-                      <span className="text-sm font-semibold text-slate-800">{t.brand} {t.model}</span>
+                      <span className="font-bold text-[#121212] font-mono text-[13px]">{t.trackingNumber}</span>
+                      <span className="text-[13px] font-semibold text-[#121212]">{t.brand} {t.model}</span>
                       {t.reopenCount && t.reopenCount > 0 ? (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
-                          🔁 Re-Check
+                        <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#FEF7E0] px-2 py-0.5 text-[10px] font-bold text-[#B35300] border border-[#B35300]/20">
+                          <RotateCcw className="h-2.5 w-2.5" /> Re-Check
                         </span>
                       ) : null}
                     </div>
                     {warranty.status !== "NONE" && (
-                      <p className="text-xs text-slate-500 mt-1">{warranty.label}</p>
+                      <p className="text-[11px] text-[#767676] mt-1">{warranty.label}</p>
                     )}
                   </div>
-                  <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+                  <span className="text-[11px] font-semibold text-[#121212] bg-[#F0F0F2] px-2.5 py-1 rounded-[6px]">
                     {formatStatus(t.status)}
                   </span>
                 </CardContent>

@@ -609,19 +609,19 @@ export default function TicketDetailPage() {
           </div>
 
           {editingEstimate && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 space-y-3 animate-fade-in">
+            <div className="rounded-[10px] border border-[#EBEBEB] bg-[#F7F7F8] p-3.5 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-blue-950 uppercase tracking-wider">
+                <p className="text-xs font-bold text-[#121212] uppercase tracking-wider">
                   {Number(ticket.estimatedCost) === 0 ? "Add Initial Repair Estimate" : "Update Repair Estimate"}
                 </p>
-                <span className="text-xs text-slate-600 font-medium">
+                <span className="text-xs text-[#767676] font-medium">
                   Advance Paid: {formatCurrency(Number(ticket.advancePaid))}
                 </span>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 block">Estimated Cost (₹) *</label>
+                  <label className="text-xs font-semibold text-[#121212] block">Estimated Cost (₹) *</label>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -634,7 +634,7 @@ export default function TicketDetailPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 block">Remarks / Reason (Optional)</label>
+                  <label className="text-xs font-semibold text-[#121212] block">Remarks / Reason (Optional)</label>
                   <Input
                     placeholder="e.g. Battery replaced + frame fix"
                     value={newEstimateRemarks}
@@ -643,12 +643,12 @@ export default function TicketDetailPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 pt-2 border-t border-blue-200/70">
+              <div className="space-y-1.5 pt-2 border-t border-[#EBEBEB]">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    🛡️ Service Warranty Period
+                  <label className="text-xs font-bold text-[#121212] flex items-center gap-1.5">
+                    Service Warranty Period
                   </label>
-                  <span className="text-xs font-semibold text-emerald-700">
+                  <span className="text-xs font-semibold text-[#0E8345]">
                     {newEstimateWarrantyDays > 0 ? `${newEstimateWarrantyDays} Days Selected` : "No Warranty"}
                   </span>
                 </div>
@@ -658,17 +658,17 @@ export default function TicketDetailPage() {
                       key={w.days}
                       type="button"
                       onClick={() => setNewEstimateWarrantyDays(w.days)}
-                      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                      className={`rounded-[8px] border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
                         newEstimateWarrantyDays === w.days
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+                          ? "border-[#121212] bg-[#121212] text-white shadow-2xs"
+                          : "border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8]"
                       }`}
                     >
                       {w.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-[#767676]">
                   {newEstimateWarrantyDays > 0
                     ? `Customer will receive ${newEstimateWarrantyDays} days warranty from delivery date (printed on receipt & tracking).`
                     : "Counter testing warranty only; no post-collection warranty coverage."}
@@ -676,16 +676,16 @@ export default function TicketDetailPage() {
               </div>
 
               {newEstimateCost && !isNaN(Number(newEstimateCost)) && (
-                <div className="flex items-center justify-between text-xs rounded-lg bg-white border border-blue-100 p-2 text-slate-700">
+                <div className="flex items-center justify-between text-xs rounded-[8px] bg-white border border-[#EBEBEB] p-2 text-[#121212]">
                   <span>
                     New Balance will be:{" "}
-                    <strong className="text-blue-900 text-sm">
+                    <strong className="text-[#121212] text-sm">
                       {formatCurrency(Math.max(0, Number(newEstimateCost) - Number(ticket.advancePaid)))}
                     </strong>
                   </span>
                   {Number(ticket.advancePaid) > Number(newEstimateCost) && (
-                    <span className="text-red-700 font-semibold">
-                      ❌ Cannot be less than advance ({formatCurrency(Number(ticket.advancePaid))})
+                    <span className="text-[#C5221F] font-semibold">
+                      Cannot be less than advance ({formatCurrency(Number(ticket.advancePaid))})
                     </span>
                   )}
                 </div>
@@ -694,17 +694,19 @@ export default function TicketDetailPage() {
               <div className="flex justify-end gap-2 pt-1">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setEditingEstimate(false)}
                   disabled={savingEstimate}
+                  className="h-8 text-xs border border-[#EBEBEB]"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
+                  variant="primary"
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="h-8 text-xs font-semibold"
                   onClick={saveEstimation}
                   disabled={
                     savingEstimate ||
@@ -742,18 +744,18 @@ export default function TicketDetailPage() {
 
                   {/* Payment pending warning when DELIVERED is selected */}
                   {nextStatus === "DELIVERED" && Number(ticket.balanceAmount) > 0 && (
-                    <div className="rounded-lg bg-amber-50 border border-amber-300 p-2.5 text-xs text-amber-900 flex items-center justify-between shadow-xs animate-fade-in">
+                    <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs text-[#B35300] flex items-center justify-between shadow-2xs animate-fade-in">
                       <div className="space-y-0.5">
-                        <span className="font-bold flex items-center gap-1 text-amber-950">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" /> Payment Pending: {formatCurrency(Number(ticket.balanceAmount))}
+                        <span className="font-bold flex items-center gap-1 text-[#121212]">
+                          <AlertTriangle className="h-3.5 w-3.5 text-[#B35300] shrink-0" /> Payment Pending: {formatCurrency(Number(ticket.balanceAmount))}
                         </span>
-                        <p className="text-amber-800">Clear remaining balance before device handover.</p>
+                        <p className="text-[#767676]">Clear remaining balance before device handover.</p>
                       </div>
                       {user?.role !== "TECHNICIAN" && (
                         <button
                           type="button"
                           onClick={() => scrollToPaymentSection(true)}
-                          className="rounded bg-amber-200 hover:bg-amber-300 px-2.5 py-1 text-amber-950 font-bold transition-colors shrink-0 ml-2 shadow-xs cursor-pointer"
+                          className="rounded-[8px] bg-[#121212] hover:bg-black px-2.5 py-1 text-white font-semibold transition-colors shrink-0 ml-2 shadow-2xs cursor-pointer"
                         >
                           Record Payment ↓
                         </button>
@@ -762,15 +764,15 @@ export default function TicketDetailPage() {
                   )}
 
                   {paymentWarning && (
-                    <Alert variant="warning" className="border-amber-300 bg-amber-50 text-amber-900 flex items-start gap-2 text-xs py-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <Alert variant="warning" className="border-[#FFE4CF] bg-[#FFF4EB] text-[#B35300] flex items-start gap-2 text-xs py-2">
+                      <AlertTriangle className="h-4 w-4 text-[#B35300] shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <p className="font-semibold text-amber-950">{paymentWarning}</p>
+                        <p className="font-semibold text-[#121212]">{paymentWarning}</p>
                         {user?.role !== "TECHNICIAN" && Number(ticket.balanceAmount) > 0 && (
                           <button
                             type="button"
                             onClick={() => scrollToPaymentSection(true)}
-                            className="mt-1 font-bold underline hover:text-amber-950 cursor-pointer"
+                            className="mt-1 font-bold underline hover:text-[#121212] cursor-pointer"
                           >
                             Jump to Record Payment section ↓
                           </button>
@@ -780,19 +782,19 @@ export default function TicketDetailPage() {
                   )}
 
                   {paymentSuccessMsg && (
-                    <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-2 text-xs text-emerald-900 flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span className="font-medium">{paymentSuccessMsg}</span>
+                    <div className="rounded-[10px] bg-[#EAF6EE] border border-[#D0ECD9] p-2 text-xs text-[#0E8345] flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#0E8345] shrink-0" />
+                      <span className="font-medium text-[#121212]">{paymentSuccessMsg}</span>
                     </div>
                   )}
 
                   {nextStatus === "READY_FOR_PICKUP" && (
-                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2 text-xs flex items-center justify-between text-emerald-800">
+                    <div className="rounded-[10px] bg-[#EAF6EE] border border-[#D0ECD9] p-2.5 text-xs flex items-center justify-between text-[#0E8345]">
                       <span>Ready for Pickup alert template ready</span>
                       <button
                         type="button"
                         onClick={() => openWhatsApp("pickup")}
-                        className="font-bold underline hover:text-emerald-950 flex items-center gap-1"
+                        className="font-bold underline hover:text-[#0B6B38] flex items-center gap-1 cursor-pointer"
                       >
                         <MessageCircle className="h-3 w-3" /> Preview WhatsApp
                       </button>
@@ -800,23 +802,23 @@ export default function TicketDetailPage() {
                   )}
 
                   {nextStatus === "WAITING_FOR_APPROVAL" && (
-                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2.5 text-xs text-amber-900 animate-fade-in">
+                    <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-3 space-y-2.5 text-xs text-[#B35300] animate-fade-in">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
-                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <span className="font-bold text-[#121212] flex items-center gap-1.5">
+                          <AlertTriangle className="h-4 w-4 text-[#B35300]" />
                           Estimate Approval Required
                         </span>
                         <button
                           type="button"
                           onClick={() => openWhatsApp("estimate")}
-                          className="font-bold underline hover:text-amber-950 flex items-center gap-1"
+                          className="font-bold underline hover:text-[#121212] flex items-center gap-1 cursor-pointer"
                         >
                           <MessageCircle className="h-3 w-3" /> Preview WhatsApp
                         </button>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-semibold text-amber-950 block">
+                        <label className="font-semibold text-[#121212] block">
                           {Number(ticket.estimatedCost) === 0
                             ? "Enter estimated cost to seek customer approval (₹) *"
                             : `Current Estimate: ${formatCurrency(Number(ticket.estimatedCost))}. Update quote if needed:`}
@@ -829,28 +831,28 @@ export default function TicketDetailPage() {
                           placeholder={ticket.estimatedCost && Number(ticket.estimatedCost) > 0 ? String(ticket.estimatedCost) : "e.g. 2500"}
                           value={approvalEstimateCost}
                           onChange={(e) => setApprovalEstimateCost(e.target.value)}
-                          className="bg-white border-amber-300"
+                          className="bg-white border-[#EBEBEB]"
                         />
                         {approvalEstimateCost && !isNaN(Number(approvalEstimateCost)) && (
                           <div className="text-[11px] space-y-0.5">
-                            <p className="text-amber-800">
-                              New balance will be: <strong>{formatCurrency(Math.max(0, Number(approvalEstimateCost) - Number(ticket.advancePaid)))}</strong>
+                            <p className="text-[#767676]">
+                              New balance will be: <strong className="text-[#121212]">{formatCurrency(Math.max(0, Number(approvalEstimateCost) - Number(ticket.advancePaid)))}</strong>
                             </p>
                             {Number(approvalEstimateCost) < Number(ticket.advancePaid) && (
-                              <p className="text-red-700 font-semibold">
-                                ❌ Cannot be less than advance already paid ({formatCurrency(Number(ticket.advancePaid))})
+                              <p className="text-[#C5221F] font-semibold">
+                                Cannot be less than advance already paid ({formatCurrency(Number(ticket.advancePaid))})
                               </p>
                             )}
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-1.5 pt-2 border-t border-amber-200">
+                      <div className="space-y-1.5 pt-2 border-t border-[#FFE4CF]">
                         <div className="flex items-center justify-between">
-                          <label className="font-semibold text-amber-950 text-xs block">
-                            🛡️ Warranty Period to Offer Customer:
+                          <label className="font-semibold text-[#121212] text-xs block">
+                            Warranty Period to Offer Customer:
                           </label>
-                          <span className="text-xs font-semibold text-amber-900">
+                          <span className="text-xs font-semibold text-[#0E8345]">
                             {approvalWarrantyDays > 0 ? `${approvalWarrantyDays} Days` : "No Warranty"}
                           </span>
                         </div>
@@ -860,10 +862,10 @@ export default function TicketDetailPage() {
                               key={w.days}
                               type="button"
                               onClick={() => setApprovalWarrantyDays(w.days)}
-                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                              className={`rounded-[8px] border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
                                 approvalWarrantyDays === w.days
-                                  ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
-                                  : "border-amber-300 bg-white text-slate-700 hover:border-emerald-400"
+                                  ? "border-[#121212] bg-[#121212] text-white shadow-2xs"
+                                  : "border-[#EBEBEB] bg-white text-[#121212] hover:bg-[#F7F7F8]"
                               }`}
                             >
                               {w.label}
@@ -875,8 +877,8 @@ export default function TicketDetailPage() {
                   )}
 
                   {nextStatus === "RETURNED_UNREPAIRED" && (
-                    <div className="space-y-2 rounded-lg bg-slate-50 border border-slate-300 p-3 text-xs text-slate-800 animate-fade-in">
-                      <label className="font-semibold text-slate-900 block">Reason for returning unrepaired:</label>
+                    <div className="space-y-2 rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-3 text-xs text-[#121212] animate-fade-in">
+                      <label className="font-semibold text-[#121212] block">Reason for returning unrepaired:</label>
                       <select
                         className={selectClassName}
                         value={cancelReason}
@@ -888,12 +890,12 @@ export default function TicketDetailPage() {
                         <option value="Spare parts unavailable">Spare parts unavailable</option>
                         <option value="Other">Other</option>
                       </select>
-                      <div className="rounded bg-amber-50 border border-amber-200 p-2 text-amber-900 space-y-0.5">
-                        <p className="font-semibold text-amber-950">⚠️ Cost & Advance Settlement:</p>
-                        <p className="text-amber-800">
+                      <div className="rounded-[8px] bg-[#FFF4EB] border border-[#FFE4CF] p-2 text-[#B35300] space-y-0.5">
+                        <p className="font-semibold text-[#121212]">Cost & Advance Settlement:</p>
+                        <p className="text-xs">
                           Total repair cost will be set to ₹0.
                           {Number(ticket.advancePaid) > 0 ? (
-                            <strong className="text-amber-950"> Advance of {formatCurrency(Number(ticket.advancePaid))} will be marked as refunded to customer.</strong>
+                            <strong className="text-[#121212]"> Advance of {formatCurrency(Number(ticket.advancePaid))} will be marked as refunded to customer.</strong>
                           ) : (
                             " No advance was collected."
                           )}
@@ -903,7 +905,8 @@ export default function TicketDetailPage() {
                   )}
 
                   <Button
-                    className="w-full"
+                    variant="primary"
+                    className="w-full h-10 text-xs font-semibold"
                     onClick={updateStatus}
                     disabled={
                       !nextStatus ||
@@ -916,12 +919,12 @@ export default function TicketDetailPage() {
                   </Button>
 
                   {justUpdatedStatus === "READY_FOR_PICKUP" && (
-                    <div className="rounded-lg bg-emerald-100 border border-emerald-300 p-2.5 text-xs flex items-center justify-between text-emerald-900 animate-fade-in">
+                    <div className="rounded-[10px] bg-[#EAF6EE] border border-[#D0ECD9] p-2.5 text-xs flex items-center justify-between text-[#0E8345] animate-fade-in">
                       <span>Status updated!</span>
                       <button
                         type="button"
                         onClick={() => { openWhatsApp("pickup"); setJustUpdatedStatus(""); }}
-                        className="font-bold bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700 flex items-center gap-1 shadow-sm"
+                        className="font-semibold bg-[#0E8345] text-white px-2.5 py-1 rounded-[6px] hover:bg-[#0B6B38] flex items-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> Send Pickup WhatsApp
                       </button>
@@ -929,12 +932,12 @@ export default function TicketDetailPage() {
                   )}
 
                   {justUpdatedStatus === "WAITING_FOR_APPROVAL" && (
-                    <div className="rounded-lg bg-amber-100 border border-amber-300 p-2.5 text-xs flex items-center justify-between text-amber-900 animate-fade-in">
+                    <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs flex items-center justify-between text-[#B35300] animate-fade-in">
                       <span>Status updated!</span>
                       <button
                         type="button"
                         onClick={() => { openWhatsApp("estimate"); setJustUpdatedStatus(""); }}
-                        className="font-bold bg-amber-600 text-white px-2.5 py-1 rounded hover:bg-amber-700 flex items-center gap-1 shadow-sm"
+                        className="font-semibold bg-[#121212] text-white px-2.5 py-1 rounded-[6px] hover:bg-black flex items-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> Send Estimate to Customer
                       </button>
@@ -942,12 +945,12 @@ export default function TicketDetailPage() {
                   )}
 
                   {justUpdatedStatus === "RETURNED_UNREPAIRED" && (
-                    <div className="rounded-lg bg-slate-100 border border-slate-300 p-2.5 text-xs flex items-center justify-between text-slate-900 animate-fade-in">
+                    <div className="rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-2.5 text-xs flex items-center justify-between text-[#121212] animate-fade-in">
                       <span>Device marked as Returned Unrepaired. Cost set to ₹0.</span>
                       <button
                         type="button"
                         onClick={() => { openWhatsApp("auto"); setJustUpdatedStatus(""); }}
-                        className="font-bold bg-slate-700 text-white px-2.5 py-1 rounded hover:bg-slate-800 flex items-center gap-1 shadow-sm"
+                        className="font-semibold bg-[#121212] text-white px-2.5 py-1 rounded-[6px] hover:bg-black flex items-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> Send Return Notice
                       </button>
@@ -955,15 +958,15 @@ export default function TicketDetailPage() {
                   )}
                 </>
               ) : ticket.status === "DELIVERED" ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                <div className="rounded-[12px] border border-[#D0ECD9] bg-[#EAF6EE] p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#0E8345] text-white shrink-0">
                         <CheckCircle2 className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-emerald-950">Repair Delivered & Handed Over</p>
-                        <p className="text-xs text-emerald-700">
+                        <p className="text-sm font-bold text-[#121212]">Repair Delivered & Handed Over</p>
+                        <p className="text-xs text-[#767676]">
                           {ticket.deliveredAt ? `Delivered on ${formatDateTime(ticket.deliveredAt)}` : "Order settled"}
                         </p>
                       </div>
@@ -971,25 +974,25 @@ export default function TicketDetailPage() {
                   </div>
 
                   <div className={cn(
-                    "rounded-lg p-3 text-xs border space-y-1",
+                    "rounded-[8px] p-3 text-xs border space-y-1",
                     isEligibleForFree
-                      ? "bg-white border-emerald-300 text-emerald-900 shadow-xs"
-                      : "bg-amber-50 border-amber-300 text-amber-900"
+                      ? "bg-white border-[#D0ECD9] text-[#121212] shadow-2xs"
+                      : "bg-[#FFF4EB] border-[#FFE4CF] text-[#B35300]"
                   )}>
                     <div className="flex items-center gap-1.5 font-bold">
                       {isEligibleForFree ? (
                         <>
-                          <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="flex h-2 w-2 rounded-full bg-[#0E8345]" />
                           <span>Within 7-Day Free Service Guarantee (₹0 Charge)</span>
                         </>
                       ) : (
                         <>
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          <AlertTriangle className="h-3.5 w-3.5 text-[#B35300]" />
                           <span>Beyond 7-Day Guarantee Window</span>
                         </>
                       )}
                     </div>
-                    <p className="text-[11px] opacity-90 leading-relaxed">
+                    <p className="text-[11px] opacity-90 leading-relaxed text-[#767676]">
                       {daysSinceDelivery !== null ? (
                         daysSinceDelivery === 0
                           ? "Delivered today. If the customer encounters any recurring problem, accept for free quality re-check."
@@ -1004,20 +1007,21 @@ export default function TicketDetailPage() {
 
                   <Button
                     type="button"
+                    variant="primary"
                     onClick={() => {
                       if (!recheckReason) {
                         setRecheckReason(isEligibleForFree ? "7-Day Free Re-Check" : "Post-Delivery Rework");
                       }
                       setRecheckModalOpen(true);
                     }}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                    className="w-full h-10 text-xs font-semibold flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Accept Device for Re-Check / Rework
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">This repair is complete.</p>
+                <p className="text-sm text-[#767676]">This repair is complete.</p>
               )}
             </CardContent>
           </Card>
@@ -1026,10 +1030,10 @@ export default function TicketDetailPage() {
         {/* Device info */}
         <Card>
           <CardHeader><CardTitle className="text-base">Device Details</CardTitle></CardHeader>
-          <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-            {ticket.imei && <p><span className="text-slate-500">IMEI:</span> {ticket.imei}</p>}
-            {ticket.color && <p><span className="text-slate-500">Color:</span> {ticket.color}</p>}
-            <p className="sm:col-span-2"><span className="text-slate-500">Problem:</span> {ticket.problemDescription || "—"}</p>
+          <CardContent className="grid gap-2 text-xs sm:grid-cols-2">
+            {ticket.imei && <p><span className="text-[#767676]">IMEI:</span> <span className="font-mono">{ticket.imei}</span></p>}
+            {ticket.color && <p><span className="text-[#767676]">Color:</span> {ticket.color}</p>}
+            <p className="sm:col-span-2"><span className="text-[#767676]">Problem:</span> {ticket.problemDescription || "—"}</p>
           </CardContent>
         </Card>
 
@@ -1055,7 +1059,7 @@ export default function TicketDetailPage() {
           <CardHeader><CardTitle className="text-base">Add Note</CardTitle></CardHeader>
           <CardContent className="flex gap-2">
             <Input placeholder="Write a note..." value={note} onChange={(e) => setNote(e.target.value)} className="flex-1" />
-            <Button onClick={addNote}>Add</Button>
+            <Button variant="primary" onClick={addNote}>Add</Button>
           </CardContent>
         </Card>
 
@@ -1064,29 +1068,29 @@ export default function TicketDetailPage() {
             <Card
               className={cn(
                 "transition-all duration-300",
-                highlightPayment && "ring-4 ring-amber-400 border-amber-500 shadow-xl bg-amber-50/20"
+                highlightPayment && "ring-2 ring-[#121212] border-[#121212] shadow-md bg-[#F7F7F8]"
               )}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">Record Payment</CardTitle>
                 {Number(ticket.balanceAmount) > 0 ? (
-                  <Badge variant="warning" className="border border-amber-400 bg-amber-50 text-amber-900 font-semibold text-xs">
+                  <Badge variant="warning">
                     Pending Balance: {formatCurrency(Number(ticket.balanceAmount))}
                   </Badge>
                 ) : (
-                  <Badge variant="success" className="border border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold text-xs">
+                  <Badge variant="success">
                     Paid in Full ✓
                   </Badge>
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
                 {highlightPayment && (
-                  <div className="rounded-lg bg-amber-100 border border-amber-300 p-2.5 text-xs text-amber-950 font-medium flex items-center justify-between animate-pulse">
-                    <span>👉 Complete pending payment of {formatCurrency(Number(ticket.balanceAmount))} below:</span>
+                  <div className="rounded-[8px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs text-[#B35300] font-medium flex items-center justify-between">
+                    <span>Complete pending payment of {formatCurrency(Number(ticket.balanceAmount))} below:</span>
                     <button
                       type="button"
                       onClick={() => setPayAmount(String(Number(ticket.balanceAmount)))}
-                      className="font-bold underline text-amber-900 hover:text-amber-950 cursor-pointer"
+                      className="font-bold underline text-[#121212] cursor-pointer"
                     >
                       Fill ₹{ticket.balanceAmount}
                     </button>
@@ -1094,17 +1098,17 @@ export default function TicketDetailPage() {
                 )}
 
                 {paymentSuccessMsg && (
-                  <div className="rounded-lg bg-emerald-50 border border-emerald-300 p-2.5 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
+                  <div className="rounded-[8px] bg-[#EAF6EE] border border-[#D0ECD9] p-2.5 text-xs text-[#0E8345] flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 font-medium">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-[#0E8345] shrink-0" />
                       {paymentSuccessMsg}
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
-                        className="h-7 text-xs border-emerald-600 text-emerald-800 hover:bg-emerald-100 font-semibold cursor-pointer"
+                        variant="secondary"
+                        className="h-7 text-xs border border-[#EBEBEB] font-semibold cursor-pointer"
                         onClick={() => openWhatsApp("general")}
                       >
                         <MessageCircle className="h-3 w-3 mr-1" />
@@ -1114,7 +1118,8 @@ export default function TicketDetailPage() {
                         <Button
                           type="button"
                           size="sm"
-                          className="h-7 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold cursor-pointer"
+                          variant="primary"
+                          className="h-7 text-xs font-semibold cursor-pointer"
                           onClick={() => {
                             setNextStatus("DELIVERED");
                             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1405,22 +1410,22 @@ export default function TicketDetailPage() {
 
       {/* 7-Day Re-Check & Quality Rework Modal */}
       {recheckModalOpen && ticket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg rounded-[12px] bg-white p-5 shadow-2xl border border-[#EBEBEB] space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-[#EBEBEB] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] shrink-0">
                   <RotateCcw className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Device Return / Quality Re-Check</h3>
-                  <p className="text-xs text-slate-500 font-mono">{ticket.trackingNumber} · {ticket.brand} {ticket.model}</p>
+                  <h3 className="text-[15px] font-bold text-[#121212]">Device Return / Quality Re-Check</h3>
+                  <p className="text-[11px] text-[#767676] font-mono">{ticket.trackingNumber} · {ticket.brand} {ticket.model}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setRecheckModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 text-sm font-bold cursor-pointer"
+                className="text-[#767676] hover:text-[#121212] rounded-lg p-1 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -1428,20 +1433,20 @@ export default function TicketDetailPage() {
 
             {/* Guarantee / 7-Day Assurance banner */}
             <div className={cn(
-              "rounded-xl p-3 text-xs border space-y-1",
+              "rounded-[10px] p-3 text-xs border space-y-1",
               isEligibleForFree
-                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                : "bg-amber-50 border-amber-200 text-amber-900"
+                ? "bg-[#E6F4EA] border-[#0E8345]/20 text-[#0E8345]"
+                : "bg-[#FEF7E0] border-[#B35300]/20 text-[#B35300]"
             )}>
               <div className="flex items-center gap-1.5 font-bold">
                 {isEligibleForFree ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-[#0E8345] shrink-0" />
                     <span>Eligible for 7-Day Free Re-Check (₹0 Charge)</span>
                   </>
                 ) : (
                   <>
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-[#B35300] shrink-0" />
                     <span>Post-Delivery Rework (Beyond 7-Day Window)</span>
                   </>
                 )}
@@ -1456,7 +1461,7 @@ export default function TicketDetailPage() {
 
             {/* Issue Category selection */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#767676]">
                 Issue Category *
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1470,21 +1475,21 @@ export default function TicketDetailPage() {
                     }
                   }}
                   className={cn(
-                    "rounded-xl border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
+                    "rounded-[10px] border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
                     recheckReasonType === "SAME_ISSUE"
-                      ? "border-emerald-600 bg-emerald-50/50 shadow-xs ring-1 ring-emerald-500"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-[#121212] bg-[#F7F7F8] shadow-2xs ring-1 ring-[#121212]"
+                      : "border-[#EBEBEB] bg-white hover:border-[#DFDFDF]"
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900">Same / Recurring Issue</span>
+                    <span className="font-bold text-xs text-[#121212]">Same / Recurring Issue</span>
                     {isEligibleForFree && (
-                      <span className="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900">
+                      <span className="rounded bg-[#E6F4EA] px-1.5 py-0.5 text-[10px] font-bold text-[#0E8345]">
                         FREE ₹0
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Screen flicker, touch issue, loose port, same fault</p>
+                  <p className="text-[11px] text-[#767676] mt-1">Screen flicker, touch issue, loose port, same fault</p>
                 </button>
 
                 <button
@@ -1496,26 +1501,26 @@ export default function TicketDetailPage() {
                     }
                   }}
                   className={cn(
-                    "rounded-xl border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
+                    "rounded-[10px] border p-3 text-left transition-all cursor-pointer flex flex-col justify-between",
                     recheckReasonType === "NEW_ISSUE"
-                      ? "border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-500"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-[#121212] bg-[#F7F7F8] shadow-2xs ring-1 ring-[#121212]"
+                      : "border-[#EBEBEB] bg-white hover:border-[#DFDFDF]"
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900">New / Secondary Issue</span>
-                    <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                    <span className="font-bold text-xs text-[#121212]">New / Secondary Issue</span>
+                    <span className="rounded bg-[#FEF7E0] px-1.5 py-0.5 text-[10px] font-bold text-[#B35300]">
                       Chargeable
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Fresh physical drop, liquid spill, or unrelated new fault</p>
+                  <p className="text-[11px] text-[#767676] mt-1">Fresh physical drop, liquid spill, or unrelated new fault</p>
                 </button>
               </div>
             </div>
 
             {/* Quick Reason chips */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Quick Reason</label>
+              <label className="text-xs font-semibold text-[#121212]">Quick Reason</label>
               <div className="flex flex-wrap gap-1.5">
                 {[
                   "Touch not responding / ghost touches",
@@ -1532,7 +1537,7 @@ export default function TicketDetailPage() {
                       setRecheckReason(preset);
                       if (!recheckRemarks) setRecheckRemarks(preset);
                     }}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
+                    className="rounded-[8px] border border-[#EBEBEB] bg-[#F7F7F8] px-2.5 py-1 text-[11px] font-medium text-[#121212] hover:bg-[#EBEBEB] transition-colors cursor-pointer"
                   >
                     {preset}
                   </button>
@@ -1542,7 +1547,7 @@ export default function TicketDetailPage() {
 
             {/* Complaint Remarks */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-[#121212]">
                 Customer Complaint Notes *
               </label>
               <Textarea
@@ -1557,7 +1562,7 @@ export default function TicketDetailPage() {
             {/* Additional Charge (if applicable) */}
             {recheckReasonType === "NEW_ISSUE" && (
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700">
+                <label className="text-xs font-semibold text-[#121212]">
                   Additional Estimate Cost (₹)
                 </label>
                 <Input
@@ -1569,13 +1574,13 @@ export default function TicketDetailPage() {
                   onChange={(e) => setRecheckCost(e.target.value)}
                   className="text-xs"
                 />
-                <p className="text-[10px] text-slate-500">Leave 0 if diagnosing before providing quote.</p>
+                <p className="text-[10px] text-[#767676]">Leave 0 if diagnosing before providing quote.</p>
               </div>
             )}
 
             {/* Technician Assignment */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-[#121212]">
                 Assign Technician
               </label>
               <select
@@ -1597,12 +1602,12 @@ export default function TicketDetailPage() {
             </div>
 
             {recheckError && (
-              <p className="text-xs text-red-600 bg-red-50 p-2 rounded-lg font-medium">
+              <p className="text-xs text-[#C5221F] bg-[#FDE8E8] p-2 rounded-[8px] font-medium">
                 {recheckError}
               </p>
             )}
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EBEBEB]">
               <Button
                 type="button"
                 variant="outline"
@@ -1615,7 +1620,7 @@ export default function TicketDetailPage() {
               <Button
                 type="button"
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                className="bg-[#121212] hover:bg-[#262626] text-white font-semibold rounded-[10px]"
                 disabled={submittingRecheck || !recheckRemarks.trim()}
                 onClick={handleReopenTicket}
               >

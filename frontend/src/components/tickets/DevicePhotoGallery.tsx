@@ -141,7 +141,7 @@ export function DevicePhotoGallery({
               type="button"
               disabled={uploading}
               onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-[10px] bg-[#121212] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#262626] active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
             >
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
               <span>Snap Photo</span>
@@ -151,10 +151,10 @@ export function DevicePhotoGallery({
               type="button"
               disabled={uploading}
               onClick={() => galleryInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-[10px] border border-[#EBEBEB] bg-white px-2.5 py-1.5 text-xs font-medium text-[#121212] hover:bg-[#F7F7F8] active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               title="Upload from Gallery"
             >
-              <ImageIcon className="h-3.5 w-3.5 text-slate-500" />
+              <ImageIcon className="h-3.5 w-3.5 text-[#767676]" />
               <span className="hidden sm:inline">Gallery</span>
             </button>
           </div>

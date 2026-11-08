@@ -23,21 +23,21 @@ export function CustomerTrackingView({ data }: { data: PublicTracking }) {
     <div className="animate-slide-up space-y-4">
       {/* Hero status card */}
       <div className={cn(
-        "overflow-hidden rounded-2xl text-white shadow-lg",
-        isDelivered ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : isReady ? "bg-gradient-to-br from-amber-500 to-orange-500" : isRecheck ? "bg-gradient-to-br from-indigo-600 to-blue-700" : "gradient-hero"
+        "overflow-hidden rounded-[12px] text-white shadow-sm border border-[#EBEBEB]",
+        isDelivered ? "bg-[#0E8345]" : isReady ? "bg-[#B35300]" : "bg-[#121212]"
       )}>
         <div className="p-5">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Current Status</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Current Status</p>
             {isRecheck && (
-              <span className="rounded-full bg-amber-400 text-slate-950 px-2.5 py-0.5 text-[10px] font-bold shadow-xs">
-                🔁 Quality Re-Check
+              <span className="rounded-[6px] bg-white/20 text-white px-2.5 py-0.5 text-[10px] font-semibold">
+                Quality Re-Check
               </span>
             )}
           </div>
-          <h2 className="mt-1 text-2xl font-bold">{formatStatus(data.currentStatus)}</h2>
-          <p className="mt-2 text-sm leading-relaxed opacity-95">{displayMessage}</p>
-          <div className="mt-4 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+          <h2 className="mt-1 text-2xl font-bold tracking-tight">{formatStatus(data.currentStatus)}</h2>
+          <p className="mt-2 text-[13px] leading-relaxed text-white/90">{displayMessage}</p>
+          <div className="mt-4 rounded-[10px] bg-white/10 p-3">
             <StatusProgress status={data.currentStatus} compact />
           </div>
         </div>
