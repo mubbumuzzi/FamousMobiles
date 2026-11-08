@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.famousmobiles.domain.DevicePhoto;
 import com.famousmobiles.domain.Payment;
 import com.famousmobiles.domain.RepairTicket;
+import com.famousmobiles.domain.Store;
 import com.famousmobiles.domain.TicketNote;
 import com.famousmobiles.domain.TicketStatusHistory;
 import com.famousmobiles.domain.User;
@@ -31,6 +32,7 @@ import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.DevicePhotoRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
+import com.famousmobiles.repository.StoreRepository;
 import com.famousmobiles.repository.TicketNoteRepository;
 import com.famousmobiles.repository.TicketStatusHistoryRepository;
 import com.famousmobiles.repository.TechnicianRepository;
@@ -50,13 +52,16 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final PaymentRepository paymentRepository;
     private final SecurityUtils securityUtils;
+    private final StoreRepository storeRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TicketService(RepairTicketRepository ticketRepository,
             TicketStatusHistoryRepository historyRepository, TicketNoteRepository noteRepository,
             DevicePhotoRepository photoRepository, CustomerService customerService,
             TechnicianRepository technicianRepository, TrackingNumberService trackingNumberService,
             NotificationService notificationService, FileStorageService fileStorageService,
-            PaymentRepository paymentRepository, SecurityUtils securityUtils) {
+            PaymentRepository paymentRepository, SecurityUtils securityUtils,
+            StoreRepository storeRepository) {
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
         this.noteRepository = noteRepository;
@@ -68,6 +73,18 @@ public class TicketService {
         this.fileStorageService = fileStorageService;
         this.paymentRepository = paymentRepository;
         this.securityUtils = securityUtils;
+        this.storeRepository = storeRepository;
+    }
+
+    public TicketService(RepairTicketRepository ticketRepository,
+            TicketStatusHistoryRepository historyRepository, TicketNoteRepository noteRepository,
+            DevicePhotoRepository photoRepository, CustomerService customerService,
+            TechnicianRepository technicianRepository, TrackingNumberService trackingNumberService,
+            NotificationService notificationService, FileStorageService fileStorageService,
+            PaymentRepository paymentRepository, SecurityUtils securityUtils) {
+        this(ticketRepository, historyRepository, noteRepository, photoRepository, customerService,
+                technicianRepository, trackingNumberService, notificationService, fileStorageService,
+                paymentRepository, securityUtils, null);
     }
 
     @Transactional
@@ -86,9 +103,26 @@ public class TicketService {
             throw new BadRequestException("Advance payment (₹" + advPaid + ") cannot exceed estimated cost (₹" + estCost + ")");
         }
 
+        Store store = null;
+        if (storeRepository != null) {
+            if (request.storeId() != null) {
+                store = storeRepository.findById(request.storeId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
+            } else if (user != null && user.getDefaultStore() != null) {
+                store = user.getDefaultStore();
+            } else {
+                store = storeRepository.findByCode("FM1").orElse(null);
+            }
+        }
+        String storeCode = store != null ? store.getCode() : "FM1";
+
         RepairTicket ticket = new RepairTicket();
-        ticket.setTrackingNumber(trackingNumberService.generateTrackingNumber());
+        String trackingNum = (store != null && store.getCode() != null)
+                ? trackingNumberService.generateTrackingNumber(store.getCode())
+                : trackingNumberService.generateTrackingNumber();
+        ticket.setTrackingNumber(trackingNum);
         ticket.setCustomer(customerService.getEntity(request.customerId()));
+        ticket.setStore(store);
         ticket.setCreatedBy(user);
         ticket.setStatus(RepairStatus.DEVICE_RECEIVED);
         applyDeviceDetails(ticket, request);
@@ -112,6 +146,7 @@ public class TicketService {
         if (advPaid.compareTo(BigDecimal.ZERO) > 0) {
             Payment payment = new Payment();
             payment.setTicket(ticket);
+            payment.setStore(store);
             payment.setAmount(advPaid);
             payment.setPaymentMode(PaymentMode.CASH);
             payment.setNotes("Advance collected at device intake");
@@ -137,8 +172,18 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> list() {
-        return ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream()
-                .map(TicketDto.TicketResponse::from).toList();
+        return list(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketDto.TicketResponse> list(UUID storeId) {
+        List<RepairTicket> tickets;
+        if (storeId != null) {
+            tickets = ticketRepository.findByStoreIdWithDetailsOrderByCreatedAtDesc(storeId);
+        } else {
+            tickets = ticketRepository.findAllWithDetailsOrderByCreatedAtDesc();
+        }
+        return tickets.stream().map(TicketDto.TicketResponse::from).toList();
     }
 
     @Transactional
@@ -398,12 +443,13 @@ public class TicketService {
     public DevicePhotoDto uploadPhoto(UUID id, PhotoType photoType, MultipartFile file) {
         RepairTicket ticket = getEntityWithAccess(id);
 
-        // Single photo policy: replace any previous photo for this ticket
+        // Maximum 2 photos policy: if 2 photos already exist, remove the oldest one
         List<DevicePhoto> existing = photoRepository.findByTicketIdOrderByCreatedAtAsc(id);
-        for (DevicePhoto prev : existing) {
-            photoRepository.delete(prev);
+        if (existing.size() >= 2) {
+            DevicePhoto oldest = existing.get(0);
+            photoRepository.delete(oldest);
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(prev.getFilePath()));
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(oldest.getFilePath()));
             } catch (Exception ignored) {}
         }
 

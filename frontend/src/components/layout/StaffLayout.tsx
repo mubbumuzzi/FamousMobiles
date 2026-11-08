@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,11 +14,13 @@ import {
   UserCog,
   Plus,
   ShoppingBag,
+  RotateCw,
 } from "lucide-react";
 import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
 import { IntakeForkModal } from "@/components/stock/IntakeForkModal";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
+import { StoreSwitcher } from "@/components/layout/StoreSwitcher";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 const navItems = [
@@ -41,6 +43,42 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
   useAndroidBackButton(() => setIsStockModalOpen(false), isStockModalOpen, 20);
   useAndroidBackButton(() => setIsForkOpen(false), isForkOpen, 15);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Trigger global data refresh with visual feedback
+  const triggerRefresh = useCallback(() => {
+    if (isRefreshing) {
+      window.location.reload();
+      return;
+    }
+    setIsRefreshing(true);
+    if (typeof window !== "undefined") {
+      try {
+        if ("vibrate" in navigator) navigator.vibrate(20);
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent("fm:refresh"));
+    }
+    router.refresh();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
+  }, [isRefreshing, router]);
+
+  // Auto-refresh when app resumes from background / screen unlock
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        window.dispatchEvent(new CustomEvent("fm:refresh"));
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
+  }, []);
+
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && role !== "ADMIN") return false;
     return true;
@@ -57,13 +95,26 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
     <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-0">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md shadow-2xs pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="flex items-center gap-2.5 font-bold text-slate-900 transition-opacity hover:opacity-90">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl gradient-header text-white shadow-md">
-              <Smartphone className="h-4 w-4" />
-            </span>
-            <span className="hidden sm:inline">Famous Mobiles</span>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={triggerRefresh}
+              title="Tap to sync & refresh data (Double-tap for hard reload)"
+              aria-label="Refresh data"
+              className="group relative flex h-9 w-9 items-center justify-center rounded-xl gradient-header text-white shadow-md touch-active active:scale-95 transition-transform cursor-pointer"
+            >
+              <Smartphone className={cn("h-4 w-4 transition-transform duration-500", isRefreshing && "rotate-180 scale-90")} />
+              {/* Subtle mini sync badge on icon corner */}
+              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-blue-600 shadow-2xs ring-1 ring-slate-200">
+                <RotateCw className={cn("h-2.5 w-2.5 transition-transform duration-500", isRefreshing && "animate-spin text-blue-600")} />
+              </span>
+            </button>
+            <Link href="/dashboard" className="hidden sm:inline font-bold text-slate-900 transition-opacity hover:opacity-80">
+              Famous Mobiles
+            </Link>
+          </div>
           <div className="flex items-center gap-2">
+            <StoreSwitcher role={role} />
             <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 md:inline">
               {userName} · {formatRole(role ?? "")}
             </span>
@@ -78,6 +129,13 @@ export function StaffLayout({ children, userName, role }: { children: React.Reac
           </div>
         </div>
       </header>
+
+      {isRefreshing && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-slate-900/90 text-white px-3.5 py-1 text-xs font-semibold shadow-lg backdrop-blur-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 pointer-events-none">
+          <RotateCw className="h-3 w-3 animate-spin text-blue-400" />
+          Syncing latest updates...
+        </div>
+      )}
 
       <div className="mx-auto flex max-w-6xl gap-6 px-4 py-5">
         <aside className="hidden w-56 shrink-0 lg:block">

@@ -35,6 +35,14 @@ export default function CustomersPage() {
     load(debouncedQuery || undefined);
   }, [debouncedQuery, authLoading, user]);
 
+  useEffect(() => {
+    const handleFmRefresh = () => {
+      load(debouncedQuery || undefined);
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, [debouncedQuery]);
+
   const [formError, setFormError] = useState("");
 
   const create = async () => {

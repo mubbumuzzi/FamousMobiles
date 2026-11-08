@@ -41,8 +41,8 @@ public class TicketController {
     }
 
     @GetMapping
-    public List<TicketDto.TicketResponse> list() {
-        return ticketService.list();
+    public List<TicketDto.TicketResponse> list(@RequestParam(required = false) UUID storeId) {
+        return ticketService.list(storeId);
     }
 
     @GetMapping("/{id}")

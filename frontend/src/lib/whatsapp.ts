@@ -1,6 +1,6 @@
-import { Ticket, TodayRevenueSummary } from "./types";
-import { formatCurrency } from "./utils";
-import { SHOP } from "./shop";
+import type { Ticket, TodayRevenueSummary } from "./types.ts";
+import { formatCurrency } from "./utils.ts";
+import { SHOP } from "./shop.ts";
 
 function cleanMobile(mobile?: string): string {
   if (!mobile) return "";
@@ -17,6 +17,12 @@ export function buildWhatsAppPickupUrl(ticket: Ticket): string {
   const tracking = ticket.trackingNumber;
   const balance = Number(ticket.balanceAmount || 0);
 
+  const shopName = ticket.store?.name || SHOP.name;
+  const shopAddress = ticket.store
+    ? [ticket.store.addressLine1, ticket.store.addressLine2, ticket.store.city].filter(Boolean).join(", ")
+    : SHOP.addressLines.join(", ");
+  const shopMobile = ticket.store?.mobile || SHOP.mobile;
+
   const balanceText = balance > 0
     ? `Pending balance to pay: ${formatCurrency(balance)}.`
     : `Total bill is settled in full (Balance: ₹0).`;
@@ -24,11 +30,11 @@ export function buildWhatsAppPickupUrl(ticket: Ticket): string {
   const message = [
     `Dear ${name},`,
     ``,
-    `✨ Great news! Your *${device}* (Tracking ID: *${tracking}*) is tested, verified, and *Ready for Collection* at *${SHOP.name}*.`,
+    `✨ Great news! Your *${device}* (Tracking ID: *${tracking}*) is tested, verified, and *Ready for Collection* at *${shopName}*.`,
     ``,
     `💳 ${balanceText}`,
-    `📍 Shop Address: ${SHOP.addressLines.join(", ")}.`,
-    `📞 Phone: ${SHOP.mobile}`,
+    `📍 Shop Address: ${shopAddress}.`,
+    `📞 Phone: ${shopMobile}`,
     ``,
     `Please present your service bill or tracking ID when collecting. Thank you for choosing Famous Mobiles!`,
   ].join("\n");
@@ -42,16 +48,19 @@ export function buildWhatsAppDelayUrl(ticket: Ticket): string {
   const device = `${ticket.brand || ""} ${ticket.model || ""}`.trim() || "Device";
   const tracking = ticket.trackingNumber;
 
+  const shopName = ticket.store?.name || SHOP.name;
+  const shopMobile = ticket.store?.mobile || SHOP.mobile;
+
   const message = [
     `Dear ${name},`,
     ``,
-    `Regarding your *${device}* (Tracking ID: *${tracking}*) at *${SHOP.name}*:`,
+    `Regarding your *${device}* (Tracking ID: *${tracking}*) at *${shopName}*:`,
     ``,
     `🔧 Your device is currently undergoing detailed testing and repair by our technician. We are working diligently to deliver top-quality service.`,
     ``,
-    `We will notify you immediately once it passes quality check. If you have any urgent queries, please reach out to us at ${SHOP.mobile}.`,
+    `We will notify you immediately once it passes quality check. If you have any urgent queries, please reach out to us at ${shopMobile}.`,
     ``,
-    `Thank you for your patience! — *${SHOP.name}*`,
+    `Thank you for your patience! — *${shopName}*`,
   ].join("\n");
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;

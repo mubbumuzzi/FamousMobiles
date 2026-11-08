@@ -40,6 +40,10 @@ public class RepairTicket extends BaseEntity {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RepairStatus status = RepairStatus.DEVICE_RECEIVED;
@@ -268,5 +272,13 @@ public class RepairTicket extends BaseEntity {
 
     public void setReopenReason(String reopenReason) {
         this.reopenReason = reopenReason;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 }

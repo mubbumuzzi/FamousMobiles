@@ -20,8 +20,17 @@ import com.famousmobiles.exception.BadRequestException;
 @Service
 public class FileStorageService {
 
-    private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
-    private static final long MAX_SIZE = 5 * 1024 * 1024;
+    private static final Set<String> ALLOWED_TYPES = Set.of(
+        "image/jpeg",
+        "image/jpg",
+        "image/pjpeg",
+        "image/png",
+        "image/x-png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+    );
+    private static final long MAX_SIZE = 25 * 1024 * 1024;
 
     private final Path uploadRoot;
 
@@ -68,11 +77,23 @@ public class FileStorageService {
             throw new BadRequestException("File is empty");
         }
         if (file.getSize() > MAX_SIZE) {
-            throw new BadRequestException("File exceeds 5MB limit");
+            throw new BadRequestException("File exceeds 25MB limit");
         }
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new BadRequestException("Only JPEG, PNG, and WebP images are allowed");
+        boolean allowed = contentType != null && ALLOWED_TYPES.contains(contentType.toLowerCase());
+        if (!allowed) {
+            // Also inspect filename extension fallback for phones/browsers sending application/octet-stream
+            String original = file.getOriginalFilename();
+            if (original != null) {
+                String lower = original.toLowerCase();
+                if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
+                    lower.endsWith(".webp") || lower.endsWith(".heic") || lower.endsWith(".heif")) {
+                    allowed = true;
+                }
+            }
+        }
+        if (!allowed) {
+            throw new BadRequestException("Only JPEG, PNG, WebP, and HEIC images are allowed");
         }
     }
 

@@ -34,6 +34,10 @@ public class User extends BaseEntity {
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
 
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "default_store_id")
+    private Store defaultStore;
+
     public String getEmail() {
         return email;
     }
@@ -88,5 +92,13 @@ public class User extends BaseEntity {
 
     public void setMustChangePassword(boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+
+    public Store getDefaultStore() {
+        return defaultStore;
+    }
+
+    public void setDefaultStore(Store defaultStore) {
+        this.defaultStore = defaultStore;
     }
 }

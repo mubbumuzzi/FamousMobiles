@@ -12,6 +12,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles } from "@/lib/utils";
+import { useStore } from "@/context/StoreContext";
 
 interface SearchResult {
   tickets: Ticket[];
@@ -20,6 +21,7 @@ interface SearchResult {
 
 export default function SearchPage() {
   const { user, loading: authLoading } = useAuthGuard();
+  const { activeStoreId } = useStore();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 350);
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -35,11 +37,12 @@ export default function SearchPage() {
     }
     setSearching(true);
     setError("");
-    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery)}`)
+    const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
+    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery)}${storeParam}`)
       .then(setResults)
       .catch((err) => setError(err instanceof Error ? err.message : "Search failed"))
       .finally(() => setSearching(false));
-  }, [debouncedQuery, authLoading, user]);
+  }, [debouncedQuery, authLoading, user, activeStoreId]);
 
   if (authLoading) return <PageLoading />;
 

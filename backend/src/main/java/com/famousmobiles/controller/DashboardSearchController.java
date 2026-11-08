@@ -24,15 +24,19 @@ public class DashboardSearchController {
     }
 
     @GetMapping("/dashboard/metrics")
-    public MiscDto.DashboardMetrics metrics(Authentication authentication) {
+    public MiscDto.DashboardMetrics metrics(
+            Authentication authentication,
+            @RequestParam(required = false) java.util.UUID storeId) {
         boolean includeRevenue = authentication != null && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_ADMIN"::equals);
-        return dashboardService.getMetrics(includeRevenue);
+        return dashboardService.getMetrics(includeRevenue, storeId);
     }
 
     @GetMapping("/search")
-    public MiscDto.SearchResult search(@RequestParam String q) {
-        return searchService.search(q);
+    public MiscDto.SearchResult search(
+            @RequestParam String q,
+            @RequestParam(required = false) java.util.UUID storeId) {
+        return searchService.search(q, storeId);
     }
 }

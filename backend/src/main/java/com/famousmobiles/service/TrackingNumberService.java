@@ -16,15 +16,21 @@ public class TrackingNumberService {
     }
 
     @Transactional
-    public String generateTrackingNumber() {
+    public String generateTrackingNumber(String storeCode) {
         int year = Year.now().getValue();
+        String prefix = (storeCode != null && !storeCode.isBlank()) ? storeCode.trim().toUpperCase() : "FM1";
         Long next = jdbcTemplate.queryForObject("""
-            INSERT INTO tracking_number_sequences (year, last_value)
-            VALUES (?, 1)
-            ON CONFLICT (year) DO UPDATE SET last_value = tracking_number_sequences.last_value + 1
+            INSERT INTO store_tracking_sequences (store_code, year, last_value)
+            VALUES (?, ?, 1)
+            ON CONFLICT (store_code, year) DO UPDATE SET last_value = store_tracking_sequences.last_value + 1
             RETURNING last_value
-            """, Long.class, year);
-        return String.format("FM-%d-%06d", year, next);
+            """, Long.class, prefix, year);
+        return String.format("%s-%d-%06d", prefix, year, next);
+    }
+
+    @Transactional
+    public String generateTrackingNumber() {
+        return generateTrackingNumber("FM1");
     }
 
     @Transactional

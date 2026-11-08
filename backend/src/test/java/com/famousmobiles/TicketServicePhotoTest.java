@@ -146,4 +146,44 @@ public class TicketServicePhotoTest {
 
         verify(photoRepository).delete(photo);
     }
+
+    @Test
+    void testUploadPhoto_enforcesMaxTwoLimit() {
+        UUID ticketId = UUID.randomUUID();
+
+        RepairTicket ticket = new RepairTicket();
+        ticket.setId(ticketId);
+        when(ticketRepository.findByIdWithDetails(ticketId)).thenReturn(Optional.of(ticket));
+
+        User staff = new User();
+        staff.setFullName("Staff");
+        when(securityUtils.getCurrentUser()).thenReturn(staff);
+
+        DevicePhoto photo1 = new DevicePhoto();
+        photo1.setId(UUID.randomUUID());
+        photo1.setFilePath("/tmp/photo1.jpg");
+        DevicePhoto photo2 = new DevicePhoto();
+        photo2.setId(UUID.randomUUID());
+        photo2.setFilePath("/tmp/photo2.jpg");
+
+        // When 2 photos already exist, uploading a 3rd should delete the oldest (photo1)
+        when(photoRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)).thenReturn(List.of(photo1, photo2));
+
+        when(fileStorageService.storeTicketPhoto(eq(ticketId), eq("device"), any()))
+                .thenReturn(new FileStorageService.StoredFile("photo3.jpg", "/tmp/photo3.jpg", "image/jpeg", 20L));
+
+        DevicePhoto photo3 = new DevicePhoto();
+        photo3.setId(UUID.randomUUID());
+        photo3.setTicket(ticket);
+        photo3.setPhotoType(PhotoType.DEVICE);
+        photo3.setFileName("photo3.jpg");
+        photo3.setFilePath("/tmp/photo3.jpg");
+        when(photoRepository.save(any(DevicePhoto.class))).thenReturn(photo3);
+
+        MockMultipartFile file = new MockMultipartFile("file", "p3.jpg", "image/jpeg", new byte[10]);
+        DevicePhotoDto uploaded = ticketService.uploadPhoto(ticketId, PhotoType.DEVICE, file);
+
+        assertNotNull(uploaded);
+        verify(photoRepository).delete(photo1); // Oldest removed
+    }
 }

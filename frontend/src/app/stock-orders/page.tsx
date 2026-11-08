@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { PageLoading } from "@/components/ui/skeleton";
 import { useAuthGuard } from "@/hooks/useAuth";
@@ -11,6 +11,14 @@ export default function StockOrdersPage() {
   const { user, loading: authLoading } = useAuthGuard();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleFmRefresh = () => {
+      setRefreshTrigger((t) => t + 1);
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, []);
 
   if (authLoading) return <PageLoading label="Loading stock demands..." />;
 

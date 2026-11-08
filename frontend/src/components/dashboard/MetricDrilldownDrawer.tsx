@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, getAccessToken } from "@/lib/api";
 import { printTicketReceipt } from "@/lib/print";
+import { useStore } from "@/context/StoreContext";
 import {
   DetailedPayment,
   MetricDrilldownType,
@@ -155,16 +156,19 @@ export function MetricDrilldownDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const { activeStoreId } = useStore();
+
   // Load today's revenue breakdown if metric is revenueToday and user is admin
   useEffect(() => {
     if (metric === "revenueToday" && role === "ADMIN") {
       setLoadingRevenue(true);
-      api<TodayRevenueSummary>("/payments/today")
+      const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+      api<TodayRevenueSummary>(`/payments/today${query}`)
         .then(setRevenueSummary)
         .catch(console.error)
         .finally(() => setLoadingRevenue(false));
     }
-  }, [metric, role]);
+  }, [metric, role, activeStoreId]);
 
   // Compute customer repair counts for VIP/Repeat customer badge
   const customerRepairCounts = useMemo(() => {

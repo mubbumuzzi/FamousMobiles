@@ -9,9 +9,11 @@ import { DashboardMetrics, Ticket } from "@/lib/types";
 import { ReceptionDashboard } from "@/components/dashboard/ReceptionDashboard";
 import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
 import { TechnicianHome } from "@/components/dashboard/TechnicianHome";
+import { useStore } from "@/context/StoreContext";
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuthGuard();
+  const { activeStoreId } = useStore();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,9 +22,10 @@ export default function DashboardPage() {
   const load = () => {
     setLoading(true);
     setError("");
+    const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
     Promise.all([
-      api<DashboardMetrics>("/dashboard/metrics"),
-      api<Ticket[]>("/tickets"),
+      api<DashboardMetrics>(`/dashboard/metrics${query}`),
+      api<Ticket[]>(`/tickets${query}`),
     ])
       .then(([m, t]) => {
         setMetrics(m);
@@ -35,7 +38,15 @@ export default function DashboardPage() {
   useEffect(() => {
     if (authLoading || !user) return;
     load();
-  }, [authLoading, user]);
+  }, [authLoading, user, activeStoreId]);
+
+  useEffect(() => {
+    const handleFmRefresh = () => {
+      load();
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, [activeStoreId]);
 
   if (authLoading) return <PageLoading label="Loading dashboard..." />;
 

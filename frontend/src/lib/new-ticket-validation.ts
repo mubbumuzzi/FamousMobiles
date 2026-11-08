@@ -61,3 +61,22 @@ export function canProceedCustomerStep(
   if (Boolean(customerId)) return true;
   return isExact10DigitMobile(mobile) && isValidCustomerFullName(fullName);
 }
+
+/**
+ * Validates intake device photos requirement:
+ * Requires at least 1 photo, and at most 2 photos.
+ */
+export function isValidIntakePhotoCount(count: number): boolean {
+  return count >= 1 && count <= 2;
+}
+
+/**
+ * Determines whether Step 1 (Device & Photos) of the New Repair wizard can proceed.
+ */
+export function canProceedDeviceStep(
+  brand: string,
+  model: string,
+  photoCount: number
+): boolean {
+  return Boolean(brand.trim() && model.trim() && isValidIntakePhotoCount(photoCount));
+}

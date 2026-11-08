@@ -22,6 +22,7 @@ import { formatCurrency, formatCustomerMobiles } from "@/lib/utils";
 import { getPhotoFullUrl } from "./DevicePhotoGallery";
 import { SafeDeviceImage } from "./SafeDeviceImage";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { compressImage } from "@/lib/image-compressor";
 
 interface DeliveryVerificationModalProps {
   isOpen: boolean;
@@ -62,7 +63,8 @@ export function DeliveryVerificationModal({
     e.target.value = "";
     setUploadingNow(true);
     try {
-      await onQuickUploadPhoto(file);
+      const optimizedFile = await compressImage(file);
+      await onQuickUploadPhoto(optimizedFile);
     } catch (err: any) {
       alert(err?.message || "Failed to upload photo");
     } finally {
@@ -155,7 +157,7 @@ export function DeliveryVerificationModal({
 
                   {/* Photo badge */}
                   <span className="absolute top-2 left-2 rounded-lg bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
-                    {currentPhoto.photoType || "DEVICE PHOTO"}
+                    {currentPhoto.photoType || "DEVICE PHOTO"} {photos.length > 1 ? `(#${activePhotoIndex + 1}/${photos.length})` : ""}
                   </span>
 
                   {/* Visual reminder overlay */}
@@ -171,6 +173,27 @@ export function DeliveryVerificationModal({
                     </button>
                   </div>
                 </div>
+
+                {/* Multiple Photos Switcher */}
+                {photos.length > 1 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-500">View Intake Photo:</span>
+                    {photos.map((p, idx) => (
+                      <button
+                        key={p.id || idx}
+                        type="button"
+                        onClick={() => setActivePhotoIndex(idx)}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                          activePhotoIndex === idx
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        Photo #{idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/70 p-4 text-center">

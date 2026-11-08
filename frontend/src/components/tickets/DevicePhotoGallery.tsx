@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { getPhotoFullUrl, invalidatePhotoCache } from "@/lib/photo-loader";
 import { SafeDeviceImage } from "./SafeDeviceImage";
+import { compressImage } from "@/lib/image-compressor";
 
 export { getPhotoFullUrl };
 
@@ -48,8 +49,10 @@ export function DevicePhotoGallery({
     setError(null);
 
     try {
+      // Optimize image on-device (fixes camera >5MB limit & HEIC on iPhone/Samsung)
+      const optimizedFile = await compressImage(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimizedFile);
       formData.append("photoType", photoType);
 
       await api(`/tickets/${ticketId}/photos?photoType=${encodeURIComponent(photoType)}`, {
@@ -63,7 +66,7 @@ export function DevicePhotoGallery({
         onPhotosUpdated();
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to upload photo. Please check image format (JPEG/PNG max 5MB).");
+      setError(err?.message || "Failed to upload photo. Please check image format (JPEG/PNG/HEIC).");
     } finally {
       setUploading(false);
     }
@@ -105,7 +108,7 @@ export function DevicePhotoGallery({
               <h3 className="text-sm font-bold text-slate-900">Device Photos & Shelf ID</h3>
               {photos.length > 0 && (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                  {photos.length} Photo{photos.length === 1 ? "" : "s"}
+                  {photos.length}/2 Photos
                 </span>
               )}
             </div>
@@ -199,76 +202,71 @@ export function DevicePhotoGallery({
             )}
           </div>
         ) : (
-          (() => {
-            const photo = photos[0];
-            return (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                {/* Single Image Thumbnail with Zoom */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {photos.map((photo, idx) => (
                 <div
-                  onClick={() => setSelectedPhoto(photo)}
-                  className="group relative h-28 w-28 sm:h-32 sm:w-32 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 border-emerald-500/40 bg-slate-900 shadow-sm"
+                  key={photo.id || idx}
+                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 rounded-xl border border-slate-200 bg-slate-50/50 p-3 relative"
                 >
-                  <SafeDeviceImage
-                    fileUrl={photo.fileUrl}
-                    alt={`${deviceLabel} photo`}
-                    className="h-full w-full"
-                    imgClassName="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <span className="rounded-full bg-white/95 p-1.5 text-slate-900 shadow-sm">
-                      <ZoomIn className="h-4 w-4" />
+                  {/* Single Image Thumbnail with Zoom */}
+                  <div
+                    onClick={() => setSelectedPhoto(photo)}
+                    className="group relative h-28 w-28 sm:h-28 sm:w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 border-emerald-500/40 bg-slate-900 shadow-sm"
+                  >
+                    <SafeDeviceImage
+                      fileUrl={photo.fileUrl}
+                      alt={`${deviceLabel} photo ${idx + 1}`}
+                      className="h-full w-full"
+                      imgClassName="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="rounded-full bg-white/95 p-1.5 text-slate-900 shadow-sm">
+                        <ZoomIn className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <span className="absolute top-1 left-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
+                      Photo #{idx + 1}
                     </span>
-                  </div>
-                  <span className="absolute bottom-1 right-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
-                    Tap to zoom
-                  </span>
-                </div>
-
-                {/* Details & Actions */}
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 border border-emerald-200">
-                      Active Phone Photo ✓
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      Uploaded {formatDate(photo.createdAt)}
+                    <span className="absolute bottom-1 right-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
+                      Tap to zoom
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-700 font-medium">
-                    {deviceLabel} {color ? `(${color})` : ""}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Use this visual reference to match the exact device in your shop tray before handing it over to the customer.
-                  </p>
+                  {/* Details & Actions */}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 border border-emerald-200">
+                        Photo #{idx + 1} ✓
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {formatDate(photo.createdAt)}
+                      </span>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPhoto(photo)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>View Photo</span>
-                    </button>
+                    <p className="text-xs text-slate-700 font-medium truncate">
+                      {deviceLabel} {color ? `(${color})` : ""}
+                    </p>
+                    <p className="text-[10px] text-slate-500 line-clamp-2">
+                      Visual reference to match phone shelf tray & return securely.
+                    </p>
 
-                    {canEdit && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={uploading}
-                          onClick={() => cameraInputRef.current?.click()}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-                        >
-                          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
-                          <span>Retake Photo</span>
-                        </button>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhoto(photo)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Eye className="h-3 w-3" />
+                        <span>View</span>
+                      </button>
 
+                      {canEdit && (
                         <button
                           type="button"
                           disabled={deletingId === photo.id}
                           onClick={() => handleDelete(photo.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
                         >
                           {deletingId === photo.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -277,13 +275,31 @@ export function DevicePhotoGallery({
                           )}
                           <span>Delete</span>
                         </button>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })()
+              ))}
+
+              {photos.length === 1 && canEdit && (
+                <div
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 p-4 text-center cursor-pointer hover:bg-blue-50/70 transition-colors min-h-[120px]"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 mb-1.5">
+                    <Camera className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-bold text-blue-900">+ Add 2nd Photo</p>
+                  <p className="text-[10px] text-blue-600 mt-0.5">Capture screen, back cover, or IMEI</p>
+                </div>
+              )}
+            </div>
+            {photos.length >= 2 && canEdit && (
+              <p className="text-[10px] text-slate-500 text-right">
+                Maximum 2 photos limit reached. Uploading another replaces the oldest.
+              </p>
+            )}
+          </div>
         )}
       </div>
 

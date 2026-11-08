@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Camera, Check, Image as ImageIcon, RotateCcw, Smartphone, Wrench, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Image as ImageIcon, Loader2, RotateCcw, Smartphone, Wrench, X } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,10 @@ import {
   findExactCustomerMatch,
   isCustomerMobileMatch,
   canProceedCustomerStep,
+  canProceedDeviceStep,
 } from "@/lib/new-ticket-validation";
+import { compressImage } from "@/lib/image-compressor";
+import { useStore } from "@/context/StoreContext";
 
 const STEPS = ["Customer", "Device", "Issue", "Cost", "Preview"];
 const emptyNewCustomer = { fullName: "", mobile: "", alternateMobile: "", address: "", city: "" };
@@ -35,6 +38,17 @@ const emptyNewCustomer = { fullName: "", mobile: "", alternateMobile: "", addres
 export default function NewTicketPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
+  const { activeStore, stores } = useStore();
+  const [selectedStoreId, setSelectedStoreId] = useState("");
+
+  useEffect(() => {
+    if (activeStore && !selectedStoreId) {
+      setSelectedStoreId(activeStore.id);
+    } else if (!selectedStoreId && stores.length > 0) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [activeStore, stores, selectedStoreId]);
+
   const [step, setStep] = useState(0);
 
   // Intercept Android hardware back button: step back in wizard before leaving page
@@ -75,26 +89,43 @@ export default function NewTicketPage() {
     previewUrl: string;
     photoType: "DEVICE";
   }
-  const [pendingPhoto, setPendingPhoto] = useState<IntakePhoto | null>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<IntakePhoto[]>([]);
+  const [compressingPhoto, setCompressingPhoto] = useState(false);
   const intakeCameraInputRef = useRef<HTMLInputElement>(null);
   const intakeGalleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleIntakePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleIntakePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
     e.target.value = "";
-    if (pendingPhoto?.previewUrl) {
-      URL.revokeObjectURL(pendingPhoto.previewUrl);
+    if (pendingPhotos.length >= 2) {
+      setError("Maximum 2 photos allowed. Please remove a photo first to replace it.");
+      return;
     }
-    const previewUrl = URL.createObjectURL(file);
-    setPendingPhoto({ file, previewUrl, photoType: "DEVICE" });
+    setError("");
+    setCompressingPhoto(true);
+    try {
+      // Compress & normalize image on-device (fixes camera >5MB limit & HEIC on iPhone/Samsung)
+      const file = await compressImage(rawFile);
+      const previewUrl = URL.createObjectURL(file);
+      setPendingPhotos((prev) => [...prev, { file, previewUrl, photoType: "DEVICE" }]);
+    } catch (err) {
+      console.warn("Failed to optimize photo, using original:", err);
+      const previewUrl = URL.createObjectURL(rawFile);
+      setPendingPhotos((prev) => [...prev, { file: rawFile, previewUrl, photoType: "DEVICE" }]);
+    } finally {
+      setCompressingPhoto(false);
+    }
   };
 
-  const removePendingPhoto = () => {
-    if (pendingPhoto?.previewUrl) {
-      URL.revokeObjectURL(pendingPhoto.previewUrl);
-    }
-    setPendingPhoto(null);
+  const removePendingPhoto = (index: number) => {
+    setPendingPhotos((prev) => {
+      const target = prev[index];
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   useEffect(() => {
@@ -238,7 +269,7 @@ export default function NewTicketPage() {
     if (step === 0) {
       return canProceedCustomerStep(customerId, mobile, newCustomer.fullName);
     }
-    if (step === 1) return Boolean(brand.trim() && model.trim());
+    if (step === 1) return canProceedDeviceStep(brand, model, pendingPhotos.length);
     if (step === 2) return Boolean(problem.trim());
     if (step === 3) {
       const est = Number(estimatedCost || 0);
@@ -251,6 +282,11 @@ export default function NewTicketPage() {
   };
 
   const handleNext = () => {
+    if (step === 1 && pendingPhotos.length < 1) {
+      setError("Please capture at least 1 photo of the device before continuing.");
+      return;
+    }
+    setError("");
     if (step === 0 && selectedPastTicketId && brand.trim() && model.trim()) {
       // Both Customer and Device are selected from previous repair history: skip Step 1 and go straight to Step 2
       setStep(2);
@@ -272,6 +308,12 @@ export default function NewTicketPage() {
       }
       if (quoteAfterDiagnosis && advNum > 0) {
         setError("Cannot accept advance payment when repair cost is pending diagnosis");
+        setLoading(false);
+        return;
+      }
+
+      if (pendingPhotos.length < 1) {
+        setError("At least 1 device photo is required for intake");
         setLoading(false);
         return;
       }
@@ -298,6 +340,7 @@ export default function NewTicketPage() {
         method: "POST",
         body: JSON.stringify({
           customerId: cid,
+          storeId: selectedStoreId || activeStore?.id || undefined,
           deviceType,
           brand,
           model,
@@ -313,11 +356,11 @@ export default function NewTicketPage() {
         }),
       });
 
-      // Upload captured intake device photo (single photo policy)
-      if (pendingPhoto) {
+      // Upload captured intake device photos (at least 1, max 2)
+      for (const p of pendingPhotos) {
         try {
           const formData = new FormData();
-          formData.append("file", pendingPhoto.file);
+          formData.append("file", p.file);
           formData.append("photoType", "DEVICE");
           await api(`/tickets/${ticket.id}/photos?photoType=DEVICE`, {
             method: "POST",
@@ -341,9 +384,27 @@ export default function NewTicketPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="mx-auto max-w-2xl animate-fade-in space-y-6 pb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">New Repair</h1>
-          <p className="text-sm text-slate-500">Fast intake — under 30 seconds</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">New Repair</h1>
+            <p className="text-sm text-slate-500">Fast intake — under 30 seconds</p>
+          </div>
+          {stores.length > 1 && (
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-2xs">
+              <span className="text-xs font-semibold text-slate-500">Branch:</span>
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="rounded-lg border-0 bg-transparent py-0.5 pl-1 pr-6 text-xs font-bold text-blue-700 focus:outline-none focus:ring-0 cursor-pointer"
+              >
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code} — {s.displayName || s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <WizardSteps steps={STEPS} current={step} />
@@ -710,17 +771,26 @@ export default function NewTicketPage() {
               <Field><Label>Brand *</Label><SearchableSelect placeholder="Search brand..." value={brand} onChange={setBrand} options={DEVICE_BRANDS} /></Field>
               <Field><Label>Model *</Label><Input placeholder="e.g. A14" value={model} onChange={(e) => setModel(e.target.value)} /></Field>
 
-              {/* Phone Photo Capture for Shelf ID & Return Check */}
-              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+              {/* Phone Photo Capture for Shelf ID & Return Check (Min 1, Max 2) */}
+              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Camera className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-bold text-slate-800">Phone Photo (Optional)</span>
-                    <span className="rounded-md bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-bold">
-                      Shelf ID & Return Match
+                    <span className="text-xs font-bold text-slate-800">Device Photos *</span>
+                    <span
+                      className={cn(
+                        "rounded-md px-2 py-0.5 text-[10px] font-bold",
+                        pendingPhotos.length >= 1
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                      )}
+                    >
+                      {pendingPhotos.length === 0
+                        ? "At least 1 photo required *"
+                        : `${pendingPhotos.length} of 2 photos attached ✓`}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500">Helps identify phone on shop trays during return</span>
+                  <span className="text-[11px] text-slate-500">Min 1, max 2 photos for shelf ID & delivery check</span>
                 </div>
 
                 <input
@@ -739,60 +809,83 @@ export default function NewTicketPage() {
                   onChange={handleIntakePhotoCapture}
                 />
 
-                {pendingPhoto ? (
-                  <div className="flex items-center gap-3 pt-1">
-                    <div className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-emerald-500/50 bg-black/5 shadow-2xs group shrink-0">
-                      <img src={pendingPhoto.previewUrl} alt="Device preview" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={removePendingPhoto}
-                        className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                        title="Remove photo"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
+                {compressingPhoto && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-2.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+                    <span>Optimizing photo for fast upload...</span>
+                  </div>
+                )}
 
-                    <div className="space-y-1 text-xs">
-                      <p className="font-bold text-slate-800">Phone photo ready ✓</p>
-                      <div className="flex items-center gap-2">
+                {/* Thumbnails of attached photos */}
+                {pendingPhotos.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {pendingPhotos.map((p, idx) => (
+                      <div key={idx} className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-emerald-500/70 bg-black/5 shadow-2xs group shrink-0">
+                        <img src={p.previewUrl} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
+                        <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.2 text-[9px] font-bold text-white">
+                          #{idx + 1}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => intakeCameraInputRef.current?.click()}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline cursor-pointer"
+                          onClick={() => removePendingPhoto(idx)}
+                          className="absolute top-1 right-1 rounded-full bg-black/75 p-1 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                          title={`Remove photo ${idx + 1}`}
                         >
-                          <Camera className="h-3 w-3" />
-                          <span>Retake Photo</span>
-                        </button>
-                        <span className="text-slate-300">·</span>
-                        <button
-                          type="button"
-                          onClick={removePendingPhoto}
-                          className="text-[11px] font-medium text-red-600 hover:underline cursor-pointer"
-                        >
-                          Remove
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
-                    </div>
+                    ))}
+
+                    {pendingPhotos.length < 2 && (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-700">Add 2nd Photo (Optional):</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => intakeCameraInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>Take Photo 2</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => intakeGalleryInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                          >
+                            <ImageIcon className="h-3 w-3 text-slate-400" />
+                            <span>Gallery</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => intakeCameraInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Camera className="h-3.5 w-3.5" />
-                      <span>Snap Phone Photo</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => intakeGalleryInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
-                    >
-                      <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
-                      <span>Choose from Gallery</span>
-                    </button>
+                )}
+
+                {/* If 0 photos attached, show primary prompt */}
+                {pendingPhotos.length === 0 && (
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => intakeCameraInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                        <span>Snap Device Photo (Photo 1)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => intakeGalleryInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Choose from Gallery</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] font-semibold text-amber-700">
+                      ⚠️ At least 1 photo is required to complete device intake (up to 2 photos allowed).
+                    </p>
                   </div>
                 )}
               </div>
@@ -1027,9 +1120,16 @@ export default function NewTicketPage() {
           {step === 4 && (
             <div className="space-y-4 text-sm">
               <div className="rounded-xl gradient-hero p-4 text-white">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  <span className="font-bold">{SHOP.name}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5" />
+                    <span className="font-bold">
+                      {stores.find((s) => s.id === selectedStoreId)?.displayName || activeStore?.displayName || SHOP.name}
+                    </span>
+                  </div>
+                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-bold">
+                    {stores.find((s) => s.id === selectedStoreId)?.code || activeStore?.code || "FM1"}
+                  </span>
                 </div>
                 <p className="mt-2 text-lg font-bold">{brand} {model}</p>
                 <p className="opacity-90">{customerDisplay?.fullName} · {customerDisplay ? formatCustomerMobiles(customerDisplay) : ""}</p>
@@ -1048,16 +1148,27 @@ export default function NewTicketPage() {
                 <Row label="Delivery" value={edd ? formatDate(edd) : "—"} />
                 <Row label="Warranty" value={warrantyDays > 0 ? `${warrantyDays} Days Warranty` : "No Warranty"} />
                 {conditions.length > 0 && <Row label="Condition" value={conditions.join(", ")} />}
-                {pendingPhoto && (
-                  <div className="pt-2 border-t border-slate-200/70 flex items-center gap-3">
-                    <img
-                      src={pendingPhoto.previewUrl}
-                      alt="preview"
-                      className="h-14 w-14 rounded-xl object-cover border border-slate-300 shadow-2xs"
-                    />
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-700 block">Device Intake Photo Attached ✓</span>
-                      <span className="text-[10px] text-slate-500">Will be stored for shelf matching & delivery check</span>
+                {pendingPhotos.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200/70">
+                    <span className="text-[11px] font-bold text-slate-700 block mb-2">
+                      Device Intake Photos ({pendingPhotos.length}/2 attached) ✓
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {pendingPhotos.map((p, idx) => (
+                        <div key={idx} className="relative">
+                          <img
+                            src={p.previewUrl}
+                            alt={`Intake preview ${idx + 1}`}
+                            className="h-14 w-14 rounded-xl object-cover border border-slate-300 shadow-2xs"
+                          />
+                          <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.2 text-[9px] font-bold text-white">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="text-[10px] text-slate-500">
+                        Will be stored for shelf matching & delivery check
+                      </div>
                     </div>
                   </div>
                 )}

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.famousmobiles.dto.PaymentDto;
@@ -39,13 +40,13 @@ public class PaymentController {
 
     @GetMapping("/payments/outstanding")
     @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
-    public List<TicketDto.TicketResponse> outstanding() {
-        return paymentService.getOutstanding();
+    public List<TicketDto.TicketResponse> outstanding(@RequestParam(required = false) UUID storeId) {
+        return paymentService.getOutstanding(storeId);
     }
 
     @GetMapping("/payments/today")
     @PreAuthorize("hasRole('ADMIN')")
-    public PaymentDto.TodayRevenueSummary paymentsToday() {
-        return paymentService.getTodayRevenueSummary();
+    public PaymentDto.TodayRevenueSummary paymentsToday(@RequestParam(required = false) UUID storeId) {
+        return paymentService.getTodayRevenueSummary(storeId);
     }
 }

@@ -98,6 +98,14 @@ export default function TicketDetailPage() {
   }, [id, authLoading, user]);
 
   useEffect(() => {
+    const handleFmRefresh = () => {
+      load();
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, [id]);
+
+  useEffect(() => {
     if (user?.role === "ADMIN") api<Technician[]>("/technicians").then(setTechnicians).catch(console.error);
   }, [user?.role]);
 
@@ -342,20 +350,26 @@ export default function TicketDetailPage() {
       ? "💰 Payment: PAID IN FULL ✓ (No balance to pay)"
       : `💰 Balance to Pay: ₹${ticket.balanceAmount}`;
 
+    const shopName = ticket.store?.name || "Famous Mobiles";
+    const shopAddress = ticket.store
+      ? [ticket.store.addressLine1, ticket.store.addressLine2, ticket.store.city].filter(Boolean).join(", ")
+      : "Opp Friends Colony Bus Stop, Manikonda, Hyderabad";
+    const shopMobile = ticket.store?.mobile || SHOP.mobile;
+
     if (resolvedType === "pickup") {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
-        `Great news! Your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been repaired and is READY FOR PICKUP at Famous Mobiles.\n\n` +
+        `Great news! Your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been repaired and is READY FOR PICKUP at ${shopName}.\n\n` +
         `${paymentLine}\n` +
         `🛡️ Warranty: ${warrantyText} (from collection date)\n` +
-        `📍 Shop: Opp Friends Colony Bus Stop, Manikonda, Hyderabad\n` +
-        `📞 Call: ${SHOP.mobile}\n\n` +
+        `📍 Shop: ${shopAddress}\n` +
+        `📞 Call: ${shopMobile}\n\n` +
         `Track details: ${trackUrl}\n\n` +
         `Please collect your device during shop hours. Thank you!`;
     } else if (resolvedType === "estimate") {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
-        `We have inspected your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) at Famous Mobiles.\n\n` +
+        `We have inspected your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) at ${shopName}.\n\n` +
         `📋 Issue: ${ticket.problemDescription || "Device inspection"}\n` +
         `💰 Estimated Repair Cost: ₹${ticket.estimatedCost}\n` +
         `💵 Advance Paid: ₹${ticket.advancePaid}\n` +
@@ -366,17 +380,17 @@ export default function TicketDetailPage() {
     } else if (ticket.status === "RETURNED_UNREPAIRED") {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
-        `Your device ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been returned unrepaired at Famous Mobiles.\n\n` +
+        `Your device ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) has been returned unrepaired at ${shopName}.\n\n` +
         `🔖 Status: Returned Unrepaired\n` +
         `💰 Repair Cost: ₹0 (Any advance paid has been refunded)\n` +
-        `📍 Shop: Opp Friends Colony Bus Stop, Manikonda, Hyderabad\n` +
-        `📞 Call: ${SHOP.mobile}\n\n` +
+        `📍 Shop: ${shopAddress}\n` +
+        `📞 Call: ${shopMobile}\n\n` +
         `Track details: ${trackUrl}\n\n` +
-        `Thank you for visiting Famous Mobiles!`;
+        `Thank you for visiting ${shopName}!`;
     } else {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
-        `Here is an update on your repair from Famous Mobiles:\n\n` +
+        `Here is an update on your repair from ${shopName}:\n\n` +
         `📱 Device: ${ticket.brand} ${ticket.model}\n` +
         `🔖 Ticket: ${ticket.trackingNumber}\n` +
         `⚡ Status: ${formatStatus(ticket.status)}\n` +
@@ -469,7 +483,14 @@ export default function TicketDetailPage() {
                   </span>
                 )}
               </div>
-              <p className="mt-1 font-mono text-sm opacity-90">{ticket.trackingNumber}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="font-mono text-sm opacity-90">{ticket.trackingNumber}</p>
+                {ticket.store && (
+                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold backdrop-blur-xs">
+                    {ticket.store.displayName || ticket.store.name} ({ticket.store.code})
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1.5">
               <Badge className="bg-white/20 text-white border-0 text-sm">{formatStatus(ticket.status)}</Badge>

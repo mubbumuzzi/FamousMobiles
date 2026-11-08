@@ -57,6 +57,7 @@ public class PaymentService {
         }
         Payment payment = new Payment();
         payment.setTicket(ticket);
+        payment.setStore(ticket.getStore());
         payment.setAmount(request.amount());
         payment.setPaymentMode(request.paymentMode());
         payment.setNotes(request.notes());
@@ -93,13 +94,26 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<TicketDto.TicketResponse> getOutstanding() {
-        return ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream()
+        return getOutstanding(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketDto.TicketResponse> getOutstanding(UUID storeId) {
+        var queryStream = storeId != null
+                ? ticketRepository.findByStoreIdWithDetailsOrderByCreatedAtDesc(storeId).stream()
+                : ticketRepository.findAllWithDetailsOrderByCreatedAtDesc().stream();
+        return queryStream
                 .filter(t -> t.getBalanceAmount().compareTo(BigDecimal.ZERO) > 0)
                 .map(TicketDto.TicketResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public PaymentDto.TodayRevenueSummary getTodayRevenueSummary() {
+        return getTodayRevenueSummary(null);
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentDto.TodayRevenueSummary getTodayRevenueSummary(UUID storeId) {
         if (!securityUtils.isAdmin()) {
             throw new ForbiddenException("Only admin can view revenue details");
         }
@@ -108,6 +122,11 @@ public class PaymentService {
                 .toInstant();
 
         List<Payment> todayPayments = paymentRepository.findPaymentsSinceWithDetails(startOfDay);
+        if (storeId != null) {
+            todayPayments = todayPayments.stream()
+                    .filter(p -> p.getStore() != null && storeId.equals(p.getStore().getId()))
+                    .toList();
+        }
 
         BigDecimal cashTotal = BigDecimal.ZERO;
         BigDecimal upiTotal = BigDecimal.ZERO;

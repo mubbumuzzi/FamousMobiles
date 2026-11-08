@@ -55,10 +55,27 @@ export interface Customer {
   createdAt?: string;
 }
 
+export interface Store {
+  id: string;
+  code: string;
+  name: string;
+  displayName: string;
+  mobile: string;
+  alternateMobile?: string;
+  ownerName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  pincode?: string;
+  terms?: string[];
+  active: boolean;
+}
+
 export interface Ticket {
   id: string;
   trackingNumber: string;
   customer: Customer;
+  store?: Store;
   assignedTechnicianId?: string;
   assignedTechnicianName?: string;
   status: RepairStatus;

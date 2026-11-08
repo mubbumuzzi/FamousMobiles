@@ -54,6 +54,10 @@ public class StockOrder extends BaseEntity {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     @Column(name = "arrived_at")
     private Instant arrivedAt;
 
@@ -162,5 +166,13 @@ public class StockOrder extends BaseEntity {
 
     public void setFulfilledAt(Instant fulfilledAt) {
         this.fulfilledAt = fulfilledAt;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 }

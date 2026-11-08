@@ -16,6 +16,7 @@ import { Ticket } from "@/lib/types";
 import { cn, formatCurrency, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { PageLoading, Skeleton } from "@/components/ui/skeleton";
+import { useStore } from "@/context/StoreContext";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
@@ -29,6 +30,7 @@ export default function TicketsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status");
+  const { activeStoreId } = useStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,7 +40,8 @@ export default function TicketsPageContent() {
   const load = () => {
     setLoading(true);
     setError("");
-    api<Ticket[]>("/tickets")
+    const query = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";
+    api<Ticket[]>(`/tickets${query}`)
       .then(setTickets)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load tickets"))
       .finally(() => setLoading(false));
@@ -48,7 +51,15 @@ export default function TicketsPageContent() {
     if (authLoading || !user) return;
     if (user.role === "TECHNICIAN") setView("board");
     load();
-  }, [authLoading, user]);
+  }, [authLoading, user, activeStoreId]);
+
+  useEffect(() => {
+    const handleFmRefresh = () => {
+      load();
+    };
+    window.addEventListener("fm:refresh", handleFmRefresh);
+    return () => window.removeEventListener("fm:refresh", handleFmRefresh);
+  }, [activeStoreId]);
 
   if (authLoading) return <PageLoading />;
 
@@ -212,6 +223,11 @@ export default function TicketsPageContent() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="font-bold text-blue-700 tracking-tight">{t.trackingNumber}</p>
+                      {t.store && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                          {t.store.code}
+                        </span>
+                      )}
                       {t.reopenCount && t.reopenCount > 0 ? (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
                           🔁 Re-Check

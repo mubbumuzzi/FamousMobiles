@@ -28,6 +28,8 @@ public class MainActivity extends BridgeActivity {
                 settings.setLoadsImagesAutomatically(true);
                 settings.setBlockNetworkImage(false);
                 settings.setBlockNetworkLoads(false);
+                settings.setAllowFileAccess(true);
+                settings.setAllowContentAccess(true);
             }
         } catch (Exception e) {
             e.printStackTrace();
