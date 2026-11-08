@@ -78,7 +78,6 @@ class PdfReceiptServiceTest {
     @Test
     void generateReceipt_shouldProduceCustomerCopyOnlyOnA4TopHalf() throws Exception {
         when(appProperties.shop()).thenReturn(null);
-        when(appProperties.publicAppUrl()).thenReturn("http://localhost:3000");
 
         Path receiptFile = tempDir.resolve("TRK-TEST01.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
@@ -110,7 +109,6 @@ class PdfReceiptServiceTest {
     @Test
     void generateReceipt_duplicateOption_shouldFitBothCopiesOnSingleA4Page() throws Exception {
         when(appProperties.shop()).thenReturn(null);
-        when(appProperties.publicAppUrl()).thenReturn("http://localhost:3000");
 
         Path receiptFile = tempDir.resolve("TRK-TEST02.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);

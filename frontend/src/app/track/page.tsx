@@ -1,65 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Smartphone, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input, Label, Field } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CustomerTrackingView } from "@/components/tracking/CustomerTrackingView";
-import { ShopContact, ShopTerms } from "@/components/ShopInfo";
-import { apiPublic } from "@/lib/api";
-import { PublicTracking } from "@/lib/types";
-import { formatDate, formatStatus } from "@/lib/utils";
+import { Smartphone, Phone, MessageSquare, ArrowLeft, MapPin, Clock } from "lucide-react";
+import Link from "next/link";
+import { SHOP } from "@/lib/shop";
+import { ShopTerms } from "@/components/ShopInfo";
 
 export default function TrackPage() {
-  const router = useRouter();
-  const [trackingId, setTrackingId] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [data, setData] = useState<PublicTracking | null>(null);
-  const [multiTickets, setMultiTickets] = useState<PublicTracking[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const trackById = async (id?: string) => {
-    const num = id || trackingId;
-    if (!num.trim()) return;
-    setLoading(true);
-    setError("");
-    setData(null);
-    setMultiTickets([]);
-    try {
-      const result = await apiPublic<PublicTracking>(`/public/track/${encodeURIComponent(num.trim())}`);
-      setData(result);
-      if (id) router.replace(`/track/view?trackingId=${id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Not found");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const trackByMobile = async () => {
-    if (!mobile.trim()) return;
-    setLoading(true);
-    setError("");
-    setData(null);
-    setMultiTickets([]);
-    try {
-      const results = await apiPublic<PublicTracking[]>(`/public/track?mobile=${encodeURIComponent(mobile.trim())}`);
-      if (results.length === 1) {
-        setData(results[0]);
-      } else if (results.length > 1) {
-        setMultiTickets(results);
-      } else {
-        setError("No repair tickets found for this mobile number");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Not found");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const shopPhone = SHOP.mobile || "9063786751";
+  const cleanPhone = shopPhone.replace(/\D/g, "");
+  const internationalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
   return (
     <div className="min-h-screen bg-[#F7F7F8]">
@@ -71,102 +20,76 @@ export default function TrackPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight">Famous Mobiles</h1>
-              <p className="text-xs text-[#A3A3A3] mt-0.5">Where is my phone?</p>
+              <p className="text-xs text-[#A3A3A3] mt-0.5">Customer Support & Repair Inquiries</p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-lg space-y-4 p-4 pb-8">
-        {!data && (
-          <div className="premium-card -mt-6 p-5 shadow-lg">
-            <Field>
-              <Label>Tracking ID</Label>
-              <div className="mt-1 flex gap-2">
-                <Input placeholder="FM-2026-000001" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} className="flex-1" />
-                <Button size="lg" onClick={() => trackById()} disabled={loading}><Search className="h-4 w-4" /></Button>
-              </div>
-            </Field>
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs text-slate-400">OR</span>
-              <div className="h-px flex-1 bg-slate-200" />
-            </div>
-            <Field>
-              <Label>Your Mobile Number</Label>
-              <div className="mt-1 flex gap-2">
-                <Input type="tel" placeholder="9781887246" value={mobile} onChange={(e) => setMobile(e.target.value)} className="flex-1" />
-                <Button size="lg" variant="outline" onClick={trackByMobile} disabled={loading}>Track</Button>
-              </div>
-            </Field>
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        <div className="rounded-[16px] border border-[#EBEBEB] bg-white p-6 shadow-sm -mt-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#F7F7F8] px-3 py-1 text-xs font-semibold text-[#121212]">
+            <span>Notice: Online Tracking Retired</span>
           </div>
-        )}
 
-        {multiTickets.length > 1 && !data && (
-          <div className="space-y-3 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-800">
-                Select your device ({multiTickets.length} repairs found):
-              </p>
-              <button
-                type="button"
-                onClick={() => setMultiTickets([])}
-                className="text-xs text-slate-500 hover:text-slate-700"
-              >
-                Clear
-              </button>
-            </div>
-            <div className="space-y-2">
-              {multiTickets.map((t) => (
-                <button
-                  key={t.trackingNumber}
-                  type="button"
-                  onClick={() => {
-                    setData(t);
-                    router.replace(`/track/view?trackingId=${t.trackingNumber}`);
-                  }}
-                  className="w-full text-left premium-card p-4 hover:border-blue-400 hover:shadow-md transition-all flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <p className="font-bold text-slate-900">
-                      {t.brand} {t.model} {t.color ? `(${t.color})` : ""}
-                    </p>
-                    <p className="text-xs font-mono text-blue-600 mt-0.5">{t.trackingNumber}</p>
-                    {t.estimatedDeliveryDate && (
-                      <p className="text-xs text-slate-500 mt-1">Expected: {formatDate(t.estimatedDeliveryDate)}</p>
-                    )}
-                  </div>
-                  <Badge variant="default" className="text-xs">
-                    {formatStatus(t.currentStatus)}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          <h2 className="mt-3 text-[18px] font-bold text-[#121212] leading-snug">
+            Need an update on your device repair?
+          </h2>
 
-        {data && (
-          <>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setData(null);
-                setError("");
-              }}
+          <p className="mt-2 text-sm text-[#767676] leading-relaxed">
+            To safeguard customer privacy and protect service records, public online tracking has been replaced by direct technician updates. Please contact our shop team directly with your Ticket ID or mobile number.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+            <a
+              href={`tel:+${internationalPhone}`}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#121212] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-black transition-colors"
             >
-              ← Track another device
-            </Button>
-            <CustomerTrackingView data={data} />
-          </>
-        )}
+              <Phone className="h-4 w-4" />
+              Call Shop: +91 {cleanPhone.slice(-10)}
+            </a>
+            <a
+              href={`https://wa.me/${internationalPhone}?text=${encodeURIComponent(
+                "Hello Famous Mobiles, I would like to know the status of my device repair."
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#25D366] bg-[#25D366]/10 px-4 py-3 text-sm font-semibold text-[#128C7E] hover:bg-[#25D366]/20 transition-colors"
+            >
+              <MessageSquare className="h-4 w-4 text-[#25D366]" />
+              WhatsApp Us
+            </a>
+          </div>
 
-        <ShopContact className="text-center text-sm" showName={false} />
-        <ShopTerms />
-        <p className="text-center text-xs text-slate-400">
-          <a href="/login" className="text-blue-600 hover:underline">Staff login</a>
-        </p>
+          <div className="mt-6 space-y-3 border-t border-[#EBEBEB] pt-4 text-xs text-[#767676]">
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 shrink-0 text-[#121212] mt-0.5" />
+              <div>
+                <p className="font-semibold text-[#121212]">Business Hours</p>
+                <p>Mon - Sat: 10:00 AM – 10:00 PM | Sun: 11:00 AM – 8:00 PM</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-[#121212] mt-0.5" />
+              <div>
+                <p className="font-semibold text-[#121212]">Store Location</p>
+                <p>{SHOP.addressLines.join(", ")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center pt-2">
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#767676] hover:text-[#121212]"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Staff Portal Login
+          </Link>
+        </div>
+
+        <ShopTerms className="mt-4" />
       </main>
     </div>
   );

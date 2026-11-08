@@ -338,8 +338,6 @@ export default function TicketDetailPage() {
     if (!ticket) return;
     const cleanMobile = ticket.customer.mobile.replace(/\D/g, "");
     const phoneWithCountry = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const trackUrl = `${origin}/track/${ticket.trackingNumber}`;
 
     let resolvedType = templateType;
     if (resolvedType === "auto") {
@@ -372,7 +370,6 @@ export default function TicketDetailPage() {
         `🛡️ Warranty: ${warrantyText} (from collection date)\n` +
         `📍 Shop: ${shopAddress}\n` +
         `📞 Call: ${shopMobile}\n\n` +
-        `Track details: ${trackUrl}\n\n` +
         `Please collect your device during shop hours. Thank you!`;
     } else if (resolvedType === "estimate") {
       text =
@@ -382,8 +379,8 @@ export default function TicketDetailPage() {
         `💰 Estimated Repair Cost: ₹${ticket.estimatedCost}\n` +
         `💵 Advance Paid: ₹${ticket.advancePaid}\n` +
         `⏳ Balance on Delivery: ₹${ticket.balanceAmount}\n` +
-        `🛡️ Warranty Offered: ${warrantyText}\n\n` +
-        `Track details: ${trackUrl}\n\n` +
+        `🛡️ Warranty Offered: ${warrantyText}\n` +
+        `📞 Call: ${shopMobile}\n\n` +
         `Please reply to this message to APPROVE the repair so our technician can begin. Thank you!`;
     } else if (ticket.status === "RETURNED_UNREPAIRED") {
       text =
@@ -393,7 +390,6 @@ export default function TicketDetailPage() {
         `💰 Repair Cost: ₹0 (Any advance paid has been refunded)\n` +
         `📍 Shop: ${shopAddress}\n` +
         `📞 Call: ${shopMobile}\n\n` +
-        `Track details: ${trackUrl}\n\n` +
         `Thank you for visiting ${shopName}!`;
     } else {
       text =
@@ -407,8 +403,8 @@ export default function TicketDetailPage() {
           : isSettled
           ? `💰 Repair Cost: ₹${ticket.estimatedCost} (PAID IN FULL ✓)\n`
           : `💰 Est. Cost: ₹${ticket.estimatedCost} (Balance: ₹${ticket.balanceAmount})\n`) +
-        `🛡️ Warranty: ${warrantyText}\n\n` +
-        `Track your repair status live here:\n${trackUrl}\n\n` +
+        `🛡️ Warranty: ${warrantyText}\n` +
+        `📞 Call shop: ${shopMobile}\n\n` +
         `Thank you!`;
     }
 
