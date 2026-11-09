@@ -10,6 +10,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "customers")
@@ -27,6 +28,7 @@ public class Customer extends BaseEntity {
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("isPrimary DESC, createdAt ASC")
+    @BatchSize(size = 50)
     private List<CustomerPhone> phones = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")

@@ -6,13 +6,21 @@ import java.util.UUID;
 import com.famousmobiles.domain.Payment;
 import com.famousmobiles.domain.enums.PaymentMode;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 public final class PaymentDto {
 
     private PaymentDto() {}
 
     public record PaymentRequest(
+            @NotNull(message = "Payment amount is required")
+            @Positive(message = "Payment amount must be greater than zero")
             BigDecimal amount,
+
+            @NotNull(message = "Payment mode is required")
             PaymentMode paymentMode,
+
             String notes
     ) {}
 

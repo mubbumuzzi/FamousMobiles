@@ -87,8 +87,16 @@ public final class MiscDto {
 
     public record SearchResult(
             List<TicketDto.TicketResponse> tickets,
-            List<CustomerDto.CustomerResponse> customers
-    ) {}
+            List<CustomerDto.CustomerResponse> customers,
+            List<AccessorySaleDto.AccessorySaleResponse> accessorySales
+    ) {
+        public SearchResult(
+                List<TicketDto.TicketResponse> tickets,
+                List<CustomerDto.CustomerResponse> customers
+        ) {
+            this(tickets, customers, List.of());
+        }
+    }
 
     public record ReportSummary(
             long totalTickets,

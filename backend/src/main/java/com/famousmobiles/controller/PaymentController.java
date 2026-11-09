@@ -17,6 +17,8 @@ import com.famousmobiles.dto.PaymentDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.service.PaymentService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api")
 public class PaymentController {
@@ -29,7 +31,7 @@ public class PaymentController {
 
     @PostMapping("/tickets/{id}/payments")
     @PreAuthorize("hasAnyRole('ADMIN', 'SALESMAN', 'TECHNICIAN')")
-    public PaymentDto.PaymentResponse record(@PathVariable UUID id, @RequestBody PaymentDto.PaymentRequest request) {
+    public PaymentDto.PaymentResponse record(@PathVariable UUID id, @Valid @RequestBody PaymentDto.PaymentRequest request) {
         return paymentService.recordPayment(id, request);
     }
 

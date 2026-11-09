@@ -28,6 +28,8 @@ import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.service.PdfReceiptService;
 import com.famousmobiles.service.TicketService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/tickets")
 public class TicketController {
@@ -51,12 +53,12 @@ public class TicketController {
     }
 
     @PostMapping
-    public TicketDto.TicketResponse create(@RequestBody TicketDto.CreateTicketRequest request) {
+    public TicketDto.TicketResponse create(@Valid @RequestBody TicketDto.CreateTicketRequest request) {
         return ticketService.create(request);
     }
 
     @PutMapping("/{id}")
-    public TicketDto.TicketResponse update(@PathVariable UUID id, @RequestBody TicketDto.UpdateTicketRequest request) {
+    public TicketDto.TicketResponse update(@PathVariable UUID id, @Valid @RequestBody TicketDto.UpdateTicketRequest request) {
         return ticketService.update(id, request);
     }
 

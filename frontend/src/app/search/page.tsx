@@ -41,6 +41,7 @@ import { ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 interface SearchResult {
   tickets: Ticket[];
   customers: Customer[];
+  accessorySales?: AccessorySale[];
 }
 
 function getCustomerInitials(name: string): string {
@@ -138,7 +139,7 @@ export default function SearchPage() {
     ])
       .then(([searchRes, accRes]) => {
         setResults(searchRes);
-        setAccessories(accRes || []);
+        setAccessories(searchRes.accessorySales && searchRes.accessorySales.length > 0 ? searchRes.accessorySales : (accRes || []));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Search failed"))
       .finally(() => setSearching(false));
