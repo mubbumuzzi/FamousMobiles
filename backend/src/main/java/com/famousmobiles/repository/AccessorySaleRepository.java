@@ -18,6 +18,9 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
 
     Optional<AccessorySale> findByBillNumber(String billNumber);
 
+    @Query("SELECT a FROM AccessorySale a LEFT JOIN FETCH a.customer LEFT JOIN FETCH a.soldBy LEFT JOIN FETCH a.store WHERE a.id = :id")
+    Optional<AccessorySale> findByIdWithDetails(@Param("id") UUID id);
+
     List<AccessorySale> findTop50ByOrderBySoldAtDesc();
 
     @Query("""

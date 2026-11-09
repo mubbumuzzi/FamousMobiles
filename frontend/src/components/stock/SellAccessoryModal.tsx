@@ -53,7 +53,7 @@ export function SellAccessoryModal({ isOpen, onClose, onSuccess }: SellAccessory
   const [accessoryName, setAccessoryName] = useState("");
   const [price, setPrice] = useState<string>("");
   const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("UPI");
-  const [warrantyMonths, setWarrantyMonths] = useState<number>(3);
+  const [warrantyMonths, setWarrantyMonths] = useState<number>(0);
   const [customMonths, setCustomMonths] = useState<string>("");
 
   const [customerMobile, setCustomerMobile] = useState("");
@@ -82,7 +82,7 @@ export function SellAccessoryModal({ isOpen, onClose, onSuccess }: SellAccessory
       setAccessoryName("");
       setPrice("");
       setPaymentMode("UPI");
-      setWarrantyMonths(3);
+      setWarrantyMonths(0);
       setCustomMonths("");
       setCustomerMobile("");
       setCustomerName("");
@@ -171,13 +171,9 @@ export function SellAccessoryModal({ isOpen, onClose, onSuccess }: SellAccessory
       });
 
       if (action === "PRINT") {
-        await printAccessoryWarrantyBill(sale.id).catch((err) => {
-          console.warn("Print bill failed:", err);
-        });
+        await printAccessoryWarrantyBill(sale.id, sale.billNumber);
       } else if (action === "DOWNLOAD") {
-        await downloadAccessoryWarrantyBill(sale.id, sale.billNumber).catch((err) => {
-          console.warn("Download bill failed:", err);
-        });
+        await downloadAccessoryWarrantyBill(sale.id, sale.billNumber);
       } else if (action === "WHATSAPP") {
         if (cleanMobile.length >= 10) {
           const phone = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;

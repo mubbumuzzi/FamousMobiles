@@ -54,6 +54,7 @@ public class AccessorySaleController {
     }
 
     @GetMapping("/{id}/receipt/pdf")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> receipt(
             @PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "false") boolean duplicate,

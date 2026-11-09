@@ -107,4 +107,19 @@ class AccessorySaleServiceTest {
         assertEquals("Basheer Uddin", resp.soldByName());
         verify(accessorySaleRepository).save(any(AccessorySale.class));
     }
+
+    @Test
+    void getEntity_existingSale_shouldReturnEntity() {
+        UUID id = UUID.randomUUID();
+        AccessorySale sale = new AccessorySale();
+        sale.setId(id);
+        sale.setBillNumber("FM-ACC-2026-00002");
+        when(accessorySaleRepository.findByIdWithDetails(id)).thenReturn(Optional.of(sale));
+
+        AccessorySale result = accessorySaleService.getEntity(id);
+
+        assertNotNull(result);
+        assertEquals("FM-ACC-2026-00002", result.getBillNumber());
+        verify(accessorySaleRepository).findByIdWithDetails(id);
+    }
 }

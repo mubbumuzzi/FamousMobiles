@@ -90,9 +90,10 @@ export async function downloadTicketReceipt(ticketId: string, trackingNumber: st
 /**
  * Fetches accessory sale warranty bill PDF with authenticated Bearer token and triggers print dialog or download on mobile.
  */
-export async function printAccessoryWarrantyBill(saleId: string): Promise<void> {
+export async function printAccessoryWarrantyBill(saleId: string, billNumber?: string): Promise<void> {
   const blob = await api<Blob>(`/accessory-sales/${saleId}/receipt/pdf`);
   const blobUrl = URL.createObjectURL(blob);
+  const fileName = billNumber ? `${billNumber}.pdf` : `warranty-bill-${saleId.slice(0, 8)}.pdf`;
 
   const isMobile = typeof window !== "undefined" && (
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -102,7 +103,7 @@ export async function printAccessoryWarrantyBill(saleId: string): Promise<void> 
   if (isMobile) {
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `warranty-bill-${saleId.slice(0, 8)}.pdf`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -143,7 +144,7 @@ export async function printAccessoryWarrantyBill(saleId: string): Promise<void> 
   } catch {
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `warranty-bill-${saleId.slice(0, 8)}.pdf`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {

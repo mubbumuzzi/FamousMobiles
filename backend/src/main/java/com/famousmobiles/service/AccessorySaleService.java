@@ -139,7 +139,7 @@ public class AccessorySaleService {
 
     @Transactional(readOnly = true)
     public AccessorySale getEntity(UUID id) {
-        return accessorySaleRepository.findById(id)
+        return accessorySaleRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Accessory sale bill not found"));
     }
 
