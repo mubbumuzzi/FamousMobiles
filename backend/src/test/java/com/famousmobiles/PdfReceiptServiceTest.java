@@ -106,6 +106,8 @@ class PdfReceiptServiceTest {
         assertTrue(!contentString.contains("CUT HERE"), "PDF should not contain CUT HERE cut guide");
         assertTrue(!contentString.contains("Customer Sign"), "PDF should not contain Customer Sign");
         assertTrue(contentString.contains("Authorized Sign"), "PDF should retain Authorized Sign");
+        assertTrue(contentString.contains("Md. Basheer Uddin"), "PDF should have digital sign of Md. Basheer Uddin");
+        assertTrue(contentString.contains("Digitally Signed"), "PDF should indicate digitally signed bill");
     }
 
     @Test
@@ -164,6 +166,8 @@ class PdfReceiptServiceTest {
         String contentString = new String(pageContent);
         assertTrue(contentString.contains("ACCESSORY SALE & WARRANTY BILL"), "Should have warranty bill title");
         assertTrue(contentString.contains("Replacement Warranty"), "Should have warranty text");
+        assertTrue(contentString.contains("Md. Basheer Uddin"), "Accessory bill should contain digital sign of Md. Basheer Uddin");
+        assertTrue(contentString.contains("Digitally Signed"), "Accessory bill should indicate digitally signed bill");
     }
 
     @Test

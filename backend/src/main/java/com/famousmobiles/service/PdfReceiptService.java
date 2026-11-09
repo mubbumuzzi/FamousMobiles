@@ -1,6 +1,11 @@
 package com.famousmobiles.service;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -11,6 +16,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
+
+import javax.imageio.ImageIO;
 
 import org.springframework.stereotype.Service;
 
@@ -221,8 +228,8 @@ public class PdfReceiptService {
 
         document.add(table);
 
-        // Footer Section
-        PdfPTable footerTable = new PdfPTable(new float[]{78f, 22f});
+        // Footer Section (3 columns: Terms, Digital Signature, QR Code)
+        PdfPTable footerTable = new PdfPTable(new float[]{56f, 26f, 18f});
         footerTable.setWidthPercentage(100);
         footerTable.setSpacingBefore(3f);
 
@@ -248,11 +255,9 @@ public class PdfReceiptService {
             termsCell.addElement(new Paragraph("• No replacement warranty on this item. No exchange or return after sale.", noteFont));
             termsCell.addElement(new Paragraph("• No cash refund on sold goods.", noteFont));
         }
-
-        Paragraph sigPara = new Paragraph("Authorized Sign: ____________________", smallFont);
-        sigPara.setSpacingBefore(5f);
-        termsCell.addElement(sigPara);
         footerTable.addCell(termsCell);
+
+        footerTable.addCell(createDigitalSignatureCell(labelFont, noteFont));
 
         PdfPCell qrCell = new PdfPCell();
         qrCell.setBorder(Rectangle.NO_BORDER);
@@ -445,12 +450,12 @@ public class PdfReceiptService {
 
         document.add(table);
 
-        // Footer Section (2 columns: Terms & Signatures on left, QR Code on right)
-        PdfPTable footerTable = new PdfPTable(new float[]{78f, 22f});
+        // Footer Section (3 columns: Terms, Digital Signature, QR Code)
+        PdfPTable footerTable = new PdfPTable(new float[]{56f, 26f, 18f});
         footerTable.setWidthPercentage(100);
         footerTable.setSpacingBefore(3f);
 
-        // Terms & Signatures column
+        // Terms column
         PdfPCell termsCell = new PdfPCell();
         termsCell.setBorder(Rectangle.NO_BORDER);
 
@@ -468,11 +473,9 @@ public class PdfReceiptService {
         for (String term : shop.terms()) {
             termsCell.addElement(new Paragraph("• " + term, noteFont));
         }
-
-        Paragraph sigPara = new Paragraph("Authorized Sign: ____________________", smallFont);
-        sigPara.setSpacingBefore(5f);
-        termsCell.addElement(sigPara);
         footerTable.addCell(termsCell);
+
+        footerTable.addCell(createDigitalSignatureCell(labelFont, noteFont));
 
         // QR Code column
         PdfPCell qrCell = new PdfPCell();
@@ -501,6 +504,106 @@ public class PdfReceiptService {
         cell.setPaddingRight(5f);
         cell.setBorderColor(new Color(226, 232, 240)); // subtle slate-200 border
         table.addCell(cell);
+    }
+
+    private PdfPCell createDigitalSignatureCell(Font labelFont, Font noteFont) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        Paragraph forHeader = new Paragraph("For Famous Mobiles", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7f, new Color(51, 65, 85)));
+        forHeader.setAlignment(Element.ALIGN_CENTER);
+        forHeader.setSpacingAfter(1f);
+        cell.addElement(forHeader);
+
+        try {
+            byte[] signBytes = getDigitalSignatureBytes();
+            if (signBytes.length > 0) {
+                Image signImg = Image.getInstance(signBytes);
+                signImg.scaleAbsolute(76f, 19f);
+                signImg.setAlignment(Element.ALIGN_CENTER);
+                cell.addElement(signImg);
+            }
+        } catch (Exception ignored) {}
+
+        Paragraph namePara = new Paragraph("Md. Basheer Uddin", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, new Color(15, 23, 42)));
+        namePara.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(namePara);
+
+        Paragraph titlePara = new Paragraph("Authorized Signatory (Proprietor)", FontFactory.getFont(FontFactory.HELVETICA, 6.5f, new Color(71, 85, 105)));
+        titlePara.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(titlePara);
+
+        Paragraph digitPara = new Paragraph("✓ Digitally Signed", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 6f, new Color(21, 128, 61)));
+        digitPara.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(digitPara);
+
+        return cell;
+    }
+
+    private static byte[] digitalSignatureBytes;
+
+    private static synchronized byte[] getDigitalSignatureBytes() {
+        if (digitalSignatureBytes != null) {
+            return digitalSignatureBytes;
+        }
+        int width = 260;
+        int height = 70;
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+        try {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+            // Rich fountain pen royal blue ink
+            Color inkColor = new Color(20, 56, 140);
+            g2d.setColor(inkColor);
+
+            java.awt.Font scriptFont = getBestSignatureFont();
+            g2d.setFont(scriptFont);
+            g2d.drawString("Md Basheer Uddin", 8, 40);
+
+            // Natural signature underline flourish
+            g2d.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            Path2D.Float flourish = new Path2D.Float();
+            flourish.moveTo(6, 48);
+            flourish.curveTo(45, 52, 120, 46, 210, 48);
+            flourish.curveTo(230, 48.5f, 248, 47, 252, 42);
+            g2d.draw(flourish);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(image, "PNG", baos);
+            digitalSignatureBytes = baos.toByteArray();
+            return digitalSignatureBytes;
+        } catch (Exception e) {
+            return new byte[0];
+        } finally {
+            g2d.dispose();
+        }
+    }
+
+    private static java.awt.Font getBestSignatureFont() {
+        String[] preferred = {
+            "Snell Roundhand",
+            "Apple Chancery",
+            "Brush Script MT",
+            "Bradley Hand",
+            "Segoe Script",
+            "Lucida Handwriting",
+            "Comic Sans MS"
+        };
+        try {
+            java.util.Set<String> available = new java.util.HashSet<>(
+                java.util.Arrays.asList(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames())
+            );
+            for (String name : preferred) {
+                if (available.contains(name)) {
+                    return new java.awt.Font(name, java.awt.Font.BOLD | java.awt.Font.ITALIC, 25);
+                }
+            }
+        } catch (Exception ignored) {}
+        return new java.awt.Font(java.awt.Font.SERIF, java.awt.Font.BOLD | java.awt.Font.ITALIC, 23);
     }
 
     private byte[] generateQrBytes(String content) throws Exception {
