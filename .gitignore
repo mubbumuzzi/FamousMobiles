@@ -3,6 +3,8 @@
 .env.server
 data/uploads/*
 !data/uploads/.gitkeep
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
 node_modules/
 target/
 .next/
