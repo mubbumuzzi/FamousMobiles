@@ -260,3 +260,34 @@ export interface CreateStockOrderRequest {
   notes?: string;
 }
 
+export interface AccessorySale {
+  id: string;
+  billNumber: string;
+  customerId?: string | null;
+  customerName: string;
+  customerMobile: string;
+  accessoryName: string;
+  price: number;
+  paymentMode: "CASH" | "UPI" | "CARD" | string;
+  warrantyMonths: number;
+  warrantyExpiresAt?: string | null;
+  serialNumber?: string | null;
+  notes?: string | null;
+  soldByName?: string | null;
+  storeName?: string | null;
+  soldAt: string;
+  createdAt: string;
+}
+
+export interface CreateAccessorySaleRequest {
+  accessoryName: string;
+  price: number;
+  paymentMode?: string;
+  warrantyMonths?: number;
+  serialNumber?: string;
+  customerName?: string;
+  customerMobile: string;
+  notes?: string;
+  storeId?: string;
+}
+

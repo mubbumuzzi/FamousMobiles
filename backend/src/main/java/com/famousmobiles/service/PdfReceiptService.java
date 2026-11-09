@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import com.famousmobiles.config.AppProperties;
 import com.famousmobiles.config.ShopInfo;
+import com.famousmobiles.domain.AccessorySale;
 import com.famousmobiles.domain.RepairTicket;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -65,6 +66,200 @@ public class PdfReceiptService {
         Path cached = fileStorageService.getReceiptPath(ticket.getTrackingNumber());
         Files.write(cached, pdf);
         return pdf;
+    }
+
+    public byte[] generateAccessoryWarrantyBill(AccessorySale sale) throws Exception {
+        return generateAccessoryWarrantyBill(sale, false);
+    }
+
+    public byte[] generateAccessoryWarrantyBill(AccessorySale sale, boolean duplicate) throws Exception {
+        byte[] pdf = buildAccessoryBillPdf(sale, duplicate);
+        Path cached = fileStorageService.getReceiptPath(sale.getBillNumber());
+        Files.write(cached, pdf);
+        return pdf;
+    }
+
+    private byte[] buildAccessoryBillPdf(AccessorySale sale, boolean duplicate) throws Exception {
+        ShopInfo.Resolved shop = ShopInfo.resolve(sale.getStore(), appProperties.shop());
+
+        Document document = new Document(PageSize.A4, 20f, 20f, 16f, 16f);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter.getInstance(document, baos);
+        document.open();
+
+        String rawPhone = shop.mobile() != null && !shop.mobile().isBlank() ? shop.mobile().replaceAll("[^0-9+]", "") : "+919063786751";
+        String shopPhone = rawPhone.startsWith("+") ? rawPhone : (rawPhone.length() == 10 ? "+91" + rawPhone : "+" + rawPhone);
+        String callUrl = "tel:" + shopPhone;
+        Image qr = Image.getInstance(generateQrBytes(callUrl));
+        qr.scaleAbsolute(46, 46);
+        qr.setAlignment(Element.ALIGN_CENTER);
+
+        // 1. Top Half: Customer Copy
+        renderAccessoryBillBlock(document, sale, shop, "CUSTOMER COPY", qr);
+
+        // 2. Only render Shop Copy if duplicate is explicitly requested
+        if (duplicate) {
+            Paragraph spacer = new Paragraph(" ");
+            spacer.setSpacingBefore(16f);
+            spacer.setSpacingAfter(8f);
+            document.add(spacer);
+            renderAccessoryBillBlock(document, sale, shop, "STORE / OFFICE COPY", qr);
+        }
+
+        document.close();
+        return baos.toByteArray();
+    }
+
+    private void renderAccessoryBillBlock(Document document, AccessorySale sale, ShopInfo.Resolved shop, String copyLabel, Image qr) throws Exception {
+        Font shopTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12f, new Color(15, 23, 42));
+        Font headerTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10.5f, new Color(30, 41, 59));
+        Font badgeFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, new Color(71, 85, 105));
+        Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, new Color(15, 23, 42));
+        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7f, new Color(71, 85, 105));
+        Font valueFont = FontFactory.getFont(FontFactory.HELVETICA, 7.5f, new Color(15, 23, 42));
+        Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 6.5f, new Color(100, 116, 139));
+        Font noteFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 6.5f, new Color(71, 85, 105));
+
+        // Header Table
+        PdfPTable headerTable = new PdfPTable(new float[]{60f, 40f});
+        headerTable.setWidthPercentage(100);
+        headerTable.setSpacingAfter(3f);
+
+        PdfPCell shopCell = new PdfPCell();
+        shopCell.setBorder(Rectangle.NO_BORDER);
+        shopCell.addElement(new Paragraph(shop.name(), shopTitleFont));
+        for (String line : shop.addressLines()) {
+            shopCell.addElement(new Paragraph(line, smallFont));
+        }
+        shopCell.addElement(new Paragraph("Prop: " + shop.ownerName() + " | Phone: " + shop.mobile(), smallFont));
+        headerTable.addCell(shopCell);
+
+        PdfPCell receiptMetaCell = new PdfPCell();
+        receiptMetaCell.setBorder(Rectangle.NO_BORDER);
+        receiptMetaCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+        Paragraph badgePara = new Paragraph("[ " + copyLabel + " ]", badgeFont);
+        badgePara.setAlignment(Element.ALIGN_RIGHT);
+        receiptMetaCell.addElement(badgePara);
+
+        Paragraph receiptTitle = new Paragraph("ACCESSORY SALE & WARRANTY BILL", headerTitleFont);
+        receiptTitle.setAlignment(Element.ALIGN_RIGHT);
+        receiptMetaCell.addElement(receiptTitle);
+
+        Paragraph billPara = new Paragraph("Bill No: " + sale.getBillNumber(), boldFont);
+        billPara.setAlignment(Element.ALIGN_RIGHT);
+        receiptMetaCell.addElement(billPara);
+
+        Instant billDate = sale.getSoldAt() != null ? sale.getSoldAt() : (sale.getCreatedAt() != null ? sale.getCreatedAt() : Instant.now());
+        Paragraph datePara = new Paragraph("Date: " + RECEIPT_DATE.format(billDate), smallFont);
+        datePara.setAlignment(Element.ALIGN_RIGHT);
+        receiptMetaCell.addElement(datePara);
+
+        headerTable.addCell(receiptMetaCell);
+        document.add(headerTable);
+
+        // Details Table
+        PdfPTable table = new PdfPTable(new float[]{18f, 32f, 18f, 32f});
+        table.setWidthPercentage(100);
+
+        String custName = sale.getCustomerName() != null && !sale.getCustomerName().isBlank()
+                ? sale.getCustomerName()
+                : (sale.getCustomer() != null ? sale.getCustomer().getFullName() : "Walk-in Customer");
+        String soldBy = sale.getSoldBy() != null ? sale.getSoldBy().getFullName() : "Store Staff";
+
+        // Row 1
+        addCell(table, "Customer Name", labelFont, false, true);
+        addCell(table, custName, boldFont, false, false);
+        addCell(table, "Sold By", labelFont, false, true);
+        addCell(table, soldBy, valueFont, false, false);
+
+        // Row 2
+        String mobile = sale.getCustomerMobile() != null && !sale.getCustomerMobile().isBlank()
+                ? sale.getCustomerMobile()
+                : "-";
+        addCell(table, "Customer Mobile", labelFont, false, true);
+        addCell(table, mobile, valueFont, false, false);
+        addCell(table, "Payment Mode", labelFont, false, true);
+        addCell(table, sale.getPaymentMode() != null ? sale.getPaymentMode() : "UPI", boldFont, false, false);
+
+        // Row 3
+        addCell(table, "Item / Accessory", labelFont, false, true);
+        addCell(table, sale.getAccessoryName(), boldFont, false, false);
+        addCell(table, "Serial / IMEI / Batch", labelFont, false, true);
+        addCell(table, sale.getSerialNumber() != null && !sale.getSerialNumber().isBlank() ? sale.getSerialNumber() : "-", valueFont, false, false);
+
+        // Row 4
+        addCell(table, "Amount Paid", labelFont, false, true);
+        addCell(table, "₹" + sale.getPrice(), boldFont, false, false);
+        addCell(table, "Payment Status", labelFont, false, true);
+        PdfPCell paidCell = new PdfPCell(new Phrase("PAID IN FULL ✓", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(21, 128, 61))));
+        paidCell.setBackgroundColor(new Color(240, 253, 244));
+        paidCell.setPaddingTop(2.5f);
+        paidCell.setPaddingBottom(2.5f);
+        paidCell.setPaddingLeft(5f);
+        paidCell.setPaddingRight(5f);
+        paidCell.setBorderColor(new Color(187, 247, 208));
+        table.addCell(paidCell);
+
+        // Row 5: Warranty Banner
+        int warrantyMonths = sale.getWarrantyMonths() != null ? sale.getWarrantyMonths() : 0;
+        addCell(table, "Warranty", labelFont, false, true);
+        String warrantyVal;
+        if (warrantyMonths > 0) {
+            String expiryStr = sale.getWarrantyExpiresAt() != null ? LOCAL_DATE_FMT.format(sale.getWarrantyExpiresAt()) : "-";
+            warrantyVal = warrantyMonths + " Months Replacement Warranty (Valid till " + expiryStr + ")";
+        } else {
+            warrantyVal = "Testing Warranty / Checked at Counter (No Replacement After Leaving Shop)";
+        }
+        PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
+        warrantyCell.setColspan(3);
+        warrantyCell.setPaddingTop(2.5f);
+        warrantyCell.setPaddingBottom(2.5f);
+        warrantyCell.setPaddingLeft(5f);
+        warrantyCell.setPaddingRight(5f);
+        warrantyCell.setBorderColor(new Color(226, 232, 240));
+        table.addCell(warrantyCell);
+
+        document.add(table);
+
+        // Footer Section
+        PdfPTable footerTable = new PdfPTable(new float[]{78f, 22f});
+        footerTable.setWidthPercentage(100);
+        footerTable.setSpacingBefore(3f);
+
+        PdfPCell termsCell = new PdfPCell();
+        termsCell.setBorder(Rectangle.NO_BORDER);
+
+        Paragraph termsHeader = new Paragraph("Important Warranty Terms:", labelFont);
+        termsHeader.setSpacingAfter(1f);
+        termsCell.addElement(termsHeader);
+
+        if (warrantyMonths > 0) {
+            String expText = sale.getWarrantyExpiresAt() != null ? LOCAL_DATE_FMT.format(sale.getWarrantyExpiresAt()) : "";
+            termsCell.addElement(new Paragraph("• Warranty: " + warrantyMonths + " Months valid till " + expText + " strictly against manufacturing defects.", noteFont));
+        } else {
+            termsCell.addElement(new Paragraph("• Testing Warranty: Goods checked in front of customer. No return/exchange once leaves counter.", noteFont));
+        }
+        termsCell.addElement(new Paragraph("• Physical breakage, liquid exposure, burnt circuitry, torn seals, or broken pins strictly VOID warranty.", noteFont));
+        termsCell.addElement(new Paragraph("• Original bill or Bill No (" + sale.getBillNumber() + ") must be presented for warranty replacement.", noteFont));
+        termsCell.addElement(new Paragraph("• No cash refund on sold goods. Defective unit will be serviced or replaced as per policy.", noteFont));
+
+        Paragraph sigPara = new Paragraph("Authorized Sign: ____________________", smallFont);
+        sigPara.setSpacingBefore(5f);
+        termsCell.addElement(sigPara);
+        footerTable.addCell(termsCell);
+
+        PdfPCell qrCell = new PdfPCell();
+        qrCell.setBorder(Rectangle.NO_BORDER);
+        qrCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        qrCell.addElement(qr);
+
+        Paragraph qrText = new Paragraph("Scan to call shop", smallFont);
+        qrText.setAlignment(Element.ALIGN_CENTER);
+        qrCell.addElement(qrText);
+        footerTable.addCell(qrCell);
+
+        document.add(footerTable);
     }
 
     private byte[] buildPdf(RepairTicket ticket, boolean duplicate) throws Exception {

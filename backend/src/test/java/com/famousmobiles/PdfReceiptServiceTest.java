@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.famousmobiles.config.AppProperties;
+import com.famousmobiles.domain.AccessorySale;
 import com.famousmobiles.domain.Customer;
 import com.famousmobiles.domain.RepairTicket;
 import com.famousmobiles.domain.enums.DeviceType;
@@ -126,5 +128,36 @@ class PdfReceiptServiceTest {
         assertEquals(PageSize.A4.getWidth(), reader.getPageSize(1).getWidth(), 0.5f);
         assertEquals(PageSize.A4.getHeight(), reader.getPageSize(1).getHeight(), 0.5f);
         assertEquals(1, reader.getNumberOfPages(), "Both copies must cleanly fit on a single A4 sheet without overflow");
+    }
+
+    @Test
+    void generateAccessoryWarrantyBill_shouldProduceValidA4TopHalfPdf() throws Exception {
+        when(appProperties.shop()).thenReturn(null);
+
+        Path receiptFile = tempDir.resolve("FM-ACC-TEST01.pdf");
+        when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
+
+        AccessorySale sale = new AccessorySale();
+        sale.setId(UUID.randomUUID());
+        sale.setBillNumber("FM-ACC-2026-00001");
+        sale.setCustomerName("Rahul Sharma");
+        sale.setCustomerMobile("9876543210");
+        sale.setAccessoryName("Boat Airdopes 141 ANC");
+        sale.setPrice(new BigDecimal("1499.00"));
+        sale.setPaymentMode("UPI");
+        sale.setWarrantyMonths(6);
+        sale.setWarrantyExpiresAt(LocalDate.now().plusMonths(6));
+        sale.setSerialNumber("SN-BOAT-99218");
+        sale.setSoldAt(Instant.now());
+
+        byte[] pdfBytes = pdfReceiptService.generateAccessoryWarrantyBill(sale, false);
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+
+        PdfReader reader = new PdfReader(pdfBytes);
+        assertEquals(1, reader.getNumberOfPages(), "Accessory bill must fit on a single page");
+        assertEquals(PageSize.A4.getWidth(), reader.getPageSize(1).getWidth(), 0.5f);
+        assertEquals(PageSize.A4.getHeight(), reader.getPageSize(1).getHeight(), 0.5f);
     }
 }

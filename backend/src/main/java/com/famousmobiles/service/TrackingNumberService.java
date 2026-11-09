@@ -52,4 +52,16 @@ public class TrackingNumberService {
             """, Long.class, year);
         return String.format("ORD-%d-%04d", year, next);
     }
+
+    @Transactional
+    public String generateAccessoryBillNumber() {
+        int year = Year.now().getValue();
+        Long next = jdbcTemplate.queryForObject("""
+            INSERT INTO accessory_bill_sequences (year, last_value)
+            VALUES (?, 1)
+            ON CONFLICT (year) DO UPDATE SET last_value = accessory_bill_sequences.last_value + 1
+            RETURNING last_value
+            """, Long.class, year);
+        return String.format("FM-ACC-%d-%05d", year, next);
+    }
 }

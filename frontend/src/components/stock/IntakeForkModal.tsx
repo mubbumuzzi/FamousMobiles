@@ -1,6 +1,6 @@
 "use client";
 
-import { Wrench, ShoppingBag, X, ArrowRight, ShieldCheck, Clock } from "lucide-react";
+import { Wrench, ShoppingBag, X, ArrowRight, ShieldCheck, Clock, Tag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
@@ -8,9 +8,10 @@ interface IntakeForkModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectStockOrder: () => void;
+  onSelectSellAccessory?: () => void;
 }
 
-export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeForkModalProps) {
+export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder, onSelectSellAccessory }: IntakeForkModalProps) {
   const router = useRouter();
 
   // Android hardware back button handler
@@ -26,6 +27,13 @@ export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeF
   const handleSelectStock = () => {
     onClose();
     onSelectStockOrder();
+  };
+
+  const handleSelectSellAccessory = () => {
+    onClose();
+    if (onSelectSellAccessory) {
+      onSelectSellAccessory();
+    }
   };
 
   return (
@@ -109,6 +117,36 @@ export function IntakeForkModal({ isOpen, onClose, onSelectStockOrder }: IntakeF
                 </span>
                 <span className="inline-flex items-center rounded-[6px] bg-[#F0F0F2] px-2 py-0.5 text-[11px] font-medium text-[#767676]">
                   1-Click Remove when Arrived
+                </span>
+              </div>
+            </div>
+          </button>
+
+          {/* Option 3: Sell In-Shop Accessory & Issue Warranty Bill */}
+          <button
+            type="button"
+            onClick={handleSelectSellAccessory}
+            className="group relative flex items-start gap-3.5 rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#121212] hover:bg-[#F7F7F8] active:scale-[0.99] cursor-pointer"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#0E8345] text-white">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[15px] font-bold text-[#121212]">
+                  Sell Accessory & Warranty Bill
+                </h4>
+                <ArrowRight className="h-4 w-4 text-[#767676] group-hover:text-[#121212] group-hover:translate-x-0.5 transition-all" />
+              </div>
+              <p className="mt-1 text-[12px] text-[#767676] leading-relaxed">
+                Counter sale for in-store accessories (chargers, tempered glass, covers, earbuds). Set price & warranty months, issue official store warranty bill.
+              </p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#E6F4EA] px-2 py-0.5 text-[11px] font-semibold text-[#0E8345]">
+                  <ShieldCheck className="h-3 w-3" /> 1-Click Bill PDF
+                </span>
+                <span className="inline-flex items-center rounded-[6px] bg-[#F0F0F2] px-2 py-0.5 text-[11px] font-medium text-[#767676]">
+                  WhatsApp Ready
                 </span>
               </div>
             </div>

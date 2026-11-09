@@ -23,6 +23,7 @@ import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
 import { IntakeForkModal } from "@/components/stock/IntakeForkModal";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
+import { SellAccessoryModal } from "@/components/stock/SellAccessoryModal";
 import { StoreSwitcher } from "@/components/layout/StoreSwitcher";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
@@ -50,12 +51,14 @@ export function StaffLayout({
   const router = useRouter();
   const [isForkOpen, setIsForkOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [isSellAccessoryModalOpen, setIsSellAccessoryModalOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   // Android hardware back button handler: close modal if open
   useAndroidBackButton(() => setIsStockModalOpen(false), isStockModalOpen, 20);
+  useAndroidBackButton(() => setIsSellAccessoryModalOpen(false), isSellAccessoryModalOpen, 22);
   useAndroidBackButton(() => setIsForkOpen(false), isForkOpen, 15);
   useAndroidBackButton(() => setIsMoreOpen(false), isMoreOpen, 10);
 
@@ -104,6 +107,13 @@ export function StaffLayout({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Listen for open sell accessory modal event from anywhere (e.g. dashboard quick actions)
+  useEffect(() => {
+    const handleOpenSell = () => setIsSellAccessoryModalOpen(true);
+    window.addEventListener("fm:open-sell-accessory", handleOpenSell);
+    return () => window.removeEventListener("fm:open-sell-accessory", handleOpenSell);
   }, []);
 
   const visibleNavItems = navItems.filter((item) => {
@@ -398,11 +408,12 @@ export function StaffLayout({
         </button>
       )}
 
-      {/* Intake Fork: Choose Repair vs Order Stock */}
+      {/* Intake Fork: Choose Repair vs Order Stock vs Sell Accessory */}
       <IntakeForkModal
         isOpen={isForkOpen}
         onClose={() => setIsForkOpen(false)}
         onSelectStockOrder={() => setIsStockModalOpen(true)}
+        onSelectSellAccessory={() => setIsSellAccessoryModalOpen(true)}
       />
 
       {/* Order Stock Modal */}
@@ -415,6 +426,15 @@ export function StaffLayout({
           } else {
             router.push("/dashboard");
           }
+        }}
+      />
+
+      {/* Sell In-Shop Accessory & Generate Warranty Bill Modal */}
+      <SellAccessoryModal
+        isOpen={isSellAccessoryModalOpen}
+        onClose={() => setIsSellAccessoryModalOpen(false)}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent("fm:refresh"));
         }}
       />
     </div>

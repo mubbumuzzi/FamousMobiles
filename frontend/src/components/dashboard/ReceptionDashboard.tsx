@@ -15,6 +15,7 @@ import {
   Wrench,
   Clock,
   ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -152,12 +153,24 @@ export function ReceptionDashboard({
           </p>
         </div>
 
-        <Link href="/tickets/new">
-          <Button variant="primary" className="h-10 px-4 text-[13px] font-semibold gap-1.5 shadow-xs cursor-pointer">
-            <Plus className="h-4 w-4" />
-            <span>New Repair</span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("fm:open-sell-accessory"))}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-[10px] border border-[#EBEBEB] bg-white text-[13px] font-semibold text-[#121212] hover:bg-[#F7F7F8] active:scale-95 transition-all shadow-2xs cursor-pointer"
+            title="Direct counter sale with warranty bill"
+          >
+            <ShieldCheck className="h-4 w-4 text-[#0E8345]" />
+            <span>Sell Accessory</span>
+          </button>
+
+          <Link href="/tickets/new">
+            <Button variant="primary" className="h-10 px-4 text-[13px] font-semibold gap-1.5 shadow-xs cursor-pointer">
+              <Plus className="h-4 w-4" />
+              <span>New Repair</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
