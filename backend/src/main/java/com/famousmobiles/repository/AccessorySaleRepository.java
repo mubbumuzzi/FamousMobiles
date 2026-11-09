@@ -21,16 +21,33 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
     @Query("SELECT a FROM AccessorySale a LEFT JOIN FETCH a.customer LEFT JOIN FETCH a.soldBy LEFT JOIN FETCH a.store WHERE a.id = :id")
     Optional<AccessorySale> findByIdWithDetails(@Param("id") UUID id);
 
-    List<AccessorySale> findTop50ByOrderBySoldAtDesc();
-
     @Query("""
         SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        ORDER BY a.soldAt DESC
+    """)
+    List<AccessorySale> findTop50WithDetailsByOrderBySoldAtDesc();
+
+    @Query(value = """
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
         WHERE LOWER(a.billNumber) LIKE LOWER(CONCAT('%', :q, '%'))
            OR a.customerMobile LIKE CONCAT('%', :q, '%')
            OR LOWER(a.customerName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(a.accessoryName) LIKE LOWER(CONCAT('%', :q, '%'))
            OR LOWER(COALESCE(a.serialNumber, '')) LIKE LOWER(CONCAT('%', :q, '%'))
         ORDER BY a.soldAt DESC
+    """, countQuery = """
+        SELECT count(a) FROM AccessorySale a
+        WHERE LOWER(a.billNumber) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR a.customerMobile LIKE CONCAT('%', :q, '%')
+           OR LOWER(a.customerName) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(a.accessoryName) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(COALESCE(a.serialNumber, '')) LIKE LOWER(CONCAT('%', :q, '%'))
     """)
     Page<AccessorySale> search(@Param("q") String query, Pageable pageable);
 }

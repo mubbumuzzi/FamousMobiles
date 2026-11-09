@@ -19,6 +19,8 @@ import {
   Wrench,
   Users,
   LayoutGrid,
+  Download,
+  Printer,
 } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Badge } from "@/components/ui/badge";
@@ -28,10 +30,13 @@ import { PageLoading } from "@/components/ui/skeleton";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api } from "@/lib/api";
-import { Customer, Ticket } from "@/lib/types";
+import { Customer, Ticket, AccessorySale } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles, formatCurrency } from "@/lib/utils";
 import { useStore } from "@/context/StoreContext";
 import { cn } from "@/lib/utils";
+import { computeWarrantyStatus } from "@/components/stock/AccessorySalesTracker";
+import { printAccessoryWarrantyBill, downloadAccessoryWarrantyBill } from "@/lib/print";
+import { ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 
 interface SearchResult {
   tickets: Ticket[];
@@ -111,22 +116,30 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
   const [results, setResults] = useState<SearchResult | null>(null);
+  const [accessories, setAccessories] = useState<AccessorySale[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const [scope, setScope] = useState<"ALL" | "TICKETS" | "CUSTOMERS">("ALL");
+  const [scope, setScope] = useState<"ALL" | "TICKETS" | "CUSTOMERS" | "ACCESSORIES">("ALL");
 
   useEffect(() => {
     if (authLoading || !user) return;
     if (debouncedQuery.trim().length < 2) {
       setResults(null);
+      setAccessories([]);
       setError("");
       return;
     }
     setSearching(true);
     setError("");
     const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
-    api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery.trim())}${storeParam}`)
-      .then(setResults)
+    Promise.all([
+      api<SearchResult>(`/search?q=${encodeURIComponent(debouncedQuery.trim())}${storeParam}`),
+      api<AccessorySale[]>(`/accessory-sales?q=${encodeURIComponent(debouncedQuery.trim())}`).catch(() => [] as AccessorySale[]),
+    ])
+      .then(([searchRes, accRes]) => {
+        setResults(searchRes);
+        setAccessories(accRes || []);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Search failed"))
       .finally(() => setSearching(false));
   }, [debouncedQuery, authLoading, user, activeStoreId]);
@@ -136,11 +149,13 @@ export default function SearchPage() {
   const hasResults = results !== null;
   const ticketsList = results?.tickets || [];
   const customersList = results?.customers || [];
-  const totalCount = ticketsList.length + customersList.length;
+  const accessoriesList = accessories || [];
+  const totalCount = ticketsList.length + customersList.length + accessoriesList.length;
   const isEmpty = hasResults && totalCount === 0;
 
   const showTickets = (scope === "ALL" || scope === "TICKETS") && ticketsList.length > 0;
   const showCustomers = (scope === "ALL" || scope === "CUSTOMERS") && customersList.length > 0;
+  const showAccessories = (scope === "ALL" || scope === "ACCESSORIES") && accessoriesList.length > 0;
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
@@ -253,6 +268,26 @@ export default function SearchPage() {
                 scope === "CUSTOMERS" ? "bg-white/20 text-white" : "bg-[#E0E0E2] text-[#121212]"
               )}>
                 {customersList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setScope("ACCESSORIES")}
+              className={cn(
+                "h-8 px-3 rounded-[8px] font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                scope === "ACCESSORIES"
+                  ? "bg-[#121212] text-white shadow-2xs font-semibold"
+                  : "bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB]"
+              )}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-[#0E8345]" />
+              <span>Accessory Warranty</span>
+              <span className={cn(
+                "rounded-full px-1.5 py-0.2 text-[10px]",
+                scope === "ACCESSORIES" ? "bg-white/20 text-white" : "bg-[#E0E0E2] text-[#121212]"
+              )}>
+                {accessoriesList.length}
               </span>
             </button>
           </div>
@@ -629,6 +664,155 @@ export default function SearchPage() {
                           <span className="text-[11px] font-medium text-[#121212] group-hover:underline">
                             View Customer History →
                           </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 3. ACCESSORY SALES & WARRANTY RESULTS */}
+            {showAccessories && (
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <h2 className="text-[14px] font-bold text-[#121212] flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#0E8345]" />
+                    <span>Accessory Sales & Warranties</span>
+                    <span className="rounded-full bg-[#F0F0F2] px-2 py-0.5 text-[11px] font-mono text-[#767676]">
+                      {accessoriesList.length}
+                    </span>
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {accessoriesList.map((acc) => {
+                    const status = computeWarrantyStatus(acc);
+                    const StatusIcon = status.icon;
+                    const cleanMobile = (acc.customerMobile || "").replace(/\D/g, "");
+
+                    const handlePrint = async (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      try {
+                        await printAccessoryWarrantyBill(acc.id, acc.billNumber);
+                      } catch (err: any) {
+                        alert("Print failed: " + (err?.message || "Unknown error"));
+                      }
+                    };
+
+                    const handleDownload = async (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      try {
+                        await downloadAccessoryWarrantyBill(acc.id, acc.billNumber);
+                      } catch (err: any) {
+                        alert("Download failed: " + (err?.message || "Unknown error"));
+                      }
+                    };
+
+                    const handleWhatsApp = (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      if (cleanMobile.length < 10) return;
+                      const phone = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+                      const isW = acc.warrantyMonths > 0;
+                      const header = isW
+                        ? "*Famous Mobiles - Official Warranty Bill*"
+                        : "*Famous Mobiles - Sale Receipt*";
+
+                      let wLine = "";
+                      if (isW && acc.warrantyExpiresAt) {
+                        const d = new Date(acc.warrantyExpiresAt + "T00:00:00");
+                        const fExp = !isNaN(d.getTime())
+                          ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                          : acc.warrantyExpiresAt;
+                        wLine = `\n*Warranty:* ${acc.warrantyMonths} Months (Valid till ${fExp})`;
+                      }
+
+                      const sLine = acc.serialNumber ? `\n*Serial/IMEI:* ${acc.serialNumber}` : "";
+                      const msg = `${header}\n\nHello ${acc.customerName},\nThank you for purchasing at *Famous Mobiles*!\n\n📋 *Bill No:* ${acc.billNumber}\n*Item:* ${acc.accessoryName}\n*Amount Paid:* ${formatCurrency(acc.price)} (${acc.paymentMode})${wLine}${sLine}\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Store Contact: +91 90637 86751`;
+                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+                    };
+
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => router.push("/stock-orders")}
+                        className="group flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 transition-all hover:border-[#121212]/30 hover:shadow-2xs cursor-pointer min-h-[115px]"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-bold text-[#121212]">
+                              {acc.billNumber}
+                            </span>
+                            <div
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-[6px] border px-2 py-0.5 text-[10.5px] font-bold leading-none shrink-0",
+                                status.badgeClass
+                              )}
+                              title={status.subLabel}
+                            >
+                              <StatusIcon className="h-3 w-3 shrink-0" />
+                              <span>{status.label}</span>
+                            </div>
+                          </div>
+
+                          <h3 className="font-bold text-[14px] text-[#121212] mt-1.5 leading-snug">
+                            {acc.accessoryName}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-x-2 text-xs text-[#767676] mt-1 font-medium">
+                            <span className="text-[#121212] font-semibold">{acc.customerName}</span>
+                            {cleanMobile.length >= 10 && (
+                              <span className="font-mono text-[#767676]">({acc.customerMobile})</span>
+                            )}
+                            {acc.serialNumber && (
+                              <span className="font-mono text-[10.5px] bg-[#F7F7F8] px-1.5 py-0.5 rounded border border-[#EBEBEB]">
+                                SN: {acc.serialNumber}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Footer: Price, Date & Actions */}
+                        <div className="mt-3 pt-2.5 border-t border-[#EBEBEB] flex items-center justify-between text-[11px] text-[#767676]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-xs text-[#121212]">
+                              {formatCurrency(acc.price)}
+                            </span>
+                            <span className="text-[10px] text-[#767676] uppercase font-semibold">
+                              ({acc.paymentMode || "UPI"})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            {cleanMobile.length >= 10 && (
+                              <button
+                                type="button"
+                                onClick={handleWhatsApp}
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
+                                title="Share on WhatsApp"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={handleDownload}
+                              className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
+                              title="Download PDF Invoice"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handlePrint}
+                              className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#121212] text-white hover:bg-black active:scale-95 transition-all"
+                              title="Print Bill"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

@@ -157,7 +157,7 @@ public class AccessorySaleService {
                     .map(AccessorySaleDto.AccessorySaleResponse::from)
                     .toList();
         }
-        return accessorySaleRepository.findTop50ByOrderBySoldAtDesc()
+        return accessorySaleRepository.findTop50WithDetailsByOrderBySoldAtDesc()
                 .stream()
                 .map(AccessorySaleDto.AccessorySaleResponse::from)
                 .toList();
