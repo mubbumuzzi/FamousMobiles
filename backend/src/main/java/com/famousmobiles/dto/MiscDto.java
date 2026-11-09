@@ -77,7 +77,12 @@ public final class MiscDto {
             BigDecimal revenueToday,
             BigDecimal revenueThisWeek,
             BigDecimal revenueThisMonth,
-            Map<String, Long> statusBreakdown
+            Map<String, Long> statusBreakdown,
+            BigDecimal repairRevenueToday,
+            BigDecimal salesRevenueToday,
+            BigDecimal repairRevenueThisMonth,
+            BigDecimal salesRevenueThisMonth,
+            long accessorySalesCountToday
     ) {}
 
     public record SearchResult(
@@ -93,5 +98,13 @@ public final class MiscDto {
             BigDecimal totalCost,
             BigDecimal totalAdvance,
             BigDecimal totalBalance
+    ) {}
+
+    public record AccessorySalesReportSummary(
+            long totalCount,
+            BigDecimal totalRevenue,
+            BigDecimal cashTotal,
+            BigDecimal upiTotal,
+            BigDecimal cardTotal
     ) {}
 }

@@ -454,12 +454,22 @@ export function MetricDrilldownDrawer({
           {/* Smart Contextual Banner */}
           {metric === "revenueToday" && (
             <div className="rounded-[12px] border border-[#EBEBEB] bg-[#F7F7F8] p-4 shadow-2xs">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[12px] font-semibold text-[#767676]">Day-End Cash Drawer & Bank Reconciliation</p>
-                  <p className="text-[24px] font-bold text-[#121212]">
+                  <p className="text-[26px] font-bold text-[#121212] tracking-tight">
                     {formatCurrency(Number(revenueSummary?.totalRevenue ?? 0))}
                   </p>
+                  {((revenueSummary?.repairCount ?? 0) > 0 || (revenueSummary?.salesCount ?? 0) > 0) && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#767676]">
+                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700 font-semibold border border-blue-100">
+                        Repairs: {formatCurrency(Number(revenueSummary?.repairRevenue ?? 0))} ({revenueSummary?.repairCount ?? 0})
+                      </span>
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-emerald-700 font-semibold border border-emerald-100">
+                        Counter Sales: {formatCurrency(Number(revenueSummary?.salesRevenue ?? 0))} ({revenueSummary?.salesCount ?? 0})
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {revenueSummary && (
                   <a
@@ -470,7 +480,7 @@ export function MetricDrilldownDrawer({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
                   >
                     <Share2 className="h-3.5 w-3.5" /> Share Closing on WhatsApp
                   </a>
@@ -478,18 +488,18 @@ export function MetricDrilldownDrawer({
               </div>
 
               {/* Mode Breakdown */}
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-white/80 p-2 border border-emerald-100">
-                  <p className="text-slate-500">Cash in Drawer</p>
-                  <p className="font-bold text-slate-900">{formatCurrency(Number(revenueSummary?.cashTotal ?? 0))}</p>
+              <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-xl bg-white p-2.5 border border-[#EBEBEB] shadow-2xs">
+                  <p className="text-slate-500 font-medium">Cash in Drawer</p>
+                  <p className="font-bold text-slate-900 text-sm mt-0.5">{formatCurrency(Number(revenueSummary?.cashTotal ?? 0))}</p>
                 </div>
-                <div className="rounded-xl bg-white/80 p-2 border border-emerald-100">
-                  <p className="text-slate-500">UPI / Bank</p>
-                  <p className="font-bold text-blue-700">{formatCurrency(Number(revenueSummary?.upiTotal ?? 0))}</p>
+                <div className="rounded-xl bg-white p-2.5 border border-[#EBEBEB] shadow-2xs">
+                  <p className="text-slate-500 font-medium">UPI / Bank</p>
+                  <p className="font-bold text-blue-700 text-sm mt-0.5">{formatCurrency(Number(revenueSummary?.upiTotal ?? 0))}</p>
                 </div>
-                <div className="rounded-xl bg-white/80 p-2 border border-emerald-100">
-                  <p className="text-slate-500">Card Swipes</p>
-                  <p className="font-bold text-purple-700">{formatCurrency(Number(revenueSummary?.cardTotal ?? 0))}</p>
+                <div className="rounded-xl bg-white p-2.5 border border-[#EBEBEB] shadow-2xs">
+                  <p className="text-slate-500 font-medium">Card Swipes</p>
+                  <p className="font-bold text-purple-700 text-sm mt-0.5">{formatCurrency(Number(revenueSummary?.cardTotal ?? 0))}</p>
                 </div>
               </div>
             </div>
@@ -535,45 +545,72 @@ export function MetricDrilldownDrawer({
               ) : revenueSummary?.payments.length === 0 ? (
                 <p className="text-center py-8 text-xs text-slate-500">No payment transactions recorded today yet.</p>
               ) : (
-                revenueSummary?.payments.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-xs hover:border-slate-300 transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/tickets/view?id=${p.ticketId}`}
-                          className="font-bold text-blue-600 hover:underline text-xs"
-                        >
-                          {p.trackingNumber}
-                        </Link>
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          {p.paymentMode}
-                        </Badge>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(p.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                revenueSummary?.payments.map((p) => {
+                  const isSale = p.itemType === "ACCESSORY_SALE";
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-xs hover:border-slate-300 transition-all"
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "rounded-full px-1.5 py-0.2 text-[9px] font-bold uppercase",
+                              isSale
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-blue-100 text-blue-800"
+                            )}
+                          >
+                            {isSale ? "Sale" : "Repair"}
+                          </span>
+                          {isSale ? (
+                            <Link
+                              href="/stock-orders"
+                              className="font-bold text-slate-900 hover:text-emerald-700 hover:underline text-xs"
+                            >
+                              {p.billNumber || p.trackingNumber}
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/tickets/view?id=${p.ticketId}`}
+                              className="font-bold text-blue-600 hover:underline text-xs"
+                            >
+                              {p.trackingNumber}
+                            </Link>
+                          )}
+                          <Badge variant="outline" className="text-[10px] uppercase">
+                            {p.paymentMode}
+                          </Badge>
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(p.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-900 mt-1">
+                          {p.customerName} ·{" "}
+                          <span className={isSale ? "font-semibold text-emerald-800" : "text-slate-500"}>
+                            {isSale ? (p.accessoryName || p.model) : `${p.brand} ${p.model}`}
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {isSale ? "Sold" : "Collected"} by {p.recordedByName} {p.notes ? `(${p.notes})` : ""}
+                        </p>
                       </div>
-                      <p className="text-xs font-medium text-slate-900 mt-0.5">
-                        {p.customerName} · <span className="text-slate-500">{p.brand} {p.model}</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Collected by {p.recordedByName} {p.notes ? `(${p.notes})` : ""}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-emerald-700">{formatCurrency(Number(p.amount))}</p>
+                        {isSale ? (
+                          <span className="text-[10px] font-semibold text-emerald-600">Paid ✓</span>
+                        ) : Number(p.balanceAmount || 0) > 0 ? (
+                          <span className="text-[10px] font-semibold text-amber-600">
+                            Bal: {formatCurrency(Number(p.balanceAmount))}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-emerald-600">Settled ✓</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-emerald-700">{formatCurrency(Number(p.amount))}</p>
-                      {Number(p.balanceAmount || 0) > 0 ? (
-                        <span className="text-[10px] font-semibold text-amber-600">
-                          Bal: {formatCurrency(Number(p.balanceAmount))}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-emerald-600">Settled ✓</span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

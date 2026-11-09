@@ -28,6 +28,7 @@ import { AccessorySale } from "@/lib/types";
 import { formatCurrency, cn } from "@/lib/utils";
 import { printAccessoryWarrantyBill, downloadAccessoryWarrantyBill } from "@/lib/print";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAuthGuard } from "@/hooks/useAuth";
 
 interface AccessorySalesTrackerProps {
   onOpenSellModal?: () => void;
@@ -46,6 +47,16 @@ interface WarrantyStatusInfo {
 }
 
 export function computeWarrantyStatus(sale: AccessorySale): WarrantyStatusInfo {
+  if (sale.status === "CANCELLED") {
+    return {
+      type: "EXPIRED",
+      label: "Voided / Cancelled",
+      subLabel: sale.cancellationReason || "Sale voided by Admin",
+      badgeClass: "bg-[#FCE8E6] text-[#C5221F] border-[#F5C2C7]",
+      icon: ShieldAlert,
+    };
+  }
+
   if (!sale.warrantyMonths || sale.warrantyMonths <= 0 || !sale.warrantyExpiresAt) {
     return {
       type: "NO_WARRANTY",
@@ -91,6 +102,9 @@ export function computeWarrantyStatus(sale: AccessorySale): WarrantyStatusInfo {
 }
 
 export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: AccessorySalesTrackerProps) {
+  const { user } = useAuthGuard();
+  const isAdmin = user?.role === "ADMIN";
+
   const [sales, setSales] = useState<AccessorySale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,6 +208,32 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
     const msg = `${header}\n\nHello ${sale.customerName},\nThank you for purchasing at *Famous Mobiles*!\n\n📋 *Bill No:* ${sale.billNumber}\n*Item:* ${sale.accessoryName}\n*Amount Paid:* ${formatCurrency(sale.price)} (${sale.paymentMode})${warrantyLine}${serialLine}\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Store Contact: +91 90637 86751`;
 
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  const handleVoidSale = async (sale: AccessorySale, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!isAdmin) return;
+    const confirmMsg = `Are you sure you want to void / cancel bill ${sale.billNumber} (${formatCurrency(sale.price)})?\n\nThis will deduct the amount from today's revenue and cash drawer.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    const reason = window.prompt("Reason for voiding / cancelling this sale:", "Customer returned item / mistaken entry");
+    if (!reason || !reason.trim()) return;
+
+    setActionLoadingId(`void-${sale.id}`);
+    try {
+      await api(`/accessory-sales/${sale.id}/void`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      await loadSales(searchQuery);
+      if (selectedSale?.id === sale.id) {
+        setSelectedSale(null);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Failed to void accessory sale");
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const formatDate = (dateStr?: string | null) => {
@@ -472,6 +512,22 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
                         <Printer className="h-4 w-4" />
                       )}
                     </button>
+
+                    {isAdmin && sale.status !== "CANCELLED" && (
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === `void-${sale.id}`}
+                        onClick={(e) => handleVoidSale(sale, e)}
+                        className="rounded-[6px] px-2 py-1 text-[10.5px] font-bold text-[#C5221F] bg-[#FCE8E6] border border-[#F5C2C7] hover:bg-[#F8D7DA] transition-colors cursor-pointer ml-1"
+                        title="Void / Cancel this bill"
+                      >
+                        {actionLoadingId === `void-${sale.id}` ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          "Void"
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -587,33 +643,50 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-[#EBEBEB]">
-              <button
-                type="button"
-                onClick={() => handleWhatsApp(selectedSale)}
-                className="flex items-center gap-1 rounded-[8px] border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-semibold text-[#075E54] hover:bg-[#25D366]/20 transition-all cursor-pointer"
-              >
-                <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
-                <span>WhatsApp</span>
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-5 pt-3 border-t border-[#EBEBEB]">
+              {isAdmin && selectedSale.status !== "CANCELLED" ? (
+                <button
+                  type="button"
+                  disabled={actionLoadingId === `void-${selectedSale.id}`}
+                  onClick={(e) => handleVoidSale(selectedSale, e)}
+                  className="flex items-center gap-1 rounded-[8px] border border-[#F5C2C7] bg-[#FCE8E6] px-3 py-1.5 text-xs font-semibold text-[#C5221F] hover:bg-[#F8D7DA] transition-all cursor-pointer"
+                >
+                  {actionLoadingId === `void-${selectedSale.id}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <span>Void Sale</span>
+                  )}
+                </button>
+              ) : <div />}
 
-              <button
-                type="button"
-                onClick={() => handleDownload(selectedSale)}
-                className="flex items-center gap-1 rounded-[8px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] transition-all cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5 text-[#767676]" />
-                <span>Download PDF</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleWhatsApp(selectedSale)}
+                  className="flex items-center gap-1 rounded-[8px] border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-semibold text-[#075E54] hover:bg-[#25D366]/20 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handlePrint(selectedSale)}
-                className="flex items-center gap-1 rounded-[8px] bg-[#121212] text-white px-3.5 py-1.5 text-xs font-bold hover:bg-black transition-all cursor-pointer"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span>Print Bill</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownload(selectedSale)}
+                  className="flex items-center gap-1 rounded-[8px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] transition-all cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5 text-[#767676]" />
+                  <span>Download PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePrint(selectedSale)}
+                  className="flex items-center gap-1 rounded-[8px] bg-[#121212] text-white px-3.5 py-1.5 text-xs font-bold hover:bg-black transition-all cursor-pointer"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print Bill</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

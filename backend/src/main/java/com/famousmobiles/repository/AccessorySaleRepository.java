@@ -1,5 +1,7 @@
 package com.famousmobiles.repository;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +31,47 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
         ORDER BY a.soldAt DESC
     """)
     List<AccessorySale> findTop50WithDetailsByOrderBySoldAtDesc();
+
+    @Query("""
+        SELECT COALESCE(SUM(a.price), 0) FROM AccessorySale a
+        WHERE a.soldAt >= :since
+          AND a.status = 'COMPLETED'
+          AND (:storeId IS NULL OR a.store.id = :storeId)
+    """)
+    BigDecimal sumSalesSince(@Param("since") Instant since, @Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT COUNT(a) FROM AccessorySale a
+        WHERE a.soldAt >= :since
+          AND a.status = 'COMPLETED'
+          AND (:storeId IS NULL OR a.store.id = :storeId)
+    """)
+    long countSalesSince(@Param("since") Instant since, @Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        WHERE a.soldAt >= :since
+        ORDER BY a.soldAt DESC
+    """)
+    List<AccessorySale> findSalesSinceWithDetails(@Param("since") Instant since);
+
+    @Query("""
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        WHERE a.soldAt >= :from AND a.soldAt < :to
+          AND (:storeId IS NULL OR a.store.id = :storeId)
+        ORDER BY a.soldAt DESC
+    """)
+    List<AccessorySale> findSalesBetweenWithDetails(
+        @Param("from") Instant from,
+        @Param("to") Instant to,
+        @Param("storeId") UUID storeId
+    );
 
     @Query(value = """
         SELECT a FROM AccessorySale a

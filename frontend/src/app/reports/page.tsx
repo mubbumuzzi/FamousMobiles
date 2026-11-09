@@ -13,6 +13,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Filter,
+  ShoppingBag,
+  ShieldCheck,
 } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import { useAuthGuard } from "@/hooks/useAuth";
 import { getApiUrl, getAccessToken, api, getCachedApi } from "@/lib/api";
 import { useStore } from "@/context/StoreContext";
 import { formatCurrency, cn } from "@/lib/utils";
+import { AccessorySaleReportSummary } from "@/lib/types";
 
 interface ReportSummary {
   totalTickets: number;
@@ -106,6 +109,11 @@ export default function ReportsPage() {
 
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"REPAIRS" | "ACCESSORIES" | "INVENTORY">("REPAIRS");
+  const [salesSummary, setSalesSummary] = useState<AccessorySaleReportSummary | null>(null);
+  const [loadingSalesSummary, setLoadingSalesSummary] = useState(false);
+
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -129,11 +137,30 @@ export default function ReportsPage() {
     }
   }, [from, to, statusFilter, activeStoreId]);
 
+  const loadSalesSummary = useCallback(async () => {
+    if (!from || !to) return;
+    const storeParam = activeStoreId !== "ALL" ? `&storeId=${activeStoreId}` : "";
+    const key = `/reports/accessory-sales/summary?from=${from}&to=${to}${storeParam}`;
+    setLoadingSalesSummary(true);
+    try {
+      const data = await api<AccessorySaleReportSummary>(key);
+      setSalesSummary(data);
+    } catch {
+      setSalesSummary(null);
+    } finally {
+      setLoadingSalesSummary(false);
+    }
+  }, [from, to, activeStoreId]);
+
   useEffect(() => {
     if (!authLoading && user && user.role === "ADMIN") {
-      loadSummary();
+      if (activeTab === "REPAIRS") {
+        loadSummary();
+      } else if (activeTab === "ACCESSORIES") {
+        loadSalesSummary();
+      }
     }
-  }, [authLoading, user, loadSummary]);
+  }, [authLoading, user, activeTab, loadSummary, loadSalesSummary]);
 
   const handleSelectPreset = (id: string) => {
     setActivePreset(id);
@@ -262,122 +289,173 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* Preset Range Selector */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-          {PRESET_RANGES.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => handleSelectPreset(preset.id)}
-              className={cn(
-                "h-8 px-3 rounded-[8px] font-medium transition-all cursor-pointer whitespace-nowrap",
-                activePreset === preset.id
-                  ? "bg-[#121212] text-white shadow-2xs font-semibold"
-                  : "bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB]"
-              )}
-            >
-              {preset.label}
-            </button>
-          ))}
+        {/* Top Report Tab Switcher */}
+        <div className="flex border-b border-[#EBEBEB] gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("REPAIRS")}
+            className={cn(
+              "flex items-center gap-2 pb-2.5 px-3 text-xs font-bold transition-all cursor-pointer border-b-2",
+              activeTab === "REPAIRS"
+                ? "border-[#121212] text-[#121212]"
+                : "border-transparent text-[#767676] hover:text-[#121212]"
+            )}
+          >
+            <Wrench className="h-4 w-4" />
+            <span>Repairs &amp; Service Log</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("ACCESSORIES")}
+            className={cn(
+              "flex items-center gap-2 pb-2.5 px-3 text-xs font-bold transition-all cursor-pointer border-b-2",
+              activeTab === "ACCESSORIES"
+                ? "border-[#121212] text-[#121212]"
+                : "border-transparent text-[#767676] hover:text-[#121212]"
+            )}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            <span>Accessory Sales &amp; Invoices</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("INVENTORY")}
+            className={cn(
+              "flex items-center gap-2 pb-2.5 px-3 text-xs font-bold transition-all cursor-pointer border-b-2",
+              activeTab === "INVENTORY"
+                ? "border-[#121212] text-[#121212]"
+                : "border-transparent text-[#767676] hover:text-[#121212]"
+            )}
+          >
+            <Package className="h-4 w-4" />
+            <span>Inventory Stock</span>
+          </button>
         </div>
+
+        {/* Preset Range Selector (for Repairs & Accessories) */}
+        {activeTab !== "INVENTORY" && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            {PRESET_RANGES.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleSelectPreset(preset.id)}
+                className={cn(
+                  "h-8 px-3 rounded-[8px] font-medium transition-all cursor-pointer whitespace-nowrap",
+                  activePreset === preset.id
+                    ? "bg-[#121212] text-white shadow-2xs font-semibold"
+                    : "bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB]"
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Date Range & Status Filters */}
-        <Card className="rounded-[12px] border border-[#EBEBEB] bg-white shadow-2xs">
-          <CardContent className="p-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>From Date</span>
-              </Label>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  setActivePreset("");
-                }}
-                className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-3 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
-              />
+        {activeTab !== "INVENTORY" && (
+          <Card className="rounded-[12px] border border-[#EBEBEB] bg-white shadow-2xs">
+            <CardContent className={cn("p-4 grid gap-3", activeTab === "REPAIRS" ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+              <div>
+                <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>From Date</span>
+                </Label>
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setActivePreset("");
+                  }}
+                  className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-3 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>To Date</span>
+                </Label>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setActivePreset("");
+                  }}
+                  className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-3 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
+                />
+              </div>
+
+              {activeTab === "REPAIRS" && (
+                <div>
+                  <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
+                    <Filter className="h-3.5 w-3.5" />
+                    <span>Status Scope</span>
+                  </Label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-2.5 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
+                  >
+                    {STATUS_FILTERS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* TAB 1: REPAIRS REPORT VIEW */}
+        {activeTab === "REPAIRS" && (
+          <div className="space-y-4">
+            {/* Live Filter Summary Metric Strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Matching Tickets</p>
+                <p className="mt-1 text-lg font-bold text-[#121212]">
+                  {loadingSummary ? "..." : summary?.totalTickets ?? 0}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">
+                  {summary ? `${summary.deliveredCount} delivered` : "In date range"}
+                </p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Total Estimated Billing</p>
+                <p className="mt-1 text-lg font-bold text-[#121212]">
+                  {loadingSummary ? "..." : formatCurrency(Number(summary?.totalCost ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Across tickets</p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Advance Collected</p>
+                <p className="mt-1 text-lg font-bold text-[#0E8345]">
+                  {loadingSummary ? "..." : formatCurrency(Number(summary?.totalAdvance ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Received cash/UPI</p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Outstanding Balance</p>
+                <p className="mt-1 text-lg font-bold text-[#B35300]">
+                  {loadingSummary ? "..." : formatCurrency(Number(summary?.totalBalance ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Pending collection</p>
+              </div>
             </div>
 
-            <div>
-              <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>To Date</span>
-              </Label>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  setActivePreset("");
-                }}
-                className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-3 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
-              />
-            </div>
-
-            <div>
-              <Label className="text-[11px] font-medium text-[#767676] mb-1.5 flex items-center gap-1">
-                <Filter className="h-3.5 w-3.5" />
-                <span>Status Scope</span>
-              </Label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 w-full rounded-[8px] border border-[#EBEBEB] bg-white px-2.5 text-xs text-[#121212] focus:border-[#121212] focus:outline-none focus:ring-1 focus:ring-[#121212] transition-colors"
-              >
-                {STATUS_FILTERS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Live Filter Summary Metric Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
-            <p className="text-[11px] font-medium text-[#767676]">Matching Tickets</p>
-            <p className="mt-1 text-lg font-bold text-[#121212]">
-              {loadingSummary ? "..." : summary?.totalTickets ?? 0}
-            </p>
-            <p className="text-[10px] text-[#767676] mt-0.5">
-              {summary ? `${summary.deliveredCount} delivered` : "In date range"}
-            </p>
-          </div>
-
-          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
-            <p className="text-[11px] font-medium text-[#767676]">Total Estimated Billing</p>
-            <p className="mt-1 text-lg font-bold text-[#121212]">
-              {loadingSummary ? "..." : formatCurrency(Number(summary?.totalCost ?? 0))}
-            </p>
-            <p className="text-[10px] text-[#767676] mt-0.5">Across tickets</p>
-          </div>
-
-          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
-            <p className="text-[11px] font-medium text-[#767676]">Advance Collected</p>
-            <p className="mt-1 text-lg font-bold text-[#0E8345]">
-              {loadingSummary ? "..." : formatCurrency(Number(summary?.totalAdvance ?? 0))}
-            </p>
-            <p className="text-[10px] text-[#767676] mt-0.5">Received cash/UPI</p>
-          </div>
-
-          <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
-            <p className="text-[11px] font-medium text-[#767676]">Outstanding Balance</p>
-            <p className="mt-1 text-lg font-bold text-[#B35300]">
-              {loadingSummary ? "..." : formatCurrency(Number(summary?.totalBalance ?? 0))}
-            </p>
-            <p className="text-[10px] text-[#767676] mt-0.5">Pending collection</p>
-          </div>
-        </div>
-
-        {/* Organized Report Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-          {/* Card 1: Repair Report */}
-          <div className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs">
-            <div>
+            {/* Repair Report Download Card */}
+            <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212]">
@@ -396,79 +474,204 @@ export default function ReportsPage() {
               <p className="mt-3 text-xs text-[#767676] leading-relaxed">
                 Detailed report containing tracking tokens, customer mobile numbers, device models, issue descriptions, technician assignments, and payment balance due.
               </p>
-            </div>
 
-            <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex flex-wrap items-center gap-2">
-              {/* PDF Download */}
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={Boolean(downloadingType)}
-                onClick={() =>
-                  handleDownload(
-                    `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=pdf`,
-                    `repairs-${from}-to-${to}.pdf`,
-                    "repair-pdf"
-                  )
-                }
-                className="cursor-pointer gap-1.5 h-8.5 text-xs flex-1 min-w-[120px]"
-              >
-                {downloadingType === "repair-pdf" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileText className="h-3.5 w-3.5" />
-                )}
-                <span>Download PDF</span>
-              </Button>
+              <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handleDownload(
+                      `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=pdf`,
+                      `repairs-${from}-to-${to}.pdf`,
+                      "repair-pdf"
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs flex-1 min-w-[120px]"
+                >
+                  {downloadingType === "repair-pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="h-3.5 w-3.5" />
+                  )}
+                  <span>Download PDF</span>
+                </Button>
 
-              {/* PDF Preview / Print */}
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={Boolean(downloadingType)}
-                onClick={() =>
-                  handlePreviewPdf(
-                    `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=pdf`
-                  )
-                }
-                className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
-                title="Preview and print directly"
-              >
-                {downloadingType === "preview-pdf" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Printer className="h-3.5 w-3.5" />
-                )}
-                <span>Print</span>
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handlePreviewPdf(
+                      `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=pdf`
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  title="Preview and print directly"
+                >
+                  {downloadingType === "preview-pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Printer className="h-3.5 w-3.5" />
+                  )}
+                  <span>Print</span>
+                </Button>
 
-              {/* Excel Download */}
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={Boolean(downloadingType)}
-                onClick={() =>
-                  handleDownload(
-                    `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=xlsx`,
-                    `repairs-${from}-to-${to}.xlsx`,
-                    "repair-excel"
-                  )
-                }
-                className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8] flex-1 min-w-[120px]"
-              >
-                {downloadingType === "repair-excel" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileSpreadsheet className="h-3.5 w-3.5" />
-                )}
-                <span>Download Excel</span>
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handleDownload(
+                      `/reports/repairs?from=${from}&to=${to}${statusQuery}${storeQuery}&format=xlsx`,
+                      `repairs-${from}-to-${to}.xlsx`,
+                      "repair-excel"
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8] flex-1 min-w-[120px]"
+                >
+                  {downloadingType === "repair-excel" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                  )}
+                  <span>Download Excel</span>
+                </Button>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Card 2: Inventory & Stock Report */}
-          <div className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs">
-            <div>
+        {/* TAB 2: ACCESSORY SALES & INVOICES VIEW */}
+        {activeTab === "ACCESSORIES" && (
+          <div className="space-y-4">
+            {/* Live Filter Summary Metric Strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Accessories Sold</p>
+                <p className="mt-1 text-lg font-bold text-[#121212]">
+                  {loadingSalesSummary ? "..." : salesSummary?.totalCount ?? 0}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Completed bills</p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Total Sales Revenue</p>
+                <p className="mt-1 text-lg font-bold text-[#0E8345]">
+                  {loadingSalesSummary ? "..." : formatCurrency(Number(salesSummary?.totalRevenue ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Total collections</p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">Cash Collections</p>
+                <p className="mt-1 text-lg font-bold text-[#121212]">
+                  {loadingSalesSummary ? "..." : formatCurrency(Number(salesSummary?.cashTotal ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Cash in drawer</p>
+              </div>
+
+              <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 shadow-2xs">
+                <p className="text-[11px] font-medium text-[#767676]">UPI / Bank Collections</p>
+                <p className="mt-1 text-lg font-bold text-blue-700">
+                  {loadingSalesSummary ? "..." : formatCurrency(Number(salesSummary?.upiTotal ?? 0))}
+                </p>
+                <p className="text-[10px] text-[#767676] mt-0.5">Direct bank deposit</p>
+              </div>
+            </div>
+
+            {/* Accessory Sales Report Download Card */}
+            <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#E6F4EA] text-[#0E8345]">
+                    <ShoppingBag className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#121212]">Accessory Sales &amp; Warranty Invoices</h3>
+                    <p className="text-[11px] text-[#767676]">Filtered by selected dates &amp; branch</p>
+                  </div>
+                </div>
+                <span className="rounded-[4px] bg-[#F0F0F2] px-2 py-0.5 text-[10px] font-semibold text-[#121212]">
+                  PDF &amp; Excel
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs text-[#767676] leading-relaxed">
+                Itemized register containing official Bill Numbers, customer names &amp; mobile numbers, accessory descriptions, serial numbers, warranty durations, payment modes, and cashier/staff details.
+              </p>
+
+              <div className="mt-4 pt-3 border-t border-[#EBEBEB] flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handleDownload(
+                      `/reports/accessory-sales?from=${from}&to=${to}${storeQuery}&format=pdf`,
+                      `accessory-sales-${from}-to-${to}.pdf`,
+                      "acc-pdf"
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs flex-1 min-w-[120px]"
+                >
+                  {downloadingType === "acc-pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="h-3.5 w-3.5" />
+                  )}
+                  <span>Download PDF</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handlePreviewPdf(
+                      `/reports/accessory-sales?from=${from}&to=${to}${storeQuery}&format=pdf`
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  title="Preview and print directly"
+                >
+                  {downloadingType === "preview-pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Printer className="h-3.5 w-3.5" />
+                  )}
+                  <span>Print</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handleDownload(
+                      `/reports/accessory-sales?from=${from}&to=${to}${storeQuery}&format=xlsx`,
+                      `accessory-sales-${from}-to-${to}.xlsx`,
+                      "acc-excel"
+                    )
+                  }
+                  className="cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8] flex-1 min-w-[120px]"
+                >
+                  {downloadingType === "acc-excel" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                  )}
+                  <span>Download Excel</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: INVENTORY STOCK VIEW */}
+        {activeTab === "INVENTORY" && (
+          <div className="space-y-4">
+            <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-4 shadow-2xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212]">
@@ -487,32 +690,32 @@ export default function ReportsPage() {
               <p className="mt-3 text-xs text-[#767676] leading-relaxed">
                 Complete inventory valuation spreadsheet listing all spare parts, SKUs, in-stock quantities, cost prices, selling prices, and low stock threshold alerts.
               </p>
-            </div>
 
-            <div className="mt-4 pt-3 border-t border-[#EBEBEB]">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={Boolean(downloadingType)}
-                onClick={() =>
-                  handleDownload(
-                    `/reports/inventory?format=xlsx`,
-                    `inventory-stock-${new Date().toISOString().slice(0, 10)}.xlsx`,
-                    "inventory-excel"
-                  )
-                }
-                className="w-full cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
-              >
-                {downloadingType === "inventory-excel" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileSpreadsheet className="h-3.5 w-3.5" />
-                )}
-                <span>Download Stock Sheet (Excel)</span>
-              </Button>
+              <div className="mt-4 pt-3 border-t border-[#EBEBEB]">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(downloadingType)}
+                  onClick={() =>
+                    handleDownload(
+                      `/reports/inventory?format=xlsx`,
+                      `inventory-stock-${new Date().toISOString().slice(0, 10)}.xlsx`,
+                      "inventory-excel"
+                    )
+                  }
+                  className="w-full cursor-pointer gap-1.5 h-8.5 text-xs text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                >
+                  {downloadingType === "inventory-excel" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                  )}
+                  <span>Download Stock Sheet (Excel)</span>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </StaffLayout>
   );

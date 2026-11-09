@@ -22,9 +22,11 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.famousmobiles.domain.AccessorySale;
 import com.famousmobiles.domain.RepairTicket;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.dto.MiscDto;
+import com.famousmobiles.repository.AccessorySaleRepository;
 import com.famousmobiles.repository.InventoryItemRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
@@ -46,14 +48,19 @@ public class ReportService {
     private final RepairTicketRepository ticketRepository;
     private final PaymentRepository paymentRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final AccessorySaleRepository accessorySaleRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.of("Asia/Kolkata"));
 
-    public ReportService(RepairTicketRepository ticketRepository, PaymentRepository paymentRepository,
-            InventoryItemRepository inventoryItemRepository) {
+    public ReportService(
+            RepairTicketRepository ticketRepository,
+            PaymentRepository paymentRepository,
+            InventoryItemRepository inventoryItemRepository,
+            AccessorySaleRepository accessorySaleRepository) {
         this.ticketRepository = ticketRepository;
         this.paymentRepository = paymentRepository;
         this.inventoryItemRepository = inventoryItemRepository;
+        this.accessorySaleRepository = accessorySaleRepository;
     }
 
     public List<RepairTicket> repairReport(LocalDate from, LocalDate to, RepairStatus status, UUID storeId) {
@@ -256,6 +263,168 @@ public class ReportService {
                 row.createCell(3).setCellValue(item.getCostPrice() != null ? item.getCostPrice().doubleValue() : 0.0);
                 row.createCell(4).setCellValue(item.getSellingPrice() != null ? item.getSellingPrice().doubleValue() : 0.0);
                 row.createCell(5).setCellValue(item.isLowStock() ? "YES" : "NO");
+            }
+
+            for (int i = 0; i < cols.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            workbook.write(baos);
+            return baos.toByteArray();
+        }
+    }
+
+    public List<AccessorySale> accessorySalesReport(LocalDate from, LocalDate to, UUID storeId) {
+        Instant fromInstant = from.atStartOfDay(ZoneId.of("Asia/Kolkata")).toInstant();
+        Instant toInstant = to.plusDays(1).atStartOfDay(ZoneId.of("Asia/Kolkata")).toInstant();
+        return accessorySaleRepository.findSalesBetweenWithDetails(fromInstant, toInstant, storeId);
+    }
+
+    public MiscDto.AccessorySalesReportSummary getAccessorySalesSummary(LocalDate from, LocalDate to, UUID storeId) {
+        List<AccessorySale> sales = accessorySalesReport(from, to, storeId);
+        List<AccessorySale> active = sales.stream()
+                .filter(s -> !"CANCELLED".equalsIgnoreCase(s.getStatus()))
+                .toList();
+
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal cashTotal = BigDecimal.ZERO;
+        BigDecimal upiTotal = BigDecimal.ZERO;
+        BigDecimal cardTotal = BigDecimal.ZERO;
+
+        for (AccessorySale s : active) {
+            BigDecimal price = s.getPrice() != null ? s.getPrice() : BigDecimal.ZERO;
+            totalRevenue = totalRevenue.add(price);
+            String mode = s.getPaymentMode() != null ? s.getPaymentMode().trim().toUpperCase() : "UPI";
+            if ("CASH".equals(mode)) {
+                cashTotal = cashTotal.add(price);
+            } else if ("CARD".equals(mode)) {
+                cardTotal = cardTotal.add(price);
+            } else {
+                upiTotal = upiTotal.add(price);
+            }
+        }
+
+        return new MiscDto.AccessorySalesReportSummary(active.size(), totalRevenue, cashTotal, upiTotal, cardTotal);
+    }
+
+    public byte[] exportAccessorySalesPdf(LocalDate from, LocalDate to, UUID storeId) throws Exception {
+        List<AccessorySale> sales = accessorySalesReport(from, to, storeId);
+
+        Document document = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter.getInstance(document, baos);
+        document.open();
+
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, new Color(18, 18, 18));
+        Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(118, 118, 118));
+        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.WHITE);
+        Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 8, new Color(18, 18, 18));
+        Font cellBoldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, new Color(18, 18, 18));
+        Font cancelledFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, new Color(179, 38, 30));
+        Font activeFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, new Color(14, 131, 69));
+
+        Paragraph title = new Paragraph("Famous Mobiles - Accessory Sales & Invoices Report", titleFont);
+        title.setSpacingAfter(2);
+        document.add(title);
+
+        String scopeText = "Date Range: " + from.format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + " to " +
+                to.format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + " | Generated on: " +
+                LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+        Paragraph subtitle = new Paragraph(scopeText, subtitleFont);
+        subtitle.setSpacingAfter(10);
+        document.add(subtitle);
+
+        // Compute active totals
+        BigDecimal totalActiveAmt = sales.stream()
+                .filter(s -> !"CANCELLED".equalsIgnoreCase(s.getStatus()))
+                .map(s -> s.getPrice() != null ? s.getPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long activeCount = sales.stream().filter(s -> !"CANCELLED".equalsIgnoreCase(s.getStatus())).count();
+        long voidCount = sales.size() - activeCount;
+
+        Paragraph kpiSummary = new Paragraph(
+                "Total Items Sold: " + activeCount + (voidCount > 0 ? " (" + voidCount + " voided)" : "") +
+                "  |  Total Sales Revenue: INR " + totalActiveAmt.toPlainString(),
+                cellBoldFont
+        );
+        kpiSummary.setSpacingAfter(8);
+        document.add(kpiSummary);
+
+        PdfPTable table = new PdfPTable(new float[]{4f, 13f, 12f, 13f, 10f, 18f, 9f, 9f, 9f, 8f});
+        table.setWidthPercentage(100);
+
+        String[] headers = {"#", "Bill No", "Date / Time", "Customer", "Mobile", "Accessory Item", "Warranty", "Mode", "Price", "Status"};
+        for (String h : headers) {
+            PdfPCell cell = new PdfPCell(new Phrase(h, headerFont));
+            cell.setBackgroundColor(new Color(18, 18, 18));
+            cell.setPadding(5f);
+            cell.setBorder(0);
+            table.addCell(cell);
+        }
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a").withZone(ZoneId.of("Asia/Kolkata"));
+        int idx = 1;
+        for (AccessorySale s : sales) {
+            Color rowBg = (idx % 2 == 0) ? new Color(247, 247, 248) : Color.WHITE;
+            boolean isCancelled = "CANCELLED".equalsIgnoreCase(s.getStatus());
+
+            addTableCell(table, String.valueOf(idx++), cellFont, rowBg);
+            addTableCell(table, s.getBillNumber(), cellBoldFont, rowBg);
+            addTableCell(table, s.getSoldAt() != null ? dtf.format(s.getSoldAt()) : "-", cellFont, rowBg);
+            addTableCell(table, s.getCustomerName(), cellFont, rowBg);
+            addTableCell(table, s.getCustomerMobile(), cellFont, rowBg);
+            addTableCell(table, s.getAccessoryName(), cellFont, rowBg);
+            addTableCell(table, s.getWarrantyMonths() != null && s.getWarrantyMonths() > 0 ? s.getWarrantyMonths() + " Mo" : "None", cellFont, rowBg);
+            addTableCell(table, s.getPaymentMode() != null ? s.getPaymentMode() : "UPI", cellFont, rowBg);
+            addTableCell(table, "INR " + (s.getPrice() != null ? s.getPrice().toPlainString() : "0"), cellBoldFont, rowBg);
+            addTableCell(table, isCancelled ? "VOID" : "PAID", isCancelled ? cancelledFont : activeFont, rowBg);
+        }
+
+        document.add(table);
+        document.close();
+        return baos.toByteArray();
+    }
+
+    public byte[] exportAccessorySalesExcel(LocalDate from, LocalDate to, UUID storeId) throws Exception {
+        List<AccessorySale> sales = accessorySalesReport(from, to, storeId);
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Accessory Sales");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font hFont = workbook.createFont();
+            hFont.setBold(true);
+            headerStyle.setFont(hFont);
+            headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+
+            Row header = sheet.createRow(0);
+            String[] cols = {"#", "Bill Number", "Date / Time", "Customer Name", "Customer Mobile", "Accessory Item", "Serial / IMEI", "Warranty (Months)", "Payment Mode", "Price (INR)", "Status", "Sold By"};
+            for (int i = 0; i < cols.length; i++) {
+                var cell = header.createCell(i);
+                cell.setCellValue(cols[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm").withZone(ZoneId.of("Asia/Kolkata"));
+            int rowIdx = 1;
+            for (AccessorySale s : sales) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(rowIdx - 1);
+                row.createCell(1).setCellValue(s.getBillNumber());
+                row.createCell(2).setCellValue(s.getSoldAt() != null ? dtf.format(s.getSoldAt()) : "");
+                row.createCell(3).setCellValue(s.getCustomerName());
+                row.createCell(4).setCellValue(s.getCustomerMobile());
+                row.createCell(5).setCellValue(s.getAccessoryName());
+                row.createCell(6).setCellValue(s.getSerialNumber() != null ? s.getSerialNumber() : "");
+                row.createCell(7).setCellValue(s.getWarrantyMonths() != null ? s.getWarrantyMonths() : 0);
+                row.createCell(8).setCellValue(s.getPaymentMode() != null ? s.getPaymentMode() : "UPI");
+                row.createCell(9).setCellValue(s.getPrice() != null ? s.getPrice().doubleValue() : 0.0);
+                row.createCell(10).setCellValue(s.getStatus() != null ? s.getStatus() : "COMPLETED");
+                row.createCell(11).setCellValue(s.getSoldBy() != null ? s.getSoldBy().getFullName() : "");
             }
 
             for (int i = 0; i < cols.length; i++) {

@@ -51,7 +51,10 @@ public final class PaymentDto {
             String notes,
             String recordedByName,
             String createdAt,
-            BigDecimal balanceAmount
+            BigDecimal balanceAmount,
+            String itemType,
+            String billNumber,
+            String accessoryName
     ) {
         public static DetailedPaymentResponse from(Payment p) {
             var t = p.getTicket();
@@ -69,7 +72,37 @@ public final class PaymentDto {
                     p.getNotes(),
                     p.getRecordedBy() != null ? p.getRecordedBy().getFullName() : "Staff",
                     p.getCreatedAt().toString(),
-                    t.getBalanceAmount()
+                    t.getBalanceAmount(),
+                    "REPAIR",
+                    t.getTrackingNumber(),
+                    null
+            );
+        }
+
+        public static DetailedPaymentResponse from(com.famousmobiles.domain.AccessorySale a) {
+            PaymentMode mode = PaymentMode.UPI;
+            if (a.getPaymentMode() != null) {
+                try {
+                    mode = PaymentMode.valueOf(a.getPaymentMode().trim().toUpperCase());
+                } catch (Exception ignored) {}
+            }
+            return new DetailedPaymentResponse(
+                    a.getId(),
+                    null,
+                    a.getBillNumber(),
+                    a.getCustomerName(),
+                    a.getCustomerMobile(),
+                    "Accessory",
+                    a.getAccessoryName(),
+                    a.getPrice(),
+                    mode,
+                    a.getNotes(),
+                    a.getSoldBy() != null ? a.getSoldBy().getFullName() : "Staff",
+                    a.getSoldAt() != null ? a.getSoldAt().toString() : a.getCreatedAt().toString(),
+                    BigDecimal.ZERO,
+                    "ACCESSORY_SALE",
+                    a.getBillNumber(),
+                    a.getAccessoryName()
             );
         }
     }
@@ -80,6 +113,10 @@ public final class PaymentDto {
             BigDecimal upiTotal,
             BigDecimal cardTotal,
             int transactionCount,
-            java.util.List<DetailedPaymentResponse> payments
+            java.util.List<DetailedPaymentResponse> payments,
+            BigDecimal repairRevenue,
+            BigDecimal salesRevenue,
+            int repairCount,
+            int salesCount
     ) {}
 }

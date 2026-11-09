@@ -56,6 +56,33 @@ public class ReportController {
                 .body(data);
     }
 
+    @GetMapping("/accessory-sales/summary")
+    public MiscDto.AccessorySalesReportSummary accessorySalesSummary(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to,
+            @RequestParam(required = false) UUID storeId) {
+        return reportService.getAccessorySalesSummary(from, to, storeId);
+    }
+
+    @GetMapping("/accessory-sales")
+    public ResponseEntity<byte[]> accessorySales(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to,
+            @RequestParam(required = false) UUID storeId,
+            @RequestParam(defaultValue = "pdf") String format) throws Exception {
+        byte[] data = "xlsx".equals(format)
+                ? reportService.exportAccessorySalesExcel(from, to, storeId)
+                : reportService.exportAccessorySalesPdf(from, to, storeId);
+        String contentType = "xlsx".equals(format)
+                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                : MediaType.APPLICATION_PDF_VALUE;
+        String ext = "xlsx".equals(format) ? "xlsx" : "pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=accessory-sales-" + from + "-to-" + to + "." + ext)
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(data);
+    }
+
     @GetMapping("/inventory")
     public ResponseEntity<byte[]> inventory(@RequestParam(defaultValue = "xlsx") String format) throws Exception {
         byte[] data = reportService.exportInventoryExcel();

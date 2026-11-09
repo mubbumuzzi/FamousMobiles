@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.famousmobiles.domain.AccessorySale;
 import com.famousmobiles.domain.Payment;
 import com.famousmobiles.domain.RepairTicket;
 import com.famousmobiles.domain.TicketStatusHistory;
@@ -19,6 +20,7 @@ import com.famousmobiles.domain.enums.UserRole;
 import com.famousmobiles.dto.PaymentDto;
 import com.famousmobiles.dto.TicketDto;
 import com.famousmobiles.exception.ForbiddenException;
+import com.famousmobiles.repository.AccessorySaleRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
 import com.famousmobiles.repository.TicketStatusHistoryRepository;
@@ -28,15 +30,21 @@ import com.famousmobiles.security.SecurityUtils;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final AccessorySaleRepository accessorySaleRepository;
     private final TicketService ticketService;
     private final RepairTicketRepository ticketRepository;
     private final TicketStatusHistoryRepository historyRepository;
     private final SecurityUtils securityUtils;
 
-    public PaymentService(PaymentRepository paymentRepository, TicketService ticketService,
-            RepairTicketRepository ticketRepository, TicketStatusHistoryRepository historyRepository,
+    public PaymentService(
+            PaymentRepository paymentRepository,
+            AccessorySaleRepository accessorySaleRepository,
+            TicketService ticketService,
+            RepairTicketRepository ticketRepository,
+            TicketStatusHistoryRepository historyRepository,
             SecurityUtils securityUtils) {
         this.paymentRepository = paymentRepository;
+        this.accessorySaleRepository = accessorySaleRepository;
         this.ticketService = ticketService;
         this.ticketRepository = ticketRepository;
         this.historyRepository = historyRepository;
@@ -128,15 +136,22 @@ public class PaymentService {
                     .toList();
         }
 
+        List<AccessorySale> todaySales = accessorySaleRepository.findSalesSinceWithDetails(startOfDay);
+        todaySales = todaySales.stream()
+                .filter(s -> !"CANCELLED".equalsIgnoreCase(s.getStatus()))
+                .filter(s -> storeId == null || (s.getStore() != null && storeId.equals(s.getStore().getId())))
+                .toList();
+
         BigDecimal cashTotal = BigDecimal.ZERO;
         BigDecimal upiTotal = BigDecimal.ZERO;
         BigDecimal cardTotal = BigDecimal.ZERO;
-        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal repairRevenue = BigDecimal.ZERO;
+        BigDecimal salesRevenue = BigDecimal.ZERO;
 
         List<PaymentDto.DetailedPaymentResponse> items = new ArrayList<>();
         for (Payment p : todayPayments) {
             BigDecimal amt = p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO;
-            totalRevenue = totalRevenue.add(amt);
+            repairRevenue = repairRevenue.add(amt);
             if (p.getPaymentMode() == PaymentMode.CASH) {
                 cashTotal = cashTotal.add(amt);
             } else if (p.getPaymentMode() == PaymentMode.UPI) {
@@ -147,13 +162,40 @@ public class PaymentService {
             items.add(PaymentDto.DetailedPaymentResponse.from(p));
         }
 
+        for (AccessorySale s : todaySales) {
+            BigDecimal amt = s.getPrice() != null ? s.getPrice() : BigDecimal.ZERO;
+            salesRevenue = salesRevenue.add(amt);
+            String modeStr = s.getPaymentMode() != null ? s.getPaymentMode().trim().toUpperCase() : "UPI";
+            if ("CASH".equals(modeStr)) {
+                cashTotal = cashTotal.add(amt);
+            } else if ("CARD".equals(modeStr)) {
+                cardTotal = cardTotal.add(amt);
+            } else {
+                upiTotal = upiTotal.add(amt);
+            }
+            items.add(PaymentDto.DetailedPaymentResponse.from(s));
+        }
+
+        // Sort items by created/sold timestamp descending
+        items.sort((a, b) -> {
+            if (a.createdAt() == null) return 1;
+            if (b.createdAt() == null) return -1;
+            return b.createdAt().compareTo(a.createdAt());
+        });
+
+        BigDecimal totalRevenue = repairRevenue.add(salesRevenue);
+
         return new PaymentDto.TodayRevenueSummary(
                 totalRevenue,
                 cashTotal,
                 upiTotal,
                 cardTotal,
                 items.size(),
-                items
+                items,
+                repairRevenue,
+                salesRevenue,
+                todayPayments.size(),
+                todaySales.size()
         );
     }
 }

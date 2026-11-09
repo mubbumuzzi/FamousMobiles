@@ -53,6 +53,13 @@ public class AccessorySaleController {
         return accessorySaleService.getById(id);
     }
 
+    @PostMapping("/{id}/void")
+    public AccessorySaleDto.AccessorySaleResponse voidSale(
+            @PathVariable UUID id,
+            @RequestBody(required = false) AccessorySaleDto.VoidSaleRequest request) {
+        return accessorySaleService.voidSale(id, request);
+    }
+
     @GetMapping("/{id}/receipt/pdf")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> receipt(

@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.famousmobiles.domain.enums.RepairStatus;
+import com.famousmobiles.repository.AccessorySaleRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
 import com.famousmobiles.service.DashboardService;
@@ -28,6 +29,7 @@ class DashboardServiceTest {
 
     @Mock private RepairTicketRepository ticketRepository;
     @Mock private PaymentRepository paymentRepository;
+    @Mock private AccessorySaleRepository accessorySaleRepository;
 
     @InjectMocks private DashboardService dashboardService;
 
@@ -43,15 +45,20 @@ class DashboardServiceTest {
         statusCounts.add(new Object[]{RepairStatus.READY_FOR_PICKUP, 0L});
         when(ticketRepository.countGroupByStatus(isNull())).thenReturn(statusCounts);
         when(paymentRepository.sumPaymentsSince(any(Instant.class), isNull())).thenReturn(new BigDecimal("1500"));
+        when(accessorySaleRepository.sumSalesSince(any(Instant.class), isNull())).thenReturn(new BigDecimal("500"));
+        when(accessorySaleRepository.countSalesSince(any(Instant.class), isNull())).thenReturn(2L);
 
         var metrics = dashboardService.getMetrics(true);
 
         assertEquals(1L, metrics.devicesReceivedToday());
         assertEquals(1L, metrics.devicesUnderRepair());
         assertEquals(0L, metrics.deliveredToday());
-        assertEquals(new BigDecimal("1500"), metrics.revenueToday());
-        assertEquals(new BigDecimal("1500"), metrics.revenueThisWeek());
-        assertEquals(new BigDecimal("1500"), metrics.revenueThisMonth());
+        assertEquals(new BigDecimal("2000"), metrics.revenueToday());
+        assertEquals(new BigDecimal("2000"), metrics.revenueThisWeek());
+        assertEquals(new BigDecimal("2000"), metrics.revenueThisMonth());
+        assertEquals(new BigDecimal("1500"), metrics.repairRevenueToday());
+        assertEquals(new BigDecimal("500"), metrics.salesRevenueToday());
+        assertEquals(2L, metrics.accessorySalesCountToday());
     }
 
     @Test

@@ -79,11 +79,22 @@ export function buildWhatsAppDayEndSummaryUrl(
     year: "numeric",
   });
 
-  const message = [
+  const lines = [
     `📊 *FAMOUS MOBILES — DAY-END REPORT*`,
     `📅 Date: ${dateStr}`,
     `───────────────────────────`,
     `💰 *Total Collections:* ${formatCurrency(Number(summary.totalRevenue || 0))}`,
+  ];
+
+  if ((summary.repairCount ?? 0) > 0 || (summary.salesCount ?? 0) > 0) {
+    lines.push(
+      `  • 🔧 *Repairs:* ${formatCurrency(Number(summary.repairRevenue || 0))} (${summary.repairCount || 0} jobs)`,
+      `  • 🛍️ *Counter Sales:* ${formatCurrency(Number(summary.salesRevenue || 0))} (${summary.salesCount || 0} items)`
+    );
+  }
+
+  lines.push(
+    `───────────────────────────`,
     `💵 *Cash in Drawer:* ${formatCurrency(Number(summary.cashTotal || 0))}`,
     `📱 *UPI / Bank:* ${formatCurrency(Number(summary.upiTotal || 0))}`,
     `💳 *Card Swipes:* ${formatCurrency(Number(summary.cardTotal || 0))}`,
@@ -92,8 +103,8 @@ export function buildWhatsAppDayEndSummaryUrl(
     `📥 *Devices Intake Today:* ${devicesReceivedToday}`,
     `✅ *Devices Delivered Today:* ${devicesDeliveredToday}`,
     `───────────────────────────`,
-    `System closed & verified.`,
-  ].join("\n");
+    `System closed & verified.`
+  );
 
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
 }

@@ -27,6 +27,10 @@ public final class AccessorySaleDto {
             UUID storeId
     ) {}
 
+    public record VoidSaleRequest(
+            String reason
+    ) {}
+
     public record AccessorySaleResponse(
             UUID id,
             String billNumber,
@@ -43,7 +47,11 @@ public final class AccessorySaleDto {
             String soldByName,
             String storeName,
             Instant soldAt,
-            Instant createdAt
+            Instant createdAt,
+            String status,
+            Instant cancelledAt,
+            String cancelledByName,
+            String cancellationReason
     ) {
         public static AccessorySaleResponse from(AccessorySale sale) {
             return new AccessorySaleResponse(
@@ -62,7 +70,11 @@ public final class AccessorySaleDto {
                     sale.getSoldBy() != null ? sale.getSoldBy().getFullName() : null,
                     sale.getStore() != null ? sale.getStore().getName() : null,
                     sale.getSoldAt(),
-                    sale.getCreatedAt()
+                    sale.getCreatedAt(),
+                    sale.getStatus(),
+                    sale.getCancelledAt(),
+                    sale.getCancelledBy() != null ? sale.getCancelledBy().getFullName() : null,
+                    sale.getCancellationReason()
             );
         }
     }

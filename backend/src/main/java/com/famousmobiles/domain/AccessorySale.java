@@ -60,6 +60,19 @@ public class AccessorySale extends BaseEntity {
     @Column(name = "sold_at", nullable = false)
     private Instant soldAt = Instant.now();
 
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "COMPLETED";
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelled_by")
+    private User cancelledBy;
+
+    @Column(name = "cancellation_reason", length = 255)
+    private String cancellationReason;
+
     public String getBillNumber() {
         return billNumber;
     }
@@ -170,5 +183,37 @@ public class AccessorySale extends BaseEntity {
 
     public void setSoldAt(Instant soldAt) {
         this.soldAt = soldAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Instant getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(Instant cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public User getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public void setCancelledBy(User cancelledBy) {
+        this.cancelledBy = cancelledBy;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
     }
 }

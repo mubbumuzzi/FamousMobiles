@@ -84,14 +84,22 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       key: "revenueToday" as MetricDrilldownType,
       label: "Revenue Today",
       value: loading ? null : formatCurrency(Number(metrics?.revenueToday ?? 0)),
-      helper: "Day-end total",
+      helper: loading
+        ? "Day-end total"
+        : (metrics?.repairRevenueToday !== undefined && metrics?.salesRevenueToday !== undefined && (metrics.repairRevenueToday > 0 || metrics.salesRevenueToday > 0))
+          ? `Repairs: ${formatCurrency(metrics.repairRevenueToday)} · Sales: ${formatCurrency(metrics.salesRevenueToday)}`
+          : "Day-end total",
       dot: null,
     },
     {
       key: "revenueMonth" as MetricDrilldownType,
       label: "Revenue (Month)",
       value: loading ? null : formatCurrency(Number(metrics?.revenueThisMonth ?? 0)),
-      helper: "Monthly billing",
+      helper: loading
+        ? "Monthly billing"
+        : (metrics?.repairRevenueThisMonth !== undefined && metrics?.salesRevenueThisMonth !== undefined && (metrics.repairRevenueThisMonth > 0 || metrics.salesRevenueThisMonth > 0))
+          ? `Repairs: ${formatCurrency(metrics.repairRevenueThisMonth)} · Sales: ${formatCurrency(metrics.salesRevenueThisMonth)}`
+          : "Monthly billing",
       dot: null,
     },
     {

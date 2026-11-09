@@ -28,6 +28,7 @@ import com.famousmobiles.domain.enums.DeviceType;
 import com.famousmobiles.domain.enums.RepairStatus;
 import com.famousmobiles.domain.enums.UserRole;
 import com.famousmobiles.dto.TicketDto;
+import com.famousmobiles.repository.AccessorySaleRepository;
 import com.famousmobiles.repository.DevicePhotoRepository;
 import com.famousmobiles.repository.PaymentRepository;
 import com.famousmobiles.repository.RepairTicketRepository;
@@ -56,6 +57,7 @@ public class MultiStoreServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private FileStorageService fileStorageService;
     @Mock private PaymentRepository paymentRepository;
+    @Mock private AccessorySaleRepository accessorySaleRepository;
     @Mock private SecurityUtils securityUtils;
     @Mock private StoreRepository storeRepository;
 
@@ -83,7 +85,7 @@ public class MultiStoreServiceTest {
                 storeRepository
         );
 
-        dashboardService = new DashboardService(ticketRepository, paymentRepository);
+        dashboardService = new DashboardService(ticketRepository, paymentRepository, accessorySaleRepository);
 
         store1 = new Store();
         store1.setId(UUID.randomUUID());

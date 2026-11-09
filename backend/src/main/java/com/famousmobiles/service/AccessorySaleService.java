@@ -17,6 +17,7 @@ import com.famousmobiles.domain.User;
 import com.famousmobiles.dto.AccessorySaleDto;
 import com.famousmobiles.dto.CustomerDto;
 import com.famousmobiles.exception.BadRequestException;
+import com.famousmobiles.exception.ForbiddenException;
 import com.famousmobiles.exception.ResourceNotFoundException;
 import com.famousmobiles.repository.AccessorySaleRepository;
 import com.famousmobiles.repository.CustomerRepository;
@@ -161,5 +162,27 @@ public class AccessorySaleService {
                 .stream()
                 .map(AccessorySaleDto.AccessorySaleResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public AccessorySaleDto.AccessorySaleResponse voidSale(UUID id, AccessorySaleDto.VoidSaleRequest req) {
+        if (!securityUtils.isAdmin()) {
+            throw new ForbiddenException("Only admin can void an accessory sale");
+        }
+        AccessorySale sale = getEntity(id);
+        if ("CANCELLED".equalsIgnoreCase(sale.getStatus())) {
+            throw new BadRequestException("This sale is already cancelled");
+        }
+        sale.setStatus("CANCELLED");
+        sale.setCancelledAt(Instant.now());
+        try {
+            sale.setCancelledBy(securityUtils.getCurrentUser());
+        } catch (Exception ignored) {}
+        sale.setCancellationReason(req != null && req.reason() != null && !req.reason().isBlank()
+                ? req.reason().trim()
+                : "Voided by Admin");
+
+        AccessorySale updated = accessorySaleRepository.save(sale);
+        return AccessorySaleDto.AccessorySaleResponse.from(updated);
     }
 }

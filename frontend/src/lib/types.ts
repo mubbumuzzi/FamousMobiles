@@ -154,6 +154,11 @@ export interface DashboardMetrics {
   revenueThisWeek?: number;
   revenueThisMonth?: number;
   statusBreakdown: Record<string, number>;
+  repairRevenueToday?: number;
+  salesRevenueToday?: number;
+  repairRevenueThisMonth?: number;
+  salesRevenueThisMonth?: number;
+  accessorySalesCountToday?: number;
 }
 
 export interface Technician {
@@ -179,7 +184,7 @@ export interface Payment {
 
 export interface DetailedPayment {
   id: string;
-  ticketId: string;
+  ticketId?: string | null;
   trackingNumber: string;
   customerName: string;
   customerMobile: string;
@@ -191,6 +196,9 @@ export interface DetailedPayment {
   recordedByName: string;
   createdAt: string;
   balanceAmount: number;
+  itemType?: "REPAIR" | "ACCESSORY_SALE" | string;
+  billNumber?: string;
+  accessoryName?: string;
 }
 
 export interface TodayRevenueSummary {
@@ -200,6 +208,10 @@ export interface TodayRevenueSummary {
   cardTotal: number;
   transactionCount: number;
   payments: DetailedPayment[];
+  repairRevenue?: number;
+  salesRevenue?: number;
+  repairCount?: number;
+  salesCount?: number;
 }
 
 export type MetricDrilldownType =
@@ -277,6 +289,18 @@ export interface AccessorySale {
   storeName?: string | null;
   soldAt: string;
   createdAt: string;
+  status?: "COMPLETED" | "CANCELLED" | string;
+  cancelledAt?: string | null;
+  cancelledByName?: string | null;
+  cancellationReason?: string | null;
+}
+
+export interface AccessorySaleReportSummary {
+  totalCount: number;
+  totalRevenue: number;
+  cashTotal: number;
+  upiTotal: number;
+  cardTotal: number;
 }
 
 export interface CreateAccessorySaleRequest {
