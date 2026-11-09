@@ -25,34 +25,47 @@ A mobile-first PWA and native Android app for Famous Mobiles repair shop in Hyde
   - **All Stores** aggregated overview for Administrators.
 
 ### 2. Admin & Reception Dashboards (`/dashboard`)
-- **Executive Metric Strip**: Real-time revenue, active workshop repairs, overdue alerts, ready pickups, and intakes.
+- **Executive Metric Strip**: Real-time unified store revenue (Repairs + Counter Accessory Sales), active workshop repairs, overdue alerts, ready pickups, and intakes.
+- **Unified Revenue Tracking**: "Revenue Today" and "Revenue (Month)" show total business intake with live subtitle breakdowns (`Repairs: ₹X · Sales: ₹Y`). Revenue remains strictly hidden from non-admin staff.
+- **Day-End Cash & Bank Reconciliation**: Clicking "Revenue Today" opens a drilldown drawer calculating physical cash in drawer, digital UPI bank deposits, and POS card swipes across all transactions, plus an itemized ledger with `[Repair]` and `[Sale]` badges.
+- **WhatsApp Day-End Closing**: 1-click generator that formats a verified daily closing message sent to the proprietor (+91 90637 86751).
 - **Stock & Parts Demands Snapshot**: Compact executive radar showing pending wholesale demands, blocked workshop repairs, and 1-tap Call/WhatsApp actions without endless vertical scroll.
 - **Workshop Queue**: Real-time cards with device model, reported issue snippets, assigned technician, and 1-tap customer communication.
 - **Analytics & Breakdown**: Device status pie chart and top brand distribution.
 
-### 3. Stock & Accessories Demand Board (`/stock-orders`)
-- **2-Column Responsive Board**: Eliminates desktop dead space with clean card density.
-- **Automated Accessory Tags**: Intelligent badge detection (`Back Cover`, `Tempered Glass`, `Display`, `Battery`, `Camera`, `Charging`).
-- **1-Tap Customer Actions**: Direct `tel:` calling and dynamic WhatsApp templates for both *Waiting Wholesale* updates and *Store Arrival* pickups.
-- **Wholesaler Order Sanitizer**: 1-click clipboard export that automatically strips customer personal data and phone numbers for clean distributor sharing.
+### 3. Stock Demand & Sold Accessories Tracker (`/stock-orders`)
+- **Top Tab Switcher**: Seamlessly toggle between **Special Stock Demands** and **Sold Accessories & Warranties**.
+- **Special Demands Board**: 2-column responsive board with automated accessory tags (`Back Cover`, `Tempered Glass`, `Display`, `Battery`), 1-tap calling/WhatsApp, and wholesale order sanitizer.
+- **Instant Counter Sales ("Sell Accessory & Bill")**: Counter sale intake for walk-in accessories with custom prices, payment mode (`CASH`, `UPI`, `CARD`), and configurable warranty (defaults to 0 days, up to 12 months).
+- **Live Warranty Tracker**: Real-time calculation showing `In Warranty (Xd left)`, `Expired`, or `No Warranty` with quick filter pills.
+- **Admin Void / Cancellation**: Admins can void mistaken sales entries with a reason, immediately deducting the amount from today's revenue, drawer, and reports.
+- **Universal Search Integration**: Accessory sales and live warranty status searchable alongside repair tickets in `/search`.
 
 ### 4. Advanced Reports & Exports (`/reports`)
-- **Landscape Tabular PDF**: 8-column structured table with token, date, customer, device, issue, status, technician, and balance due.
-- **14-Column Excel Sheet**: Complete workbook with auto-sized columns and financial summaries.
-- **Live Metric Strip**: Real-time calculations (delivered count, total billing, advance collected, outstanding receivables) prior to export.
-- **Quick Presets**: 1-tap date filters (*Today*, *Yesterday*, *This Week*, *This Month*, *Last 30 Days*, *Last Month*, *All Time*).
+- **Top Tab Switcher**: Dedicated views for **Repairs & Service Log**, **Accessory Sales & Invoices**, and **Inventory Stock**.
+- **Repairs Log**: Landscape tabular PDF & 14-column Excel workbook with ticket tracking tokens, device models, issue descriptions, technician assignments, and balance due.
+- **Accessory Sales Reports**: Itemized register of sold accessories with date range presets (`Today`, `Yesterday`, `This Week`, `This Month`, `Last 30 Days`, `All Time`), summary KPI cards (Items Sold, Sales Revenue, Cash, UPI, Card), and 1-click **Download PDF**, **Print Preview**, and **Download Excel (.xlsx)**.
+- **Live Metric Strip**: Real-time financial calculations prior to export.
 - **Direct Preview & Print**: In-browser PDF preview alongside secure token-mutex downloads.
 
-### 5. Universal Search (`/search`)
+### 5. Official Digital Signature & Receipts
+- **Proprietor Signature**: High-resolution cursive digital signature of **Md Basheer Uddin** rendered in fountain-pen royal blue ink with flourish underline.
+- **Standardized Footer Layout**: Balanced 3-column layout on both Repair Receipts and Accessory Warranty Invoices:
+  1. Terms & Conditions
+  2. Digital Signature block ("For Famous Mobiles", stylized cursive signature, "Md. Basheer Uddin (Proprietor)", "✓ Digitally Signed")
+  3. Store QR Code ("Scan to call shop")
+- Single and duplicate receipts fit cleanly on standard A4 paper without overflow.
+
+### 6. Universal Search (`/search`)
 - **Interactive Zero-State**: Suggestion chips and format guidance cards (*Token*, *Phone Number*, *Device/IMEI*).
 - **Brand-Aware Database Matching**: Eager search querying brands (`Samsung`, `iPhone`, `Vivo`), customer names, and tracking tokens.
-- **Scope Filters**: Quick tabs for *All Results*, *Tickets*, and *Customers*.
+- **Scope Filters**: Quick tabs for *All Results*, *Tickets*, *Customers*, and *Accessory Warranty*.
 
-### 6. Customers Directory (`/customers`)
+### 7. Customers Directory (`/customers`)
 - **Responsive 2-Column Grid**: Cohesive layout with circular monogram avatars (`MU`, `SA`, `SC`).
 - **Clean Location Display**: Automatic sanitization of invalid placeholder addresses with genuine `<MapPin>` locations.
 
-### 7. Device Intake Wizard (`/tickets/new`)
+### 8. Device Intake Wizard (`/tickets/new`)
 - **Strict 10-Digit Mobile Matching**: Instant customer directory lookup without premature triggers.
 - **Mandatory Intake Camera Photos**: Enforces 1 to 2 condition photos before intake.
 - **Client-Side Image Compression**: In-browser HTML5 canvas compressor reducing multi-megabyte camera photos to ~150KB before upload.
