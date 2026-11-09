@@ -159,5 +159,44 @@ class PdfReceiptServiceTest {
         assertEquals(1, reader.getNumberOfPages(), "Accessory bill must fit on a single page");
         assertEquals(PageSize.A4.getWidth(), reader.getPageSize(1).getWidth(), 0.5f);
         assertEquals(PageSize.A4.getHeight(), reader.getPageSize(1).getHeight(), 0.5f);
+
+        byte[] pageContent = reader.getPageContent(1);
+        String contentString = new String(pageContent);
+        assertTrue(contentString.contains("ACCESSORY SALE & WARRANTY BILL"), "Should have warranty bill title");
+        assertTrue(contentString.contains("Replacement Warranty"), "Should have warranty text");
+    }
+
+    @Test
+    void generateAccessoryWarrantyBill_zeroWarranty_shouldProduceInvoiceWithoutWarrantyRow() throws Exception {
+        when(appProperties.shop()).thenReturn(null);
+
+        Path receiptFile = tempDir.resolve("FM-ACC-TEST02.pdf");
+        when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
+
+        AccessorySale sale = new AccessorySale();
+        sale.setId(UUID.randomUUID());
+        sale.setBillNumber("FM-ACC-2026-00002");
+        sale.setCustomerName("Aamer Khan");
+        sale.setCustomerMobile("9123456789");
+        sale.setAccessoryName("Tempered Glass");
+        sale.setPrice(new BigDecimal("150.00"));
+        sale.setPaymentMode("UPI");
+        sale.setWarrantyMonths(0);
+        sale.setWarrantyExpiresAt(null);
+        sale.setSoldAt(Instant.now());
+
+        byte[] pdfBytes = pdfReceiptService.generateAccessoryWarrantyBill(sale, false);
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+
+        PdfReader reader = new PdfReader(pdfBytes);
+        assertEquals(1, reader.getNumberOfPages(), "Accessory bill must fit on a single page");
+
+        byte[] pageContent = reader.getPageContent(1);
+        String contentString = new String(pageContent);
+        assertTrue(contentString.contains("ACCESSORY SALE INVOICE"), "Should have invoice title when warranty is 0");
+        assertTrue(!contentString.contains("ACCESSORY SALE & WARRANTY BILL"), "Should not have warranty bill title");
+        assertTrue(!contentString.contains("Replacement Warranty"), "Should not mention replacement warranty");
     }
 }

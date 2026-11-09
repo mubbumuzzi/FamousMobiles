@@ -138,11 +138,14 @@ public class PdfReceiptService {
         receiptMetaCell.setBorder(Rectangle.NO_BORDER);
         receiptMetaCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
+        int warrantyMonths = sale.getWarrantyMonths() != null ? sale.getWarrantyMonths() : 0;
+
         Paragraph badgePara = new Paragraph("[ " + copyLabel + " ]", badgeFont);
         badgePara.setAlignment(Element.ALIGN_RIGHT);
         receiptMetaCell.addElement(badgePara);
 
-        Paragraph receiptTitle = new Paragraph("ACCESSORY SALE & WARRANTY BILL", headerTitleFont);
+        String receiptTitleText = warrantyMonths > 0 ? "ACCESSORY SALE & WARRANTY BILL" : "ACCESSORY SALE INVOICE";
+        Paragraph receiptTitle = new Paragraph(receiptTitleText, headerTitleFont);
         receiptTitle.setAlignment(Element.ALIGN_RIGHT);
         receiptMetaCell.addElement(receiptTitle);
 
@@ -201,24 +204,20 @@ public class PdfReceiptService {
         paidCell.setBorderColor(new Color(187, 247, 208));
         table.addCell(paidCell);
 
-        // Row 5: Warranty Banner
-        int warrantyMonths = sale.getWarrantyMonths() != null ? sale.getWarrantyMonths() : 0;
-        addCell(table, "Warranty", labelFont, false, true);
-        String warrantyVal;
+        // Row 5: Warranty Banner (Only if warranty is offered)
         if (warrantyMonths > 0) {
+            addCell(table, "Warranty", labelFont, false, true);
             String expiryStr = sale.getWarrantyExpiresAt() != null ? LOCAL_DATE_FMT.format(sale.getWarrantyExpiresAt()) : "-";
-            warrantyVal = warrantyMonths + " Months Replacement Warranty (Valid till " + expiryStr + ")";
-        } else {
-            warrantyVal = "Testing Warranty / Checked at Counter (No Replacement After Leaving Shop)";
+            String warrantyVal = warrantyMonths + " Months Replacement Warranty (Valid till " + expiryStr + ")";
+            PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
+            warrantyCell.setColspan(3);
+            warrantyCell.setPaddingTop(2.5f);
+            warrantyCell.setPaddingBottom(2.5f);
+            warrantyCell.setPaddingLeft(5f);
+            warrantyCell.setPaddingRight(5f);
+            warrantyCell.setBorderColor(new Color(226, 232, 240));
+            table.addCell(warrantyCell);
         }
-        PdfPCell warrantyCell = new PdfPCell(new Phrase(warrantyVal, boldFont));
-        warrantyCell.setColspan(3);
-        warrantyCell.setPaddingTop(2.5f);
-        warrantyCell.setPaddingBottom(2.5f);
-        warrantyCell.setPaddingLeft(5f);
-        warrantyCell.setPaddingRight(5f);
-        warrantyCell.setBorderColor(new Color(226, 232, 240));
-        table.addCell(warrantyCell);
 
         document.add(table);
 
@@ -230,19 +229,25 @@ public class PdfReceiptService {
         PdfPCell termsCell = new PdfPCell();
         termsCell.setBorder(Rectangle.NO_BORDER);
 
-        Paragraph termsHeader = new Paragraph("Important Warranty Terms:", labelFont);
-        termsHeader.setSpacingAfter(1f);
-        termsCell.addElement(termsHeader);
-
         if (warrantyMonths > 0) {
+            Paragraph termsHeader = new Paragraph("Important Warranty Terms:", labelFont);
+            termsHeader.setSpacingAfter(1f);
+            termsCell.addElement(termsHeader);
+
             String expText = sale.getWarrantyExpiresAt() != null ? LOCAL_DATE_FMT.format(sale.getWarrantyExpiresAt()) : "";
             termsCell.addElement(new Paragraph("• Warranty: " + warrantyMonths + " Months valid till " + expText + " strictly against manufacturing defects.", noteFont));
+            termsCell.addElement(new Paragraph("• Physical breakage, liquid exposure, burnt circuitry, torn seals, or broken pins strictly VOID warranty.", noteFont));
+            termsCell.addElement(new Paragraph("• Original bill or Bill No (" + sale.getBillNumber() + ") must be presented for warranty replacement.", noteFont));
+            termsCell.addElement(new Paragraph("• No cash refund on sold goods. Defective unit will be serviced or replaced as per policy.", noteFont));
         } else {
-            termsCell.addElement(new Paragraph("• Testing Warranty: Goods checked in front of customer. No return/exchange once leaves counter.", noteFont));
+            Paragraph termsHeader = new Paragraph("Important Terms:", labelFont);
+            termsHeader.setSpacingAfter(1f);
+            termsCell.addElement(termsHeader);
+
+            termsCell.addElement(new Paragraph("• Goods verified and handed over in good working condition at counter.", noteFont));
+            termsCell.addElement(new Paragraph("• No replacement warranty on this item. No exchange or return after sale.", noteFont));
+            termsCell.addElement(new Paragraph("• No cash refund on sold goods.", noteFont));
         }
-        termsCell.addElement(new Paragraph("• Physical breakage, liquid exposure, burnt circuitry, torn seals, or broken pins strictly VOID warranty.", noteFont));
-        termsCell.addElement(new Paragraph("• Original bill or Bill No (" + sale.getBillNumber() + ") must be presented for warranty replacement.", noteFont));
-        termsCell.addElement(new Paragraph("• No cash refund on sold goods. Defective unit will be serviced or replaced as per policy.", noteFont));
 
         Paragraph sigPara = new Paragraph("Authorized Sign: ____________________", smallFont);
         sigPara.setSpacingBefore(5f);

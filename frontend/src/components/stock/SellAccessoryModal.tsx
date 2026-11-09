@@ -29,7 +29,7 @@ interface SellAccessoryModalProps {
 }
 
 const WARRANTY_MONTH_PRESETS = [
-  { label: "Testing Only (0m)", months: 0 },
+  { label: "No Warranty (0m)", months: 0 },
   { label: "1 Month", months: 1 },
   { label: "3 Months", months: 3 },
   { label: "6 Months", months: 6 },
@@ -181,12 +181,31 @@ export function SellAccessoryModal({ isOpen, onClose, onSuccess }: SellAccessory
       } else if (action === "WHATSAPP") {
         if (cleanMobile.length >= 10) {
           const phone = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-          const warrantyText =
-            sale.warrantyMonths > 0
-              ? `Warranty: ${sale.warrantyMonths} Months (Valid till ${sale.warrantyExpiresAt || warrantyExpiryDate})`
-              : "Testing Warranty (Checked & Verified at Store)";
-          const serialText = sale.serialNumber ? `\nSerial/IMEI: ${sale.serialNumber}` : "";
-          const msg = `*Famous Mobiles - Official Warranty Bill*\n\nHello ${sale.customerName},\nThank you for purchasing at *Famous Mobiles*!\n\n📋 *Bill No:* ${sale.billNumber}\n*Item:* ${sale.accessoryName}\n*Amount Paid:* ${formatCurrency(sale.price)} (${sale.paymentMode})\n*${warrantyText}*${serialText}\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Store Contact: +91 90637 86751`;
+          const isWarranty = sale.warrantyMonths > 0;
+          const header = isWarranty
+            ? "*Famous Mobiles - Official Warranty Bill*"
+            : "*Famous Mobiles - Sale Receipt*";
+
+          let warrantyLine = "";
+          if (isWarranty) {
+            let formattedExpiry = warrantyExpiryDate || "";
+            if (sale.warrantyExpiresAt) {
+              const d = new Date(sale.warrantyExpiresAt + "T00:00:00");
+              if (!isNaN(d.getTime())) {
+                formattedExpiry = d.toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                });
+              } else {
+                formattedExpiry = sale.warrantyExpiresAt;
+              }
+            }
+            warrantyLine = `\n*Warranty:* ${sale.warrantyMonths} Months (Valid till ${formattedExpiry})`;
+          }
+
+          const serialLine = sale.serialNumber ? `\n*Serial/IMEI:* ${sale.serialNumber}` : "";
+          const msg = `${header}\n\nHello ${sale.customerName},\nThank you for purchasing at *Famous Mobiles*!\n\n📋 *Bill No:* ${sale.billNumber}\n*Item:* ${sale.accessoryName}\n*Amount Paid:* ${formatCurrency(sale.price)} (${sale.paymentMode})${warrantyLine}${serialLine}\n\n📍 *Famous Mobiles*\nOpp Friends Colony Bus Stop, Shaikpet Main Road, Manikonda, Hyderabad.\n📞 Store Contact: +91 90637 86751`;
           window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
         }
       }
@@ -346,7 +365,7 @@ export function SellAccessoryModal({ isOpen, onClose, onSuccess }: SellAccessory
                 </span>
               ) : (
                 <span className="text-[11px] font-medium text-[#767676]">
-                  Testing warranty only
+                  No replacement warranty (standard counter sale)
                 </span>
               )}
             </div>
