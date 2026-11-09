@@ -61,6 +61,10 @@ public class Payment {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public RepairTicket getTicket() {
         return ticket;
     }
@@ -103,6 +107,10 @@ public class Payment {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Store getStore() {

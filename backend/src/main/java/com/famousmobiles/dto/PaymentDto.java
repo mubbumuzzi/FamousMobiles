@@ -41,7 +41,7 @@ public final class PaymentDto {
                     p.getPaymentMode(),
                     p.getNotes(),
                     p.getRecordedBy() != null ? p.getRecordedBy().getFullName() : null,
-                    p.getCreatedAt().toString()
+                    p.getCreatedAt() != null ? p.getCreatedAt().toString() : java.time.Instant.now().toString()
             );
         }
     }
@@ -79,7 +79,7 @@ public final class PaymentDto {
                     p.getPaymentMode(),
                     p.getNotes(),
                     p.getRecordedBy() != null ? p.getRecordedBy().getFullName() : "Staff",
-                    p.getCreatedAt().toString(),
+                    p.getCreatedAt() != null ? p.getCreatedAt().toString() : java.time.Instant.now().toString(),
                     t.getBalanceAmount(),
                     "REPAIR",
                     t.getTrackingNumber(),
