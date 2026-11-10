@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench, Zap, CreditCard } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -192,16 +192,17 @@ export default function TicketDetailPage() {
       }
 
       // 2. Mark ticket as DELIVERED
-      const remarks = paymentData
-        ? `Delivered & settled remaining balance of ₹${paymentData.amount} via ${paymentData.paymentMode}`
-        : "Handed over to customer with visual photo & specification verification";
+      const userRemarks = remarks.trim();
+      const finalRemarks = paymentData
+        ? `Delivered & settled remaining balance of ₹${paymentData.amount} via ${paymentData.paymentMode}${userRemarks ? ` · ${userRemarks}` : ""}`
+        : (userRemarks || "Handed over to customer with visual photo & specification verification");
 
       await api(`/tickets/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({
           status: "DELIVERED",
-          remarks,
-          technicianNotes: remarks,
+          remarks: finalRemarks,
+          technicianNotes: finalRemarks,
         }),
       });
 
@@ -218,6 +219,7 @@ export default function TicketDetailPage() {
 
       setJustUpdatedStatus("DELIVERED");
       setNextStatus("");
+      setRemarks("");
       setPaymentWarning("");
       load();
     } catch (err: any) {
@@ -762,20 +764,16 @@ export default function TicketDetailPage() {
 
                   {/* Payment pending guidance when DELIVERED is selected */}
                   {nextStatus === "DELIVERED" && Number(ticket.balanceAmount) > 0 && (
-                    <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs text-[#B35300] flex items-center justify-between shadow-2xs animate-fade-in">
-                      <div className="space-y-0.5">
-                        <span className="font-bold flex items-center gap-1 text-[#121212]">
-                          <AlertTriangle className="h-3.5 w-3.5 text-[#B35300] shrink-0" /> Balance Due: {formatCurrency(Number(ticket.balanceAmount))}
+                    <div className="rounded-[10px] bg-[#FFFBEB] border border-amber-200 p-3 text-xs text-amber-950 flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                      <CreditCard className="h-4 w-4 text-amber-700 shrink-0" />
+                      <div className="flex-1 space-y-0.5">
+                        <span className="font-bold text-[#121212]">
+                          Balance of {formatCurrency(Number(ticket.balanceAmount))} will be collected upon handover
                         </span>
-                        <p className="text-[#767676]">Remaining balance will be collected in the 1-step Handover modal.</p>
+                        <p className="text-[11px] text-amber-800">
+                          Click below to verify the phone and collect payment via UPI (default) or Cash in 1 step.
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsDeliveryModalOpen(true)}
-                        className="rounded-[8px] bg-[#0E8345] hover:bg-[#0B6B38] px-2.5 py-1 text-white font-semibold transition-colors shrink-0 ml-2 shadow-2xs cursor-pointer"
-                      >
-                        Settle & Deliver →
-                      </button>
                     </div>
                   )}
 
@@ -922,7 +920,12 @@ export default function TicketDetailPage() {
 
                   <Button
                     variant="primary"
-                    className="w-full h-10 text-xs font-semibold"
+                    className={cn(
+                      "w-full h-11 text-xs font-bold transition-all shadow-xs cursor-pointer",
+                      nextStatus === "DELIVERED"
+                        ? "bg-[#0E8345] hover:bg-[#0B6B38] text-white"
+                        : "bg-[#121212] hover:bg-black text-white"
+                    )}
                     onClick={updateStatus}
                     disabled={
                       !nextStatus ||
@@ -931,7 +934,23 @@ export default function TicketDetailPage() {
                         Number(approvalEstimateCost) < Number(ticket.advancePaid))
                     }
                   >
-                    Update Status
+                    {nextStatus === "DELIVERED" ? (
+                      Number(ticket.balanceAmount) > 0 ? (
+                        <span className="flex items-center gap-1.5 justify-center">
+                          <Zap className="h-4 w-4" />
+                          Settle Balance ({formatCurrency(Number(ticket.balanceAmount))}) & Deliver Phone →
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 justify-center">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Hand Over & Deliver Phone →
+                        </span>
+                      )
+                    ) : nextStatus ? (
+                      `Update Status to ${formatStatus(nextStatus)}`
+                    ) : (
+                      "Update Status"
+                    )}
                   </Button>
 
                   {justUpdatedStatus === "READY_FOR_PICKUP" && (
@@ -1333,26 +1352,16 @@ export default function TicketDetailPage() {
             )}
 
             {ticket.status === "READY_FOR_PICKUP" && (
-              <>
-                {Number(ticket.balanceAmount) > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => scrollToPaymentSection(true)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
-                  >
-                    Collect Balance ({formatCurrency(Number(ticket.balanceAmount))})
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => quickUpdateStatus("DELIVERED")}
-                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#0E8345] px-4 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 touch-target cursor-pointer"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Hand Over & Deliver
-                  </button>
-                )}
-              </>
+              <button
+                type="button"
+                onClick={() => quickUpdateStatus("DELIVERED")}
+                className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#0E8345] hover:bg-[#0B6B38] px-4 py-1.5 text-xs font-bold text-white shadow-2xs active:scale-95 touch-target cursor-pointer transition-all"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {Number(ticket.balanceAmount) > 0
+                  ? `Settle ${formatCurrency(Number(ticket.balanceAmount))} & Deliver`
+                  : "Hand Over & Deliver"}
+              </button>
             )}
 
             {ticket.status === "DELIVERED" && (
