@@ -23,6 +23,14 @@ export function getApiUrl(): string {
     if (custom && custom.trim()) {
       return custom.trim().replace(/\/+$/, "");
     }
+    // Local web browser dev fallback: connect to local Spring Boot API
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const isNativeCapacitor = Boolean(
+      (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+    );
+    if (isLocalhost && !isNativeCapacitor) {
+      return "http://localhost:8080/api";
+    }
   }
   return DEFAULT_API_URL.replace(/\/+$/, "");
 }
@@ -141,8 +149,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
 
   let res: Response;
+  const timeoutMs = options.body instanceof FormData ? 45000 : 15000;
+  const signal = options.signal || (typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(timeoutMs) : undefined);
+
   try {
-    res = await fetch(`${url}${path}`, { ...options, headers });
+    res = await fetch(`${url}${path}`, { ...options, headers, signal });
   } catch {
     // If network fails during a GET request and we have cached data, return it seamlessly
     if (isGet) {
@@ -221,9 +232,10 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export async function apiPublic<T>(path: string): Promise<T> {
   const url = getApiUrl();
+  const signal = typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(15000) : undefined;
   let res: Response;
   try {
-    res = await fetch(`${url}${path}`);
+    res = await fetch(`${url}${path}`, { signal });
   } catch {
     throw new Error(
       `Cannot reach the server at ${url}. Check your network connection or tap "Change Server" on the login screen.`
