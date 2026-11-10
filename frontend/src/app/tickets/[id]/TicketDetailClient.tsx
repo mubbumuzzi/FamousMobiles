@@ -64,7 +64,7 @@ export default function TicketDetailPage() {
   const [justUpdatedStatus, setJustUpdatedStatus] = useState<RepairStatus | "">("");
   const [remarks, setRemarks] = useState("");
   const [payAmount, setPayAmount] = useState("");
-  const [payMode, setPayMode] = useState("CASH");
+  const [payMode, setPayMode] = useState("UPI");
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [paymentWarning, setPaymentWarning] = useState("");
   const [highlightPayment, setHighlightPayment] = useState(false);
@@ -1160,8 +1160,8 @@ export default function TicketDetailPage() {
                     className="w-32"
                   />
                   <select className={selectClassName} value={payMode} onChange={(e) => setPayMode(e.target.value)}>
+                    <option value="UPI">UPI / QR</option>
                     <option value="CASH">Cash</option>
-                    <option value="UPI">UPI</option>
                     <option value="CARD">Card</option>
                   </select>
                   <Button

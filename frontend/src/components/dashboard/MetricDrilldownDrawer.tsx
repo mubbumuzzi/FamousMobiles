@@ -91,7 +91,7 @@ export function MetricDrilldownDrawer({
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
   const [printingTicketId, setPrintingTicketId] = useState<string | null>(null);
   const [settleDrawerTicket, setSettleDrawerTicket] = useState<Ticket | null>(null);
-  const [settlePaymentMode, setSettlePaymentMode] = useState<"CASH" | "UPI">("CASH");
+  const [settlePaymentMode, setSettlePaymentMode] = useState<"CASH" | "UPI">("UPI");
   const [successToast, setSuccessToast] = useState("");
 
   const handlePrintTicket = async (ticket: Ticket) => {
@@ -873,18 +873,6 @@ export function MetricDrilldownDrawer({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setSettlePaymentMode("CASH")}
-                  className={cn(
-                    "py-2 px-3 rounded-[8px] text-xs font-bold border transition-all cursor-pointer",
-                    settlePaymentMode === "CASH"
-                      ? "bg-[#121212] text-white border-[#121212] shadow-xs"
-                      : "bg-white text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
-                  )}
-                >
-                  💵 Cash
-                </button>
-                <button
-                  type="button"
                   onClick={() => setSettlePaymentMode("UPI")}
                   className={cn(
                     "py-2 px-3 rounded-[8px] text-xs font-bold border transition-all cursor-pointer",
@@ -894,6 +882,18 @@ export function MetricDrilldownDrawer({
                   )}
                 >
                   📱 UPI / QR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettlePaymentMode("CASH")}
+                  className={cn(
+                    "py-2 px-3 rounded-[8px] text-xs font-bold border transition-all cursor-pointer",
+                    settlePaymentMode === "CASH"
+                      ? "bg-[#121212] text-white border-[#121212] shadow-xs"
+                      : "bg-white text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  💵 Cash
                 </button>
               </div>
             </div>

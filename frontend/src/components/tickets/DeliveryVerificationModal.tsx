@@ -55,7 +55,7 @@ export function DeliveryVerificationModal({
   const [verifiedMatch, setVerifiedMatch] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingNow, setUploadingNow] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
+  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("UPI");
   const [paymentNotes, setPaymentNotes] = useState("");
 
   const quickCameraInputRef = useRef<HTMLInputElement>(null);
@@ -337,7 +337,7 @@ export function DeliveryVerificationModal({
                   Payment Mode
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(["CASH", "UPI", "CARD"] as const).map((mode) => (
+                  {(["UPI", "CASH", "CARD"] as const).map((mode) => (
                     <button
                       key={mode}
                       type="button"
@@ -349,8 +349,8 @@ export function DeliveryVerificationModal({
                           : "bg-white text-slate-800 border-amber-200 hover:bg-amber-100/60"
                       )}
                     >
-                      {mode === "CASH" && "💵 Cash"}
                       {mode === "UPI" && "📱 UPI / QR"}
+                      {mode === "CASH" && "💵 Cash"}
                       {mode === "CARD" && "💳 Card"}
                     </button>
                   ))}
