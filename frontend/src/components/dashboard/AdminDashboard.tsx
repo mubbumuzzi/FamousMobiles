@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BarChart3,
   ChevronRight,
@@ -14,6 +15,10 @@ import {
   Clock,
   Calendar,
   ShieldCheck,
+  AlertTriangle,
+  Phone,
+  MessageCircle,
+  CreditCard,
 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
 import { formatCurrency, formatStatus, formatDate, isSameDay, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
+import { buildWhatsAppDelayUrl, buildWhatsAppPickupUrl } from "@/lib/whatsapp";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
 import { StockDemandSnapshot } from "@/components/dashboard/StockDemandSnapshot";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
@@ -32,6 +38,57 @@ const StatusPieChart = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-full w-full" /> }
 );
 
+function getStatusBadgeStyle(status: string): string {
+  switch (status) {
+    case "DEVICE_RECEIVED":
+      return "bg-[#F7F7F8] text-[#555555] border-[#EBEBEB]";
+    case "IN_PROGRESS":
+    case "REPAIR_IN_PROGRESS":
+    case "UNDER_DIAGNOSIS":
+      return "bg-[#EFF6FF] text-[#1D4ED8] border-blue-200";
+    case "WAITING_FOR_PARTS":
+      return "bg-[#FFFBEB] text-[#B45309] border-amber-200";
+    case "WAITING_FOR_APPROVAL":
+      return "bg-[#FAF5FF] text-[#7E22CE] border-purple-200";
+    case "QUALITY_CHECK":
+      return "bg-[#FDF4FF] text-[#A21CAF] border-fuchsia-200";
+    case "READY_FOR_PICKUP":
+      return "bg-[#EAF6EE] text-[#0E8345] border-green-200";
+    case "DELIVERED":
+      return "bg-[#F0FDF4] text-[#15803D] border-green-300";
+    case "RETURNED_UNREPAIRED":
+      return "bg-[#FEF2F2] text-[#B91C1C] border-red-200";
+    default:
+      return "bg-[#F7F7F8] text-[#121212] border-[#EBEBEB]";
+  }
+}
+
+function formatCompactStatus(status: string): string {
+  switch (status) {
+    case "DEVICE_RECEIVED":
+      return "Received";
+    case "IN_PROGRESS":
+    case "REPAIR_IN_PROGRESS":
+      return "In Progress";
+    case "UNDER_DIAGNOSIS":
+      return "Diagnosing";
+    case "READY_FOR_PICKUP":
+      return "Ready";
+    case "DELIVERED":
+      return "Delivered";
+    case "WAITING_FOR_PARTS":
+      return "Waiting Parts";
+    case "WAITING_FOR_APPROVAL":
+      return "Waiting Approval";
+    case "RETURNED_UNREPAIRED":
+      return "Unrepaired";
+    case "REOPENED_FOR_RECHECK":
+      return "Re-Check";
+    default:
+      return formatStatus(status);
+  }
+}
+
 type AdminDashboardProps = {
   metrics: DashboardMetrics | null;
   tickets: Ticket[];
@@ -41,8 +98,10 @@ type AdminDashboardProps = {
 };
 
 export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: AdminDashboardProps) {
+  const router = useRouter();
   const { activeStore, activeStoreId } = useStore();
   const [activeMetric, setActiveMetric] = useState<MetricDrilldownType | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"ALL" | "OVERDUE">("ALL");
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockRefreshTrigger, setStockRefreshTrigger] = useState(0);
 
@@ -69,6 +128,13 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   const activeCount = activeRepairs.length;
   const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
 
+  const displayedActiveRepairs = activeRepairs.filter((t) => {
+    if (activeFilter === "OVERDUE") {
+      return isOverdue(t.estimatedDeliveryDate, t.status);
+    }
+    return true;
+  });
+
   const todayFormatted = new Intl.DateTimeFormat("en-IN", {
     weekday: "short",
     day: "numeric",
@@ -90,6 +156,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
           ? `Repairs: ${formatCurrency(metrics.repairRevenueToday)} · Sales: ${formatCurrency(metrics.salesRevenueToday)}`
           : "Day-end total",
       dot: null,
+      isOverdue: false,
     },
     {
       key: "revenueMonth" as MetricDrilldownType,
@@ -101,6 +168,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
           ? `Repairs: ${formatCurrency(metrics.repairRevenueThisMonth)} · Sales: ${formatCurrency(metrics.salesRevenueThisMonth)}`
           : "Monthly billing",
       dot: null,
+      isOverdue: false,
     },
     {
       key: "activeRepairs" as MetricDrilldownType,
@@ -108,6 +176,8 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : activeCount,
       helper: overdueCount > 0 ? `${overdueCount} overdue` : "In workshop",
       dot: null,
+      isOverdue: overdueCount > 0,
+      overdueCount,
     },
     {
       key: "readyPickup" as MetricDrilldownType,
@@ -115,6 +185,8 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : (metrics?.readyForPickup ?? 0),
       helper: "Verified & waiting",
       dot: "bg-[#0E8345]", // green dot for ready status
+      actionPrompt: (metrics?.readyForPickup ?? 0) > 0 ? "Send alerts" : null,
+      isOverdue: false,
     },
     {
       key: "receivedToday" as MetricDrilldownType,
@@ -122,6 +194,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : (tickets.length > 0 ? receivedTodayCount : metrics?.devicesReceivedToday ?? 0),
       helper: "New intakes",
       dot: null,
+      isOverdue: false,
     },
     {
       key: "deliveredToday" as MetricDrilldownType,
@@ -129,6 +202,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : (tickets.length > 0 ? deliveredTodayCount : metrics?.deliveredToday ?? 0),
       helper: "Returned today",
       dot: null,
+      isOverdue: false,
     },
     {
       key: "waitingParts" as MetricDrilldownType,
@@ -136,6 +210,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : (metrics?.waitingForParts ?? 0),
       helper: "Awaiting spare parts",
       dot: "bg-[#B35300]", // amber dot for waiting status
+      isOverdue: false,
     },
     {
       key: "deliveredAll" as MetricDrilldownType,
@@ -143,6 +218,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       value: loading ? null : delivered,
       helper: "All-time completed",
       dot: null,
+      isOverdue: false,
     },
   ];
 
@@ -227,17 +303,33 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
                   )}
                 </div>
 
-                {/* Optional Helper Text at bottom */}
-                <p className="text-[11px] leading-[14px] text-[#767676] truncate">
-                  {cell.helper}
-                </p>
+                {/* Helper Text / Urgent Overdue Badge / Action Prompt */}
+                {cell.isOverdue && cell.overdueCount && cell.overdueCount > 0 ? (
+                  <span className="inline-flex items-center gap-1 font-bold text-[#C5221F] bg-[#FEF2F2] border border-[#FECACA] px-1.5 py-0.5 rounded-[4px] text-[10.5px] leading-tight self-start">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    <span>{cell.overdueCount} overdue</span>
+                  </span>
+                ) : cell.actionPrompt ? (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[11px] leading-[14px] text-[#767676] truncate">
+                      {cell.helper}
+                    </span>
+                    <span className="text-[10px] font-semibold text-[#0E8345] bg-[#EAF6EE] px-1.5 py-0.2 rounded border border-green-200">
+                      {cell.actionPrompt}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] leading-[14px] text-[#767676] truncate">
+                    {cell.helper}
+                  </p>
+                )}
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* 5. Quick Actions: row of 4 equal cards (desktop), 2x2 grid (mobile). 'New Repair' is filled near-black. */}
+      {/* 5. Quick Actions: 4 distinct operational shortcuts (replaces duplicate New Repair and duplicate Search) */}
       <section aria-label="Quick Actions">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: New Repair (Filled near-black card = primary action) */}
@@ -254,22 +346,37 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
           </Link>
 
-          {/* Card 2: Order Stock */}
+          {/* Card 2: Sell Accessory (Direct counter sale & warranty invoice) */}
           <button
             type="button"
-            onClick={() => setIsStockModalOpen(true)}
+            onClick={() => window.dispatchEvent(new CustomEvent("fm:open-sell-accessory"))}
             className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] mb-2 group-hover:bg-white border border-[#EBEBEB] transition-colors">
-              <ShoppingBag className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#EAF6EE] text-[#0E8345] mb-2 group-hover:bg-[#d8eedf] border border-green-200 transition-colors">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Order Stock</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Parts & accessories</p>
+              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Sell Accessory</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Counter sale & warranty bill</p>
             </div>
           </button>
 
-          {/* Card 3: Active Repairs */}
+          {/* Card 3: Cash Drawer & Day-End Audit */}
+          <button
+            type="button"
+            onClick={() => setActiveMetric("revenueToday")}
+            className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] mb-2 group-hover:bg-white border border-[#EBEBEB] transition-colors">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Cash Drawer</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Day-end cash & UPI audit</p>
+            </div>
+          </button>
+
+          {/* Card 4: Active Repairs Board */}
           <Link
             href="/tickets"
             className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
@@ -279,37 +386,54 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
             <div>
               <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Active Repairs</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Manage repair board</p>
-            </div>
-          </Link>
-
-          {/* Card 4: Search */}
-          <Link
-            href="/search"
-            className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] mb-2 group-hover:bg-white border border-[#EBEBEB] transition-colors">
-              <Search className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Search</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Customer or IMEI</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">
+                {activeCount} in workshop{overdueCount > 0 ? ` (${overdueCount} overdue)` : ""}
+              </p>
             </div>
           </Link>
         </div>
       </section>
 
-      {/* Active Repairs Section: "Active repairs" heading with "See all", then horizontal scroll on mobile, 2-3 col grid on desktop */}
+      {/* Active Repairs Section: Filter tabs (All / Overdue) + Color coded cards with explicit financial labels and 1-tap WhatsApp/Call */}
       <section aria-label="Recent Active Repairs" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[15px] leading-[20px] font-bold text-[#121212]">
-            Active Repairs
-            {activeCount > 0 && (
-              <span className="text-[13px] font-normal text-[#767676] ml-2">
-                {activeCount} in progress
-              </span>
-            )}
-          </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[15px] leading-[20px] font-bold text-[#121212]">
+              Active Repairs
+            </h2>
+
+            <div className="flex items-center gap-1 bg-[#F0F0F2] p-0.5 rounded-[8px]">
+              <button
+                type="button"
+                onClick={() => setActiveFilter("ALL")}
+                className={cn(
+                  "px-2.5 py-1 text-[12px] font-semibold rounded-[6px] transition-all cursor-pointer",
+                  activeFilter === "ALL"
+                    ? "bg-white text-[#121212] shadow-2xs"
+                    : "text-[#767676] hover:text-[#121212]"
+                )}
+              >
+                All ({activeCount})
+              </button>
+
+              {overdueCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("OVERDUE")}
+                  className={cn(
+                    "px-2.5 py-1 text-[12px] font-semibold rounded-[6px] transition-all flex items-center gap-1 cursor-pointer",
+                    activeFilter === "OVERDUE"
+                      ? "bg-[#FEF2F2] text-[#C5221F] shadow-2xs font-bold border border-[#FECACA]"
+                      : "text-[#C5221F] hover:bg-[#FEF2F2]/60"
+                  )}
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Overdue ({overdueCount})</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           <Link
             href="/tickets"
             className="text-[13px] font-semibold text-[#121212] hover:underline"
@@ -318,48 +442,129 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
           </Link>
         </div>
 
-        {activeRepairs.length === 0 ? (
+        {displayedActiveRepairs.length === 0 ? (
           <div className="rounded-[12px] border border-dashed border-[#EBEBEB] bg-white p-8 text-center text-[13px] text-[#767676]">
-            No active repairs in workshop. Click &quot;New Repair&quot; to intake a device.
+            {activeFilter === "OVERDUE"
+              ? "Great job! Zero repairs are currently overdue."
+              : 'No active repairs in workshop. Click "New Repair" to intake a device.'}
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 snap-x sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
-            {activeRepairs.slice(0, 6).map((ticket) => (
-              <Link
-                key={ticket.id}
-                href={`/tickets/view?id=${ticket.id}`}
-                className="w-[260px] sm:w-auto shrink-0 snap-start flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 sm:p-4 hover:border-[#DFDFDF] hover:bg-[#FCFCFD] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <span className="font-mono text-[12px] font-bold text-[#121212]">
-                      {ticket.trackingNumber}
-                    </span>
-                    <Badge variant="default" className="text-[11px] px-2 py-0.2">
-                      {formatStatus(ticket.status)}
-                    </Badge>
-                  </div>
-                  <p className="text-[14px] leading-[20px] font-bold text-[#121212] truncate">
-                    {ticket.brand} {ticket.model}
-                  </p>
-                  <p className="text-[12px] leading-[16px] text-[#767676] truncate mt-0.5">
-                    {ticket.customer?.fullName} · {ticket.customer?.mobile}
-                  </p>
-                </div>
+            {displayedActiveRepairs.slice(0, 6).map((ticket) => {
+              const ticketIsOverdue = isOverdue(ticket.estimatedDeliveryDate, ticket.status);
+              const isDueToday = ticket.estimatedDeliveryDate && isSameDay(ticket.estimatedDeliveryDate);
+              const est = Number(ticket.estimatedCost || 0);
+              const bal = Number(ticket.balanceAmount || 0);
+              const adv = Number(ticket.advancePaid || 0);
+              const badgeStyle = getStatusBadgeStyle(ticket.status);
 
-                <div className="flex items-center justify-between border-t border-[#EBEBEB] pt-2.5 mt-2.5 text-[12px] text-[#767676]">
-                  <span className="font-semibold text-[#121212]">
-                    {formatCurrency(ticket.estimatedCost)}
-                  </span>
-                  {ticket.estimatedDeliveryDate && (
-                    <span className="text-[11px] flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-[#767676]" />
-                      {formatDate(ticket.estimatedDeliveryDate)}
-                    </span>
-                  )}
+              return (
+                <div
+                  key={ticket.id}
+                  onClick={() => router.push(`/tickets/view?id=${ticket.id}`)}
+                  className="w-[280px] sm:w-auto shrink-0 snap-start flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 sm:p-4 hover:border-[#121212]/30 hover:shadow-2xs transition-all cursor-pointer group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1.5">
+                      <span className="font-mono text-[12px] font-bold text-[#121212]">
+                        {ticket.trackingNumber}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-[6px] border px-2 py-0.5 text-[11px] font-bold leading-none shrink-0",
+                          badgeStyle
+                        )}
+                      >
+                        {formatCompactStatus(ticket.status)}
+                      </span>
+                    </div>
+
+                    <p className="text-[14px] leading-[20px] font-bold text-[#121212] truncate">
+                      {ticket.brand} {ticket.model}
+                    </p>
+
+                    <p className="text-[12px] leading-[16px] text-[#767676] truncate mt-0.5">
+                      {ticket.customer?.fullName} · {ticket.customer?.mobile}
+                    </p>
+
+                    {/* Overdue / Due Today Alert Badge */}
+                    {ticketIsOverdue ? (
+                      <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#C5221F] bg-[#FEF2F2] border border-[#FECACA] px-2 py-0.5 rounded-[5px] mt-1.5">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        <span>Overdue · Due {formatDate(ticket.estimatedDeliveryDate)}</span>
+                      </div>
+                    ) : isDueToday ? (
+                      <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B35300] bg-[#FFFBEB] border border-[#FDE68A] px-2 py-0.5 rounded-[5px] mt-1.5">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <span>Due Today</span>
+                      </div>
+                    ) : ticket.estimatedDeliveryDate ? (
+                      <div className="inline-flex items-center gap-1 text-[11px] text-[#767676] mt-1.5 font-medium">
+                        <Clock className="h-3 w-3 text-[#767676]" />
+                        <span>Due {formatDate(ticket.estimatedDeliveryDate)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Footer: Financial Breakdown & 1-Tap Action Shortcuts */}
+                  <div className="flex items-center justify-between border-t border-[#EBEBEB] pt-2.5 mt-3 text-[12px]">
+                    <div>
+                      {est <= 0 ? (
+                        <span className="text-[11px] font-medium text-[#767676] bg-[#F7F7F8] px-2 py-0.5 rounded border border-[#EBEBEB]">
+                          Quote Pending
+                        </span>
+                      ) : bal > 0 ? (
+                        <div className="flex flex-col text-left">
+                          <span className="text-[13px] font-bold text-[#121212]">
+                            Bal: {formatCurrency(bal)}
+                          </span>
+                          {adv > 0 && (
+                            <span className="text-[10px] text-[#767676] font-medium">
+                              Est: {formatCurrency(est)} · Adv: {formatCurrency(adv)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0E8345] bg-[#EAF6EE] px-2 py-0.5 rounded border border-green-200">
+                          Paid in Full ✓
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 1-Tap Call & WhatsApp Shortcuts */}
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {ticket.customer?.mobile && (
+                        <>
+                          <a
+                            href={`tel:${ticket.customer.mobile}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#F0F0F2] text-[#121212] hover:bg-[#EBEBEB] active:scale-95 transition-all"
+                            title={`Call ${ticket.customer.fullName} (${ticket.customer.mobile})`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                          </a>
+
+                          <a
+                            href={
+                              ticket.status === "READY_FOR_PICKUP"
+                                ? buildWhatsAppPickupUrl(ticket)
+                                : buildWhatsAppDelayUrl(ticket)
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#EAF6EE] text-[#0E8345] hover:bg-[#d8eedf] active:scale-95 transition-all"
+                            title="Send WhatsApp update"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
