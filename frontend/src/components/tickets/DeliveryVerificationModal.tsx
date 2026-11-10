@@ -16,18 +16,25 @@ import {
   Loader2,
   Sparkles,
   KeyRound,
+  CreditCard,
 } from "lucide-react";
 import { Ticket, DevicePhoto } from "@/lib/types";
-import { formatCurrency, formatCustomerMobiles } from "@/lib/utils";
+import { formatCurrency, formatCustomerMobiles, cn } from "@/lib/utils";
 import { getPhotoFullUrl } from "./DevicePhotoGallery";
 import { SafeDeviceImage } from "./SafeDeviceImage";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { compressImage } from "@/lib/image-compressor";
 
+export interface PaymentHandoverData {
+  amount: number;
+  paymentMode: "CASH" | "UPI" | "CARD";
+  notes?: string;
+}
+
 interface DeliveryVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmDelivery: () => Promise<void>;
+  onConfirmDelivery: (paymentData?: PaymentHandoverData) => Promise<void>;
   ticket: Ticket;
   onQuickUploadPhoto?: (file: File) => Promise<void>;
 }
@@ -42,11 +49,14 @@ export function DeliveryVerificationModal({
   // Support Android back button to dismiss
   useAndroidBackButton(onClose, isOpen, 25);
 
+  const balance = Number(ticket.balanceAmount || 0);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [verifiedMatch, setVerifiedMatch] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingNow, setUploadingNow] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
+  const [paymentNotes, setPaymentNotes] = useState("");
 
   const quickCameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,7 +85,15 @@ export function DeliveryVerificationModal({
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      await onConfirmDelivery();
+      const paymentData: PaymentHandoverData | undefined =
+        balance > 0
+          ? {
+              amount: balance,
+              paymentMode,
+              notes: paymentNotes.trim() || undefined,
+            }
+          : undefined;
+      await onConfirmDelivery(paymentData);
       onClose();
     } catch (err) {
       // Error handled by caller
@@ -293,6 +311,78 @@ export function DeliveryVerificationModal({
             )}
           </div>
 
+          {/* Settle Balance Section (if balance is due) or Paid in Full badge */}
+          {balance > 0 ? (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-200/70 text-amber-900 shrink-0">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-amber-950">Collect Balance at Handover</h3>
+                    <p className="text-[11px] text-amber-800">Remaining amount to settle before releasing device</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-base font-extrabold text-[#121212]">
+                    {formatCurrency(balance)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Mode Selector */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-amber-950 uppercase tracking-wider block">
+                  Payment Mode
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["CASH", "UPI", "CARD"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setPaymentMode(mode)}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                        paymentMode === mode
+                          ? "bg-[#121212] text-white border-[#121212] shadow-xs scale-[1.02]"
+                          : "bg-white text-slate-800 border-amber-200 hover:bg-amber-100/60"
+                      )}
+                    >
+                      {mode === "CASH" && "💵 Cash"}
+                      {mode === "UPI" && "📱 UPI / QR"}
+                      {mode === "CARD" && "💳 Card"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMode === "UPI" && (
+                <div className="rounded-lg bg-white/80 p-2 text-[11px] text-amber-900 border border-amber-200 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                  <span>Verify customer has completed UPI transfer before confirming handover.</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 shrink-0">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-emerald-950">Payment Settled</p>
+                  <p className="text-[11px] text-emerald-800">
+                    Est: {formatCurrency(ticket.estimatedCost)} · Paid: {formatCurrency(ticket.advancePaid)}
+                  </p>
+                </div>
+              </div>
+              <span className="font-bold text-xs text-emerald-700 bg-white border border-emerald-200 rounded-lg px-2.5 py-1">
+                Paid in Full ✓
+              </span>
+            </div>
+          )}
+
           {/* Verification Confirmation Checkbox */}
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
             <label className="flex items-start gap-2.5 cursor-pointer">
@@ -332,7 +422,11 @@ export function DeliveryVerificationModal({
             ) : (
               <CheckCircle2 className="h-4 w-4" />
             )}
-            <span>Confirm Match & Hand Over Phone</span>
+            <span>
+              {balance > 0
+                ? `Collect ${formatCurrency(balance)} & Hand Over`
+                : "Confirm Match & Hand Over Phone"}
+            </span>
           </button>
         </div>
       </div>

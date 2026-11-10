@@ -223,7 +223,7 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in text-[#121212]">
+    <div className="space-y-4 animate-fade-in text-[#121212]">
       {/* 3. Page Header: Overview (20px bold) + small muted line with date & active store + Primary New Repair button */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -346,7 +346,22 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
           </Link>
 
-          {/* Card 2: Sell Accessory (Direct counter sale & warranty invoice) */}
+          {/* Card 2: Order Stock (Quick modal to record spare parts / accessories demand) */}
+          <button
+            type="button"
+            onClick={() => setIsStockModalOpen(true)}
+            className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] mb-2 group-hover:bg-white border border-[#EBEBEB] transition-colors">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Order Stock</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Parts & accessories</p>
+            </div>
+          </button>
+
+          {/* Card 3: Sell Accessory (Direct counter sale & warranty invoice) */}
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("fm:open-sell-accessory"))}
@@ -357,11 +372,11 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
             <div>
               <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Sell Accessory</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Counter sale & warranty bill</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Counter sale & bill</p>
             </div>
           </button>
 
-          {/* Card 3: Cash Drawer & Day-End Audit */}
+          {/* Card 4: Cash Drawer & Day-End Audit */}
           <button
             type="button"
             onClick={() => setActiveMetric("revenueToday")}
@@ -372,25 +387,9 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
             <div>
               <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Cash Drawer</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Day-end cash & UPI audit</p>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Day-end cash & UPI</p>
             </div>
           </button>
-
-          {/* Card 4: Active Repairs Board */}
-          <Link
-            href="/tickets"
-            className="flex flex-col justify-between rounded-[12px] border border-[#EBEBEB] bg-white p-4 text-left transition-all hover:border-[#DFDFDF] hover:bg-[#FDFDFD] active:scale-[0.98] min-h-[104px] sm:min-h-[112px] group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F0F0F2] text-[#121212] mb-2 group-hover:bg-white border border-[#EBEBEB] transition-colors">
-              <Wrench className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[14px] leading-[20px] font-bold text-[#121212]">Active Repairs</p>
-              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">
-                {activeCount} in workshop{overdueCount > 0 ? ` (${overdueCount} overdue)` : ""}
-              </p>
-            </div>
-          </Link>
         </div>
       </section>
 

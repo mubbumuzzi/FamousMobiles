@@ -90,6 +90,8 @@ export function MetricDrilldownDrawer({
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
   const [printingTicketId, setPrintingTicketId] = useState<string | null>(null);
+  const [settleDrawerTicket, setSettleDrawerTicket] = useState<Ticket | null>(null);
+  const [settlePaymentMode, setSettlePaymentMode] = useState<"CASH" | "UPI">("CASH");
   const [successToast, setSuccessToast] = useState("");
 
   const handlePrintTicket = async (ticket: Ticket) => {
@@ -291,7 +293,7 @@ export function MetricDrilldownDrawer({
   // Instant Deliver & Print
   const handleInstantDeliver = async (ticket: Ticket) => {
     if (Number(ticket.balanceAmount || 0) > 0) {
-      alert(`Cannot deliver with pending balance of ${formatCurrency(ticket.balanceAmount)}. Record payment first.`);
+      setSettleDrawerTicket(ticket);
       return;
     }
     setDeliveringId(ticket.id);
@@ -838,6 +840,117 @@ export function MetricDrilldownDrawer({
           )}
         </div>
       </div>
+
+      {/* 1-Step Handover & Balance Settlement Dialog for Drawer */}
+      {settleDrawerTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-2xs animate-fade-in">
+          <div className="w-full max-w-sm rounded-[14px] bg-white p-5 shadow-2xl border border-[#EBEBEB] space-y-4 text-[#121212]">
+            <div className="flex items-center justify-between border-b border-[#EBEBEB] pb-3">
+              <div>
+                <h3 className="text-[15px] font-bold text-[#121212]">Collect & Deliver</h3>
+                <p className="text-[12px] text-[#767676]">
+                  {settleDrawerTicket.trackingNumber} · {settleDrawerTicket.customer?.fullName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettleDrawerTicket(null)}
+                className="text-[#767676] hover:text-[#121212] p-1 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="rounded-[10px] bg-[#FFFBEB] border border-amber-200 p-3.5 flex items-center justify-between">
+              <span className="text-[12px] font-bold text-amber-950">Balance Due:</span>
+              <span className="text-[18px] font-extrabold text-[#121212]">
+                {formatCurrency(settleDrawerTicket.balanceAmount)}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#767676] uppercase">Payment Mode</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSettlePaymentMode("CASH")}
+                  className={cn(
+                    "py-2 px-3 rounded-[8px] text-xs font-bold border transition-all cursor-pointer",
+                    settlePaymentMode === "CASH"
+                      ? "bg-[#121212] text-white border-[#121212] shadow-xs"
+                      : "bg-white text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  💵 Cash
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettlePaymentMode("UPI")}
+                  className={cn(
+                    "py-2 px-3 rounded-[8px] text-xs font-bold border transition-all cursor-pointer",
+                    settlePaymentMode === "UPI"
+                      ? "bg-[#121212] text-white border-[#121212] shadow-xs"
+                      : "bg-white text-[#121212] border-[#EBEBEB] hover:bg-[#F7F7F8]"
+                  )}
+                >
+                  📱 UPI / QR
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setSettleDrawerTicket(null)}
+                className="flex-1 py-2.5 rounded-[8px] border border-[#EBEBEB] bg-white text-xs font-semibold text-[#767676] hover:bg-[#F0F0F2] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deliveringId === settleDrawerTicket.id}
+                onClick={async () => {
+                  const t = settleDrawerTicket;
+                  setDeliveringId(t.id);
+                  try {
+                    await api(`/tickets/${t.id}/payments`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        amount: Number(t.balanceAmount),
+                        paymentMode: settlePaymentMode,
+                        notes: "Instant deliver from dashboard drawer",
+                      }),
+                    });
+                    await api(`/tickets/${t.id}/status`, {
+                      method: "PATCH",
+                      body: JSON.stringify({
+                        status: "DELIVERED",
+                        remarks: `Counter handover & settled ₹${t.balanceAmount} via ${settlePaymentMode}`,
+                      }),
+                    });
+                    try {
+                      await printTicketReceipt(t.id);
+                    } catch (_) {}
+                    setSettleDrawerTicket(null);
+                    setSuccessToast(`Delivered ${t.trackingNumber}! Collected ${formatCurrency(t.balanceAmount)}.`);
+                    setTimeout(() => setSuccessToast(""), 3500);
+                    onTicketUpdated();
+                  } catch (err: any) {
+                    alert(err?.message || "Failed to settle & deliver");
+                  } finally {
+                    setDeliveringId(null);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-[8px] bg-[#0E8345] hover:bg-[#0B6B38] text-xs font-bold text-white shadow-2xs transition-all cursor-pointer"
+              >
+                {deliveringId === settleDrawerTicket.id
+                  ? "Delivering..."
+                  : `Collect & Deliver`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

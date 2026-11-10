@@ -177,21 +177,48 @@ export default function TicketDetailPage() {
     }
   };
 
-  const handleConfirmDeliveryFromModal = async () => {
+  const handleConfirmDeliveryFromModal = async (paymentData?: {
+    amount: number;
+    paymentMode: "CASH" | "UPI" | "CARD";
+    notes?: string;
+  }) => {
     try {
+      // 1. If balance settlement is included, record payment first!
+      if (paymentData && paymentData.amount > 0) {
+        await api(`/tickets/${id}/payments`, {
+          method: "POST",
+          body: JSON.stringify(paymentData),
+        });
+      }
+
+      // 2. Mark ticket as DELIVERED
+      const remarks = paymentData
+        ? `Delivered & settled remaining balance of ₹${paymentData.amount} via ${paymentData.paymentMode}`
+        : "Handed over to customer with visual photo & specification verification";
+
       await api(`/tickets/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({
           status: "DELIVERED",
-          remarks: "Handed over to customer with visual photo & specification verification",
-          technicianNotes: "Handed over to customer with visual photo & specification verification",
+          remarks,
+          technicianNotes: remarks,
         }),
       });
+
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(30); } catch (_) {}
       }
+
+      // 3. Auto-open or print delivery receipt
+      try {
+        await printTicketReceipt(id);
+      } catch (printErr) {
+        console.warn("Could not auto-open receipt:", printErr);
+      }
+
       setJustUpdatedStatus("DELIVERED");
       setNextStatus("");
+      setPaymentWarning("");
       load();
     } catch (err: any) {
       alert(err?.message || "Failed to mark as delivered");
@@ -210,15 +237,8 @@ export default function TicketDetailPage() {
   };
 
   const quickUpdateStatus = async (targetStatus: RepairStatus) => {
-    const balance = Number(ticket?.balanceAmount ?? 0);
     if (targetStatus === "DELIVERED") {
-      if (balance > 0) {
-        setPaymentWarning(
-          `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking as Delivered.`
-        );
-        scrollToPaymentSection(true);
-        return;
-      }
+      setPaymentWarning("");
       setIsDeliveryModalOpen(true);
       return;
     }
@@ -245,17 +265,9 @@ export default function TicketDetailPage() {
   const updateStatus = async () => {
     if (!nextStatus) return;
     const targetStatus = nextStatus;
-    const balance = Number(ticket?.balanceAmount ?? 0);
 
-    // Guard: delivered status requires full payment
     if (targetStatus === "DELIVERED") {
-      if (balance > 0) {
-        setPaymentWarning(
-          `Payment is pending! ${formatCurrency(balance)} balance remains. Please record the payment before marking this ticket as Delivered.`
-        );
-        scrollToPaymentSection(true);
-        return;
-      }
+      setPaymentWarning("");
       setIsDeliveryModalOpen(true);
       return;
     }
@@ -748,24 +760,22 @@ export default function TicketDetailPage() {
                   </select>
                   <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={2} />
 
-                  {/* Payment pending warning when DELIVERED is selected */}
+                  {/* Payment pending guidance when DELIVERED is selected */}
                   {nextStatus === "DELIVERED" && Number(ticket.balanceAmount) > 0 && (
                     <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs text-[#B35300] flex items-center justify-between shadow-2xs animate-fade-in">
                       <div className="space-y-0.5">
                         <span className="font-bold flex items-center gap-1 text-[#121212]">
-                          <AlertTriangle className="h-3.5 w-3.5 text-[#B35300] shrink-0" /> Payment Pending: {formatCurrency(Number(ticket.balanceAmount))}
+                          <AlertTriangle className="h-3.5 w-3.5 text-[#B35300] shrink-0" /> Balance Due: {formatCurrency(Number(ticket.balanceAmount))}
                         </span>
-                        <p className="text-[#767676]">Clear remaining balance before device handover.</p>
+                        <p className="text-[#767676]">Remaining balance will be collected in the 1-step Handover modal.</p>
                       </div>
-                      {user?.role !== "TECHNICIAN" && (
-                        <button
-                          type="button"
-                          onClick={() => scrollToPaymentSection(true)}
-                          className="rounded-[8px] bg-[#121212] hover:bg-black px-2.5 py-1 text-white font-semibold transition-colors shrink-0 ml-2 shadow-2xs cursor-pointer"
-                        >
-                          Record Payment ↓
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsDeliveryModalOpen(true)}
+                        className="rounded-[8px] bg-[#0E8345] hover:bg-[#0B6B38] px-2.5 py-1 text-white font-semibold transition-colors shrink-0 ml-2 shadow-2xs cursor-pointer"
+                      >
+                        Settle & Deliver →
+                      </button>
                     </div>
                   )}
 
