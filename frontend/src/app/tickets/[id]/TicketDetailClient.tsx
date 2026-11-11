@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench, Zap, CreditCard } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench, Zap, CreditCard, ArrowLeft } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -43,6 +43,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "des
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const rawId = params?.id || searchParams.get("id");
   const id = rawId && rawId !== "view" ? rawId : searchParams.get("id") || "";
   const { user, loading: authLoading } = useAuthGuard();
@@ -496,7 +497,25 @@ export default function TicketDetailPage() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="mx-auto max-w-3xl space-y-5 animate-fade-in pb-36 md:pb-8 text-[#121212]">
+      <div className="mx-auto max-w-3xl space-y-4 animate-fade-in pb-36 md:pb-8 text-[#121212]">
+        {/* Top Back Navigation */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/tickets");
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#767676] hover:text-[#121212] bg-white hover:bg-[#F0F0F2] border border-[#EBEBEB] px-3 py-1.5 rounded-[8px] transition-all active:scale-95 cursor-pointer shadow-2xs"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back</span>
+          </button>
+        </div>
+
         {/* Hero */}
         <div className="rounded-[12px] border border-[#EBEBEB] bg-white p-5 text-[#121212] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div className="flex flex-wrap items-start justify-between gap-3">

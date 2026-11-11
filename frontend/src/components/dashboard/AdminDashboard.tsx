@@ -28,6 +28,7 @@ import { DashboardMetrics, MetricDrilldownType, Ticket } from "@/lib/types";
 import { formatCurrency, formatStatus, formatDate, isSameDay, cn } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { buildWhatsAppDelayUrl, buildWhatsAppPickupUrl } from "@/lib/whatsapp";
+import { useNavigationState } from "@/hooks/useNavigationState";
 import { MetricDrilldownDrawer } from "@/components/dashboard/MetricDrilldownDrawer";
 import { StockDemandSnapshot } from "@/components/dashboard/StockDemandSnapshot";
 import { StockOrderModal } from "@/components/stock/StockOrderModal";
@@ -100,8 +101,8 @@ type AdminDashboardProps = {
 export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: AdminDashboardProps) {
   const router = useRouter();
   const { activeStore, activeStoreId } = useStore();
-  const [activeMetric, setActiveMetric] = useState<MetricDrilldownType | null>(null);
-  const [activeFilter, setActiveFilter] = useState<"ALL" | "OVERDUE">("ALL");
+  const [activeMetric, setActiveMetric] = useNavigationState<MetricDrilldownType | null>("dashboard_active_metric", null);
+  const [activeFilter, setActiveFilter] = useNavigationState<"ALL" | "OVERDUE">("dashboard_active_filter", "ALL");
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockRefreshTrigger, setStockRefreshTrigger] = useState(0);
 

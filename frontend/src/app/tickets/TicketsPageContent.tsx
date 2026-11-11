@@ -17,6 +17,7 @@ import { cn, formatCurrency, formatStatus } from "@/lib/utils";
 import { isOverdue } from "@/lib/status-messages";
 import { PageLoading, Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/context/StoreContext";
+import { useNavigationState } from "@/hooks/useNavigationState";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
@@ -78,9 +79,9 @@ export default function TicketsPageContent() {
     () => !getCachedApi<Ticket[]>(ticketsKey)
   );
   const [error, setError] = useState("");
-  const [view, setView] = useState<"cards" | "board">("cards");
-  const [cardFilter, setCardFilter] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [view, setView] = useNavigationState<"cards" | "board">("tickets_view", "cards");
+  const [cardFilter, setCardFilter] = useNavigationState<string>("tickets_filter", "ALL");
+  const [searchQuery, setSearchQuery] = useNavigationState<string>("tickets_search", "");
 
   const load = () => {
     const currentQuery = activeStoreId !== "ALL" ? `?storeId=${activeStoreId}` : "";

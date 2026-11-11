@@ -27,6 +27,8 @@ import { SellAccessoryModal } from "@/components/stock/SellAccessoryModal";
 import { StoreSwitcher } from "@/components/layout/StoreSwitcher";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { clearAllNavigationState } from "@/hooks/useNavigationState";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -49,6 +51,7 @@ export function StaffLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  useScrollRestoration();
   const [isForkOpen, setIsForkOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isSellAccessoryModalOpen, setIsSellAccessoryModalOpen] = useState(false);
@@ -122,6 +125,7 @@ export function StaffLayout({
   });
 
   const logout = async () => {
+    clearAllNavigationState();
     await logoutUser();
   };
 

@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Customer, Ticket } from "@/lib/types";
 import { formatStatus, formatCustomerMobiles, getVipStatus, getWarrantyStatus, cn } from "@/lib/utils";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, ArrowLeft } from "lucide-react";
 
 export default function CustomerDetailClient() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const rawId = params?.id || searchParams.get("id");
@@ -33,7 +34,24 @@ export default function CustomerDetailClient() {
 
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
-      <div className="space-y-4 max-w-2xl">
+      <div className="space-y-4 max-w-2xl animate-fade-in text-[#121212]">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/customers");
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#767676] hover:text-[#121212] bg-white hover:bg-[#F0F0F2] border border-[#EBEBEB] px-3 py-1.5 rounded-[8px] transition-all active:scale-95 cursor-pointer shadow-2xs"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back</span>
+          </button>
+        </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-[20px] font-bold text-[#121212] tracking-tight">{customer.fullName}</h1>
           {vip.isRepeat && (

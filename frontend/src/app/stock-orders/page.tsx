@@ -10,10 +10,11 @@ import { AccessorySalesTracker } from "@/components/stock/AccessorySalesTracker"
 import { SellAccessoryModal } from "@/components/stock/SellAccessoryModal";
 import { ShoppingBag, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigationState } from "@/hooks/useNavigationState";
 
 export default function StockOrdersPage() {
   const { user, loading: authLoading } = useAuthGuard();
-  const [activeTab, setActiveTab] = useState<"DEMANDS" | "SALES">("DEMANDS");
+  const [activeTab, setActiveTab] = useNavigationState<"DEMANDS" | "SALES">("stock_active_tab", "DEMANDS");
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);

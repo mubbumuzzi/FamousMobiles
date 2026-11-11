@@ -31,6 +31,7 @@ import {
 } from "@/lib/new-ticket-validation";
 import { compressImage } from "@/lib/image-compressor";
 import { useStore } from "@/context/StoreContext";
+import { useIntakeDraft } from "@/hooks/useIntakeDraft";
 
 const STEPS = ["Customer", "Device", "Issue", "Cost", "Preview"];
 const emptyNewCustomer = { fullName: "", mobile: "", alternateMobile: "", address: "", city: "" };
@@ -39,7 +40,10 @@ export default function NewTicketPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthGuard();
   const { activeStore, stores } = useStore();
-  const [selectedStoreId, setSelectedStoreId] = useState("");
+  const { draft, updateDraft, clearDraft, hasDraft } = useIntakeDraft();
+
+  const selectedStoreId = draft.selectedStoreId;
+  const setSelectedStoreId = (val: string) => updateDraft("selectedStoreId", val);
 
   useEffect(() => {
     if (activeStore && !selectedStoreId) {
@@ -49,7 +53,11 @@ export default function NewTicketPage() {
     }
   }, [activeStore, stores, selectedStoreId]);
 
-  const [step, setStep] = useState(0);
+  const step = draft.step;
+  const setStep = (val: number | ((prev: number) => number)) => {
+    const nextVal = typeof val === "function" ? val(draft.step) : val;
+    updateDraft("step", nextVal);
+  };
 
   // Intercept Android hardware back button: step back in wizard before leaving page
   useAndroidBackButton(() => {
@@ -59,28 +67,119 @@ export default function NewTicketPage() {
     }
     return false;
   }, true, 10);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerId, setCustomerId] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const customerId = draft.customerId;
+  const setCustomerId = (id: string) => updateDraft("customerId", id);
+
+  const selectedCustomer = draft.selectedCustomer;
+  const setSelectedCustomer = (c: Customer | null) => updateDraft("selectedCustomer", c);
+
   const [repairHistory, setRepairHistory] = useState<Ticket[]>([]);
   const [selectedPastTicketId, setSelectedPastTicketId] = useState("");
-  const [newCustomer, setNewCustomer] = useState(emptyNewCustomer);
-  const [mobile, setMobile] = useState("");
+
+  const newCustomer = draft.newCustomer;
+  const setNewCustomer = (
+    nc:
+      | typeof draft.newCustomer
+      | ((prev: typeof draft.newCustomer) => typeof draft.newCustomer)
+  ) => {
+    const nextVal = typeof nc === "function" ? nc(draft.newCustomer) : nc;
+    updateDraft("newCustomer", nextVal);
+  };
+
+  const mobile = draft.mobile;
+  const setMobile = (m: string | ((prev: string) => string)) => {
+    const nextVal = typeof m === "function" ? m(draft.mobile) : m;
+    updateDraft("mobile", nextVal);
+  };
   const debouncedMobile = useDebounce(mobile, 350);
-  const [deviceType, setDeviceType] = useState<DeviceType>("MOBILE");
-  const [brand, setBrand] = useState("");
-  const [model, setModel] = useState("");
-  const [color, setColor] = useState("");
-  const [imei, setImei] = useState("");
-  const [accessories, setAccessories] = useState<string[]>([]);
-  const [conditions, setConditions] = useState<string[]>([]);
-  const [problem, setProblem] = useState("");
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [estimatedCost, setEstimatedCost] = useState("");
-  const [quoteAfterDiagnosis, setQuoteAfterDiagnosis] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState("");
-  const [edd, setEdd] = useState("");
-  const [warrantyDays, setWarrantyDays] = useState(0);
+
+  const deviceType = draft.deviceType;
+  const setDeviceType = (d: DeviceType) => updateDraft("deviceType", d);
+
+  const brand = draft.brand;
+  const setBrand = (b: string | ((prev: string) => string)) => {
+    const nextVal = typeof b === "function" ? b(draft.brand) : b;
+    updateDraft("brand", nextVal);
+  };
+
+  const model = draft.model;
+  const setModel = (m: string | ((prev: string) => string)) => {
+    const nextVal = typeof m === "function" ? m(draft.model) : m;
+    updateDraft("model", nextVal);
+  };
+
+  const color = draft.color;
+  const setColor = (c: string | ((prev: string) => string)) => {
+    const nextVal = typeof c === "function" ? c(draft.color) : c;
+    updateDraft("color", nextVal);
+  };
+
+  const imei = draft.imei;
+  const setImei = (i: string | ((prev: string) => string)) => {
+    const nextVal = typeof i === "function" ? i(draft.imei) : i;
+    updateDraft("imei", nextVal);
+  };
+
+  const accessories = draft.accessories;
+  const setAccessories = (
+    a: string[] | ((prev: string[]) => string[])
+  ) => {
+    const nextVal = typeof a === "function" ? a(draft.accessories) : a;
+    updateDraft("accessories", nextVal);
+  };
+
+  const conditions = draft.conditions;
+  const setConditions = (
+    c: string[] | ((prev: string[]) => string[])
+  ) => {
+    const nextVal = typeof c === "function" ? c(draft.conditions) : c;
+    updateDraft("conditions", nextVal);
+  };
+
+  const problem = draft.problem;
+  const setProblem = (p: string | ((prev: string) => string)) => {
+    const nextVal = typeof p === "function" ? p(draft.problem) : p;
+    updateDraft("problem", nextVal);
+  };
+
+  const selectedTemplates = draft.selectedTemplates;
+  const setSelectedTemplates = (
+    t: string[] | ((prev: string[]) => string[])
+  ) => {
+    const nextVal = typeof t === "function" ? t(draft.selectedTemplates) : t;
+    updateDraft("selectedTemplates", nextVal);
+  };
+
+  const estimatedCost = draft.estimatedCost;
+  const setEstimatedCost = (c: string | ((prev: string) => string)) => {
+    const nextVal = typeof c === "function" ? c(draft.estimatedCost) : c;
+    updateDraft("estimatedCost", nextVal);
+  };
+
+  const quoteAfterDiagnosis = draft.quoteAfterDiagnosis;
+  const setQuoteAfterDiagnosis = (
+    q: boolean | ((prev: boolean) => boolean)
+  ) => {
+    const nextVal = typeof q === "function" ? q(draft.quoteAfterDiagnosis) : q;
+    updateDraft("quoteAfterDiagnosis", nextVal);
+  };
+
+  const advancePaid = draft.advancePaid;
+  const setAdvancePaid = (a: string | ((prev: string) => string)) => {
+    const nextVal = typeof a === "function" ? a(draft.advancePaid) : a;
+    updateDraft("advancePaid", nextVal);
+  };
+
+  const edd = draft.edd;
+  const setEdd = (e: string | ((prev: string) => string)) => {
+    const nextVal = typeof e === "function" ? e(draft.edd) : e;
+    updateDraft("edd", nextVal);
+  };
+
+  const warrantyDays = draft.warrantyDays;
+  const setWarrantyDays = (w: number) => updateDraft("warrantyDays", w);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -371,6 +470,9 @@ export default function NewTicketPage() {
         }
       }
 
+      // Wipe saved form draft on successful ticket creation
+      clearDraft();
+
       router.push(`/tickets/view?id=${ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create ticket");
@@ -385,9 +487,25 @@ export default function NewTicketPage() {
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="mx-auto max-w-2xl animate-fade-in space-y-6 pb-8 text-[#121212]">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">New Repair</h1>
-            <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Fast intake — under 30 seconds</p>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-[20px] leading-[24px] font-bold text-[#121212] tracking-tight">New Repair</h1>
+              <p className="text-[12px] leading-[16px] text-[#767676] mt-0.5">Fast intake — under 30 seconds</p>
+            </div>
+            {hasDraft && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Discard this draft and start a fresh repair intake?")) {
+                    clearDraft();
+                  }
+                }}
+                className="text-[11px] font-semibold text-[#767676] hover:text-[#C5221F] bg-[#F0F0F2] hover:bg-[#FDE8E8] px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer"
+                title="Discard saved draft"
+              >
+                Discard Draft ✕
+              </button>
+            )}
           </div>
           {stores.length > 1 && (
             <div className="flex items-center gap-2 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 shadow-2xs">

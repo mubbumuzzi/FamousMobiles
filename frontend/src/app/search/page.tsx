@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { computeWarrantyStatus } from "@/components/stock/AccessorySalesTracker";
 import { printAccessoryWarrantyBill, downloadAccessoryWarrantyBill } from "@/lib/print";
 import { ShieldCheck, ShieldAlert, Shield } from "lucide-react";
+import { useNavigationState } from "@/hooks/useNavigationState";
 
 interface SearchResult {
   tickets: Ticket[];
@@ -114,13 +115,13 @@ export default function SearchPage() {
   const { activeStoreId } = useStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useNavigationState<string>("search_query", "");
   const debouncedQuery = useDebounce(query, 300);
   const [results, setResults] = useState<SearchResult | null>(null);
   const [accessories, setAccessories] = useState<AccessorySale[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const [scope, setScope] = useState<"ALL" | "TICKETS" | "CUSTOMERS" | "ACCESSORIES">("ALL");
+  const [scope, setScope] = useNavigationState<"ALL" | "TICKETS" | "CUSTOMERS" | "ACCESSORIES">("search_scope", "ALL");
 
   useEffect(() => {
     if (authLoading || !user) return;

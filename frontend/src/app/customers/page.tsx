@@ -11,6 +11,7 @@ import { Input, Label } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api, getCachedApi } from "@/lib/api";
+import { useNavigationState } from "@/hooks/useNavigationState";
 import { Customer } from "@/lib/types";
 import { formatCustomerMobiles } from "@/lib/utils";
 
@@ -38,7 +39,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState<boolean>(
     () => !getCachedApi<Customer[]>(customersKey)
   );
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useNavigationState<string>("customers_query", "");
   const [form, setForm] = useState({ fullName: "", mobile: "", alternateMobile: "", address: "" });
   const [showForm, setShowForm] = useState(false);
 
