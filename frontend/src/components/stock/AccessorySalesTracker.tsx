@@ -29,6 +29,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { printAccessoryWarrantyBill, downloadAccessoryWarrantyBill } from "@/lib/print";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuthGuard } from "@/hooks/useAuth";
+import { useStore } from "@/context/StoreContext";
 
 interface AccessorySalesTrackerProps {
   onOpenSellModal?: () => void;
@@ -103,6 +104,7 @@ export function computeWarrantyStatus(sale: AccessorySale): WarrantyStatusInfo {
 
 export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: AccessorySalesTrackerProps) {
   const { user } = useAuthGuard();
+  const { activeStoreId } = useStore();
   const isAdmin = user?.role === "ADMIN";
 
   const [sales, setSales] = useState<AccessorySale[]>([]);
@@ -121,7 +123,11 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
     setError(null);
     try {
       const q = query.trim();
-      const endpoint = q ? `/accessory-sales?q=${encodeURIComponent(q)}` : "/accessory-sales";
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (activeStoreId && activeStoreId !== "ALL") params.set("storeId", activeStoreId);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const endpoint = `/accessory-sales${qs}`;
       const res = await api<AccessorySale[]>(endpoint);
       setSales(res || []);
     } catch (err: any) {
@@ -129,11 +135,11 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeStoreId]);
 
   useEffect(() => {
     loadSales(debouncedSearch);
-  }, [debouncedSearch, loadSales, refreshTrigger]);
+  }, [debouncedSearch, loadSales, refreshTrigger, activeStoreId]);
 
   // Client-side filter
   const filteredSales = useMemo(() => {
@@ -664,6 +670,7 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
                   type="button"
                   onClick={() => handleWhatsApp(selectedSale)}
                   className="flex items-center gap-1 rounded-[8px] border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-semibold text-[#075E54] hover:bg-[#25D366]/20 transition-all cursor-pointer"
+                  title="Share via WhatsApp"
                 >
                   <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
                   <span>WhatsApp</span>
@@ -673,6 +680,7 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
                   type="button"
                   onClick={() => handleDownload(selectedSale)}
                   className="flex items-center gap-1 rounded-[8px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] transition-all cursor-pointer"
+                  title="Download PDF bill"
                 >
                   <Download className="h-3.5 w-3.5 text-[#767676]" />
                   <span>Download PDF</span>
@@ -680,10 +688,12 @@ export function AccessorySalesTracker({ onOpenSellModal, refreshTrigger }: Acces
 
                 <button
                   type="button"
+                  disabled={actionLoadingId !== null}
                   onClick={() => handlePrint(selectedSale)}
-                  className="flex items-center gap-1 rounded-[8px] bg-[#121212] text-white px-3.5 py-1.5 text-xs font-bold hover:bg-black transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-[8px] bg-[#121212] text-white px-3.5 py-1.5 text-xs font-bold hover:bg-black transition-all cursor-pointer shadow-xs active:scale-98"
+                  title="Print customer bill"
                 >
-                  <Printer className="h-3.5 w-3.5" />
+                  <Printer className="h-3.5 w-3.5 text-[#0E8345]" />
                   <span>Print Bill</span>
                 </button>
               </div>

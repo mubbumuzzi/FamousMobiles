@@ -33,6 +33,26 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
     List<AccessorySale> findTop50WithDetailsByOrderBySoldAtDesc();
 
     @Query("""
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        WHERE (:storeId IS NULL OR a.store.id = :storeId)
+        ORDER BY a.soldAt DESC
+    """)
+    List<AccessorySale> findTop50WithDetailsByStoreOrderBySoldAtDesc(@Param("storeId") UUID storeId);
+
+    @Query("""
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        WHERE a.customer.id = :customerId
+        ORDER BY a.soldAt DESC
+    """)
+    List<AccessorySale> findByCustomerIdWithDetails(@Param("customerId") UUID customerId);
+
+    @Query("""
         SELECT COALESCE(SUM(a.price), 0) FROM AccessorySale a
         WHERE a.soldAt >= :since
           AND a.status = 'COMPLETED'
@@ -64,6 +84,7 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
         LEFT JOIN FETCH a.soldBy
         LEFT JOIN FETCH a.store
         WHERE a.soldAt >= :from AND a.soldAt < :to
+          AND a.status = 'COMPLETED'
           AND (:storeId IS NULL OR a.store.id = :storeId)
         ORDER BY a.soldAt DESC
     """)
@@ -72,6 +93,29 @@ public interface AccessorySaleRepository extends JpaRepository<AccessorySale, UU
         @Param("to") Instant to,
         @Param("storeId") UUID storeId
     );
+
+    @Query(value = """
+        SELECT a FROM AccessorySale a
+        LEFT JOIN FETCH a.customer
+        LEFT JOIN FETCH a.soldBy
+        LEFT JOIN FETCH a.store
+        WHERE (:storeId IS NULL OR a.store.id = :storeId)
+          AND (LOWER(a.billNumber) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR a.customerMobile LIKE CONCAT('%', :q, '%')
+            OR LOWER(a.customerName) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(a.accessoryName) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(COALESCE(a.serialNumber, '')) LIKE LOWER(CONCAT('%', :q, '%')))
+        ORDER BY a.soldAt DESC
+    """, countQuery = """
+        SELECT count(a) FROM AccessorySale a
+        WHERE (:storeId IS NULL OR a.store.id = :storeId)
+          AND (LOWER(a.billNumber) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR a.customerMobile LIKE CONCAT('%', :q, '%')
+            OR LOWER(a.customerName) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(a.accessoryName) LIKE LOWER(CONCAT('%', :q, '%'))
+            OR LOWER(COALESCE(a.serialNumber, '')) LIKE LOWER(CONCAT('%', :q, '%')))
+    """)
+    Page<AccessorySale> searchByStore(@Param("q") String query, @Param("storeId") UUID storeId, Pageable pageable);
 
     @Query(value = """
         SELECT a FROM AccessorySale a

@@ -43,9 +43,15 @@ public class AccessorySaleController {
     @GetMapping
     public List<AccessorySaleDto.AccessorySaleResponse> list(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID storeId,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "50") int size) {
-        return accessorySaleService.list(q, page, size);
+        return accessorySaleService.list(q, storeId, page, size);
+    }
+
+    @GetMapping("/customer/{customerId}")
+    public List<AccessorySaleDto.AccessorySaleResponse> listByCustomer(@PathVariable UUID customerId) {
+        return accessorySaleService.listByCustomer(customerId);
     }
 
     @GetMapping("/{id}")
@@ -65,9 +71,10 @@ public class AccessorySaleController {
     public ResponseEntity<byte[]> receipt(
             @PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "false") boolean duplicate,
+            @RequestParam(required = false, defaultValue = "a4") String format,
             @RequestParam(required = false, defaultValue = "inline") String disposition) throws Exception {
         var sale = accessorySaleService.getEntity(id);
-        byte[] pdf = pdfReceiptService.generateAccessoryWarrantyBill(sale, duplicate);
+        byte[] pdf = pdfReceiptService.generateAccessoryWarrantyBill(sale, duplicate, format);
         String dispType = "attachment".equalsIgnoreCase(disposition) ? "attachment" : "inline";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, dispType + "; filename=\"" + sale.getBillNumber() + ".pdf\"")

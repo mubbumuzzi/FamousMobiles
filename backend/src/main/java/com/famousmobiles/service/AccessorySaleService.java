@@ -63,7 +63,8 @@ public class AccessorySaleService {
         String cleanMobile = rawMobile.length() > 10 ? rawMobile.substring(rawMobile.length() - 10) : rawMobile;
 
         Customer customer = null;
-        if (!cleanMobile.isEmpty()) {
+        boolean isPlaceholderMobile = cleanMobile.isEmpty() || cleanMobile.matches("^0+$");
+        if (!isPlaceholderMobile) {
             var phoneOpt = customerRepository.findPhoneByMobile(cleanMobile);
             if (phoneOpt.isPresent()) {
                 customer = phoneOpt.get().getCustomer();
@@ -118,6 +119,14 @@ public class AccessorySaleService {
                 ? req.paymentMode().trim().toUpperCase()
                 : "UPI";
 
+        int quantity = req.quantity() != null && req.quantity() > 0 ? req.quantity() : 1;
+        BigDecimal unitPrice = req.unitPrice() != null && req.unitPrice().compareTo(BigDecimal.ZERO) > 0
+                ? req.unitPrice()
+                : (quantity > 1 ? req.price().divide(BigDecimal.valueOf(quantity), 2, java.math.RoundingMode.HALF_UP) : req.price());
+        BigDecimal discount = req.discount() != null && req.discount().compareTo(BigDecimal.ZERO) >= 0
+                ? req.discount()
+                : BigDecimal.ZERO;
+
         AccessorySale sale = new AccessorySale();
         sale.setBillNumber(trackingNumberService.generateAccessoryBillNumber());
         sale.setCustomer(customer);
@@ -125,6 +134,9 @@ public class AccessorySaleService {
         sale.setCustomerMobile(cleanMobile.isEmpty() ? "0000000000" : cleanMobile);
         sale.setAccessoryName(req.accessoryName().trim());
         sale.setPrice(req.price());
+        sale.setQuantity(quantity);
+        sale.setUnitPrice(unitPrice);
+        sale.setDiscount(discount);
         sale.setPaymentMode(paymentMode);
         sale.setWarrantyMonths(warrantyMonths);
         sale.setWarrantyExpiresAt(expiryDate);
@@ -150,15 +162,28 @@ public class AccessorySaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<AccessorySaleDto.AccessorySaleResponse> list(String query, int page, int size) {
+    public List<AccessorySaleDto.AccessorySaleResponse> list(String query, UUID storeId, int page, int size) {
         if (query != null && !query.trim().isEmpty()) {
-            return accessorySaleRepository.search(query.trim(), PageRequest.of(Math.max(0, page), Math.max(1, size)))
+            return accessorySaleRepository.searchByStore(query.trim(), storeId, PageRequest.of(Math.max(0, page), Math.max(1, size)))
                     .getContent()
                     .stream()
                     .map(AccessorySaleDto.AccessorySaleResponse::from)
                     .toList();
         }
-        return accessorySaleRepository.findTop50WithDetailsByOrderBySoldAtDesc()
+        return accessorySaleRepository.findTop50WithDetailsByStoreOrderBySoldAtDesc(storeId)
+                .stream()
+                .map(AccessorySaleDto.AccessorySaleResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AccessorySaleDto.AccessorySaleResponse> list(String query, int page, int size) {
+        return list(query, null, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AccessorySaleDto.AccessorySaleResponse> listByCustomer(UUID customerId) {
+        return accessorySaleRepository.findByCustomerIdWithDetails(customerId)
                 .stream()
                 .map(AccessorySaleDto.AccessorySaleResponse::from)
                 .toList();

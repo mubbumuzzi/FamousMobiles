@@ -280,6 +280,9 @@ export interface AccessorySale {
   customerMobile: string;
   accessoryName: string;
   price: number;
+  quantity?: number;
+  unitPrice?: number;
+  discount?: number;
   paymentMode: "CASH" | "UPI" | "CARD" | string;
   warrantyMonths: number;
   warrantyExpiresAt?: string | null;
@@ -306,6 +309,9 @@ export interface AccessorySaleReportSummary {
 export interface CreateAccessorySaleRequest {
   accessoryName: string;
   price: number;
+  quantity?: number;
+  unitPrice?: number;
+  discount?: number;
   paymentMode?: string;
   warrantyMonths?: number;
   serialNumber?: string;

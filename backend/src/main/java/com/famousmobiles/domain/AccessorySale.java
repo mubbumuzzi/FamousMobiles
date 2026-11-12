@@ -34,6 +34,15 @@ public class AccessorySale extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(nullable = false)
+    private Integer quantity = 1;
+
+    @Column(name = "unit_price", precision = 10, scale = 2)
+    private BigDecimal unitPrice;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal discount = BigDecimal.ZERO;
+
     @Column(name = "payment_mode", nullable = false, length = 20)
     private String paymentMode = "UPI";
 
@@ -119,6 +128,30 @@ public class AccessorySale extends BaseEntity {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity != null && quantity > 0 ? quantity : 1;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity != null && quantity > 0 ? quantity : 1;
+    }
+
+    public BigDecimal getUnitPrice() {
+        return unitPrice != null ? unitPrice : price;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public BigDecimal getDiscount() {
+        return discount != null ? discount : BigDecimal.ZERO;
+    }
+
+    public void setDiscount(BigDecimal discount) {
+        this.discount = discount != null ? discount : BigDecimal.ZERO;
     }
 
     public String getPaymentMode() {

@@ -142,10 +142,20 @@ export async function downloadTicketReceipt(ticketId: string, trackingNumber: st
   }, 10000);
 }
 
+export interface AccessoryPrintOptions {
+  // Legacy options kept for backward compatibility; accessory bills always render clean single Customer Copy
+  duplicate?: boolean;
+  format?: string;
+}
+
 /**
  * Fetches accessory sale warranty bill PDF with authenticated Bearer token and triggers print dialog or download/view.
  */
-export async function printAccessoryWarrantyBill(saleId: string, billNumber?: string): Promise<void> {
+export async function printAccessoryWarrantyBill(
+  saleId: string,
+  billNumber?: string,
+  _options?: AccessoryPrintOptions
+): Promise<void> {
   const blob = await api<Blob>(`/accessory-sales/${saleId}/receipt/pdf`);
   const fileName = billNumber ? `${billNumber}.pdf` : `warranty-bill-${saleId.slice(0, 8)}.pdf`;
 
@@ -228,7 +238,11 @@ export async function printAccessoryWarrantyBill(saleId: string, billNumber?: st
 /**
  * Downloads the accessory warranty bill PDF locally with authenticated Bearer token.
  */
-export async function downloadAccessoryWarrantyBill(saleId: string, billNumber: string): Promise<void> {
+export async function downloadAccessoryWarrantyBill(
+  saleId: string,
+  billNumber: string,
+  _options?: AccessoryPrintOptions
+): Promise<void> {
   const blob = await api<Blob>(`/accessory-sales/${saleId}/receipt/pdf`);
   const fileName = `${billNumber}.pdf`;
 

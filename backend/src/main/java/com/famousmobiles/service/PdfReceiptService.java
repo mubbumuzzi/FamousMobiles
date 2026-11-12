@@ -76,17 +76,21 @@ public class PdfReceiptService {
     }
 
     public byte[] generateAccessoryWarrantyBill(AccessorySale sale) throws Exception {
-        return generateAccessoryWarrantyBill(sale, false);
-    }
-
-    public byte[] generateAccessoryWarrantyBill(AccessorySale sale, boolean duplicate) throws Exception {
-        byte[] pdf = buildAccessoryBillPdf(sale, duplicate);
+        byte[] pdf = buildAccessoryBillPdf(sale);
         Path cached = fileStorageService.getReceiptPath(sale.getBillNumber());
         Files.write(cached, pdf);
         return pdf;
     }
 
-    private byte[] buildAccessoryBillPdf(AccessorySale sale, boolean duplicate) throws Exception {
+    public byte[] generateAccessoryWarrantyBill(AccessorySale sale, boolean duplicate) throws Exception {
+        return generateAccessoryWarrantyBill(sale);
+    }
+
+    public byte[] generateAccessoryWarrantyBill(AccessorySale sale, boolean duplicate, String format) throws Exception {
+        return generateAccessoryWarrantyBill(sale);
+    }
+
+    private byte[] buildAccessoryBillPdf(AccessorySale sale) throws Exception {
         ShopInfo.Resolved shop = ShopInfo.resolve(sale.getStore(), appProperties.shop());
 
         Document document = new Document(PageSize.A4, 20f, 20f, 16f, 16f);
@@ -101,17 +105,8 @@ public class PdfReceiptService {
         qr.scaleAbsolute(46, 46);
         qr.setAlignment(Element.ALIGN_CENTER);
 
-        // 1. Top Half: Customer Copy
+        // Render clean Customer Copy
         renderAccessoryBillBlock(document, sale, shop, "CUSTOMER COPY", qr);
-
-        // 2. Only render Shop Copy if duplicate is explicitly requested
-        if (duplicate) {
-            Paragraph spacer = new Paragraph(" ");
-            spacer.setSpacingBefore(16f);
-            spacer.setSpacingAfter(8f);
-            document.add(spacer);
-            renderAccessoryBillBlock(document, sale, shop, "STORE / OFFICE COPY", qr);
-        }
 
         document.close();
         return baos.toByteArray();
@@ -193,14 +188,21 @@ public class PdfReceiptService {
         addCell(table, sale.getPaymentMode() != null ? sale.getPaymentMode() : "UPI", boldFont, false, false);
 
         // Row 3
+        String itemLabel = sale.getQuantity() > 1
+                ? sale.getAccessoryName() + " (Qty: " + sale.getQuantity() + " @ ₹" + sale.getUnitPrice() + ")"
+                : sale.getAccessoryName();
         addCell(table, "Item / Accessory", labelFont, false, true);
-        addCell(table, sale.getAccessoryName(), boldFont, false, false);
+        addCell(table, itemLabel, boldFont, false, false);
         addCell(table, "Serial / IMEI / Batch", labelFont, false, true);
         addCell(table, sale.getSerialNumber() != null && !sale.getSerialNumber().isBlank() ? sale.getSerialNumber() : "-", valueFont, false, false);
 
         // Row 4
+        String amountText = "₹" + sale.getPrice();
+        if (sale.getDiscount() != null && sale.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+            amountText += " (Disc: ₹" + sale.getDiscount() + ")";
+        }
         addCell(table, "Amount Paid", labelFont, false, true);
-        addCell(table, "₹" + sale.getPrice(), boldFont, false, false);
+        addCell(table, amountText, boldFont, false, false);
         addCell(table, "Payment Status", labelFont, false, true);
         PdfPCell paidCell = new PdfPCell(new Phrase("PAID IN FULL ✓", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f, new Color(21, 128, 61))));
         paidCell.setBackgroundColor(new Color(240, 253, 244));

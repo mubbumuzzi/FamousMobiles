@@ -18,6 +18,9 @@ public final class AccessorySaleDto {
     public record CreateAccessorySaleRequest(
             @NotBlank(message = "Accessory name is required") String accessoryName,
             @NotNull(message = "Price is required") @Positive(message = "Price must be positive") BigDecimal price,
+            Integer quantity,
+            BigDecimal unitPrice,
+            BigDecimal discount,
             String paymentMode,
             Integer warrantyMonths,
             String serialNumber,
@@ -25,7 +28,21 @@ public final class AccessorySaleDto {
             @NotBlank(message = "Customer mobile is required") String customerMobile,
             String notes,
             UUID storeId
-    ) {}
+    ) {
+        public CreateAccessorySaleRequest(
+                String accessoryName,
+                BigDecimal price,
+                String paymentMode,
+                Integer warrantyMonths,
+                String serialNumber,
+                String customerName,
+                String customerMobile,
+                String notes,
+                UUID storeId
+        ) {
+            this(accessoryName, price, 1, price, BigDecimal.ZERO, paymentMode, warrantyMonths, serialNumber, customerName, customerMobile, notes, storeId);
+        }
+    }
 
     public record VoidSaleRequest(
             String reason
@@ -39,6 +56,9 @@ public final class AccessorySaleDto {
             String customerMobile,
             String accessoryName,
             BigDecimal price,
+            Integer quantity,
+            BigDecimal unitPrice,
+            BigDecimal discount,
             String paymentMode,
             Integer warrantyMonths,
             LocalDate warrantyExpiresAt,
@@ -62,6 +82,9 @@ public final class AccessorySaleDto {
                     sale.getCustomerMobile(),
                     sale.getAccessoryName(),
                     sale.getPrice(),
+                    sale.getQuantity(),
+                    sale.getUnitPrice(),
+                    sale.getDiscount(),
                     sale.getPaymentMode(),
                     sale.getWarrantyMonths(),
                     sale.getWarrantyExpiresAt(),
