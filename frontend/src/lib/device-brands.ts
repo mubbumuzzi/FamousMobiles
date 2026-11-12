@@ -7,6 +7,7 @@ export const DEVICE_BRANDS = [
   "Infinix",
   "iQOO",
   "Lava",
+  "Lenovo",
   "Motorola",
   "Nokia",
   "Nothing",
