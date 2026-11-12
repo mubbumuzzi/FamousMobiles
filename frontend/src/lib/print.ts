@@ -1,34 +1,74 @@
 import { api } from "@/lib/api";
 
+declare global {
+  interface Window {
+    AndroidPdfBridge?: {
+      isNative: () => boolean;
+      printPdf: (base64Data: string, fileName: string) => void;
+      saveAndOpenPdf: (base64Data: string, fileName: string) => void;
+    };
+  }
+}
+
 /**
- * Fetches ticket receipt PDF with authenticated Bearer token and triggers print dialog or safe download on mobile.
+ * Converts a Blob to a Base64 string for Android native bridge communication.
  */
-export async function printTicketReceipt(ticketId: string): Promise<void> {
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Fetches ticket receipt PDF with authenticated Bearer token and triggers print dialog or safe download/view.
+ */
+export async function printTicketReceipt(ticketId: string, trackingNumber?: string): Promise<void> {
   const blob = await api<Blob>(`/tickets/${ticketId}/receipt/pdf`);
+  const fileName = trackingNumber ? `${trackingNumber}.pdf` : `receipt-${ticketId.slice(0, 8)}.pdf`;
+
+  // 1. Native Android APK via AndroidPdfBridge (instant Android PrintManager dialog)
+  if (typeof window !== "undefined" && window.AndroidPdfBridge?.printPdf) {
+    try {
+      const base64 = await blobToBase64(blob);
+      window.AndroidPdfBridge.printPdf(base64, fileName);
+      return;
+    } catch (bridgeErr) {
+      console.warn("AndroidPdfBridge print failed, falling back:", bridgeErr);
+    }
+  }
+
   const blobUrl = URL.createObjectURL(blob);
 
-  // If in Android WebView or mobile environment without desktop print dialog, download the receipt safely
-  const isMobile = typeof window !== "undefined" && (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    typeof window.print !== "function"
-  );
+  // 2. Mobile web browser fallback
+  const isMobile =
+    typeof window !== "undefined" &&
+    (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      typeof window.print !== "function");
 
   if (isMobile) {
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `receipt-${ticketId.slice(0, 8)}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
-      }
-      URL.revokeObjectURL(blobUrl);
-    }, 10000);
+    // On mobile web, opening in a new tab provides the browser's native PDF viewer with print/save options
+    const opened = window.open(blobUrl, "_blank");
+    if (!opened) {
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (document.body.contains(a)) document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 10000);
+    }
     return;
   }
 
-  // Desktop browser print via invisible iframe
+  // 3. Desktop browser print via invisible iframe
   try {
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -57,7 +97,7 @@ export async function printTicketReceipt(ticketId: string): Promise<void> {
   } catch {
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `receipt-${ticketId.slice(0, 8)}.pdf`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -74,48 +114,77 @@ export async function printTicketReceipt(ticketId: string): Promise<void> {
  */
 export async function downloadTicketReceipt(ticketId: string, trackingNumber: string): Promise<void> {
   const blob = await api<Blob>(`/tickets/${ticketId}/receipt/pdf`);
+  const fileName = `${trackingNumber}.pdf`;
+
+  // 1. Native Android APK via AndroidPdfBridge (saves to Downloads + opens system Chooser)
+  if (typeof window !== "undefined" && window.AndroidPdfBridge?.saveAndOpenPdf) {
+    try {
+      const base64 = await blobToBase64(blob);
+      window.AndroidPdfBridge.saveAndOpenPdf(base64, fileName);
+      return;
+    } catch (bridgeErr) {
+      console.warn("AndroidPdfBridge save failed, falling back:", bridgeErr);
+    }
+  }
+
+  // 2. Web browser download
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${trackingNumber}.pdf`;
+  a.href = blobUrl;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
     if (document.body.contains(a)) {
       document.body.removeChild(a);
     }
-    URL.revokeObjectURL(a.href);
+    URL.revokeObjectURL(blobUrl);
   }, 10000);
 }
 
 /**
- * Fetches accessory sale warranty bill PDF with authenticated Bearer token and triggers print dialog or download on mobile.
+ * Fetches accessory sale warranty bill PDF with authenticated Bearer token and triggers print dialog or download/view.
  */
 export async function printAccessoryWarrantyBill(saleId: string, billNumber?: string): Promise<void> {
   const blob = await api<Blob>(`/accessory-sales/${saleId}/receipt/pdf`);
-  const blobUrl = URL.createObjectURL(blob);
   const fileName = billNumber ? `${billNumber}.pdf` : `warranty-bill-${saleId.slice(0, 8)}.pdf`;
 
-  const isMobile = typeof window !== "undefined" && (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    typeof window.print !== "function"
-  );
+  // 1. Native Android APK via AndroidPdfBridge (opens Android PrintManager dialog)
+  if (typeof window !== "undefined" && window.AndroidPdfBridge?.printPdf) {
+    try {
+      const base64 = await blobToBase64(blob);
+      window.AndroidPdfBridge.printPdf(base64, fileName);
+      return;
+    } catch (bridgeErr) {
+      console.warn("AndroidPdfBridge print failed, falling back:", bridgeErr);
+    }
+  }
+
+  const blobUrl = URL.createObjectURL(blob);
+
+  // 2. Mobile web browser fallback
+  const isMobile =
+    typeof window !== "undefined" &&
+    (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      typeof window.print !== "function");
 
   if (isMobile) {
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
-      }
-      URL.revokeObjectURL(blobUrl);
-    }, 10000);
+    const opened = window.open(blobUrl, "_blank");
+    if (!opened) {
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (document.body.contains(a)) document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 10000);
+    }
     return;
   }
 
-  // Desktop browser print via invisible iframe
+  // 3. Desktop browser print via invisible iframe
   try {
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -161,15 +230,30 @@ export async function printAccessoryWarrantyBill(saleId: string, billNumber?: st
  */
 export async function downloadAccessoryWarrantyBill(saleId: string, billNumber: string): Promise<void> {
   const blob = await api<Blob>(`/accessory-sales/${saleId}/receipt/pdf`);
+  const fileName = `${billNumber}.pdf`;
+
+  // 1. Native Android APK via AndroidPdfBridge (saves to Downloads + opens system Chooser)
+  if (typeof window !== "undefined" && window.AndroidPdfBridge?.saveAndOpenPdf) {
+    try {
+      const base64 = await blobToBase64(blob);
+      window.AndroidPdfBridge.saveAndOpenPdf(base64, fileName);
+      return;
+    } catch (bridgeErr) {
+      console.warn("AndroidPdfBridge save failed, falling back:", bridgeErr);
+    }
+  }
+
+  // 2. Web browser download
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${billNumber}.pdf`;
+  a.href = blobUrl;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
     if (document.body.contains(a)) {
       document.body.removeChild(a);
     }
-    URL.revokeObjectURL(a.href);
+    URL.revokeObjectURL(blobUrl);
   }, 10000);
 }

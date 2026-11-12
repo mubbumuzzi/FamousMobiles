@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge() != null ? getBridge().getWebView() : null;
             if (webView != null) {
+                webView.addJavascriptInterface(new AndroidPdfBridge(this), "AndroidPdfBridge");
                 WebSettings settings = webView.getSettings();
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                 settings.setDomStorageEnabled(true);
