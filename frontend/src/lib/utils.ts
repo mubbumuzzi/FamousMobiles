@@ -10,6 +10,9 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatStatus(status: string) {
+  if (status === "NOT_REPAIRABLE_READY_FOR_PICKUP") {
+    return "Not Able to Repair - Ready for Pickup";
+  }
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench, Zap, CreditCard, ArrowLeft } from "lucide-react";
+import { AlertTriangle, AlertCircle, Calendar, Camera, CheckCircle2, Download, MessageCircle, Pencil, Phone, Printer, RotateCcw, User, Wrench, Zap, CreditCard, ArrowLeft } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { StatusProgress } from "@/components/tracking/StatusProgress";
 import { ActivityTimeline } from "@/components/tracking/ActivityTimeline";
@@ -35,6 +35,7 @@ const WARRANTY_OPTIONS = [
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
   if (status === "READY_FOR_PICKUP") return "warning";
+  if (status === "NOT_REPAIRABLE_READY_FOR_PICKUP") return "destructive";
   if (status.includes("WAITING")) return "warning";
   if (status === "RETURNED_UNREPAIRED") return "destructive";
   return "default";
@@ -407,6 +408,22 @@ export default function TicketDetailPage() {
         `🛡️ Warranty Offered: ${warrantyText}\n` +
         `📞 Call: ${shopMobile}\n\n` +
         `Please reply to this message to APPROVE the repair so our technician can begin. Thank you!`;
+    } else if (ticket.status === "NOT_REPAIRABLE_READY_FOR_PICKUP") {
+      const advNum = Number(ticket.advancePaid || 0);
+      const advLine =
+        advNum > 0
+          ? `💵 Advance Refund: Advance of ₹${advNum} will be refunded upon collection.\n`
+          : "";
+      text =
+        `Hello ${ticket.customer.fullName},\n\n` +
+        `Regarding your ${ticket.brand} ${ticket.model} (Ticket: ${ticket.trackingNumber}) at ${shopName}:\n\n` +
+        `Our technicians have diagnosed your device. Unfortunately, the device cannot be repaired and has been safely reassembled.\n\n` +
+        `📦 Status: NOT ABLE TO REPAIR - READY FOR PICKUP\n` +
+        `💰 Total Repair Charges: ₹0\n` +
+        advLine +
+        `📍 Shop: ${shopAddress}\n` +
+        `📞 Call: ${shopMobile}\n\n` +
+        `Please collect your device during shop hours. Thank you!`;
     } else if (ticket.status === "RETURNED_UNREPAIRED") {
       text =
         `Hello ${ticket.customer.fullName},\n\n` +
@@ -574,6 +591,8 @@ export default function TicketDetailPage() {
               <MessageCircle className="h-4 w-4" />
               {ticket.status === "READY_FOR_PICKUP"
                 ? "WhatsApp: Ready for Pickup"
+                : ticket.status === "NOT_REPAIRABLE_READY_FOR_PICKUP"
+                ? "WhatsApp: Cannot Repair Notice"
                 : ticket.status === "WAITING_FOR_APPROVAL"
                 ? "WhatsApp: Request Approval"
                 : ticket.status === "RETURNED_UNREPAIRED"
@@ -909,26 +928,33 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
-                  {nextStatus === "RETURNED_UNREPAIRED" && (
+                  {(nextStatus === "NOT_REPAIRABLE_READY_FOR_PICKUP" || nextStatus === "RETURNED_UNREPAIRED") && (
                     <div className="space-y-2 rounded-[10px] bg-[#F7F7F8] border border-[#EBEBEB] p-3 text-xs text-[#121212] animate-fade-in">
-                      <label className="font-semibold text-[#121212] block">Reason for returning unrepaired:</label>
+                      <label className="font-semibold text-[#121212] block">
+                        {nextStatus === "NOT_REPAIRABLE_READY_FOR_PICKUP"
+                          ? "Reason device cannot be repaired:"
+                          : "Reason for returning unrepaired:"}
+                      </label>
                       <select
                         className={selectClassName}
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                       >
-                        <option value="Customer changed mind / Cancelled">Customer changed mind / Cancelled</option>
                         <option value="Device unrepairable (Motherboard / CPU / corrosion)">Device unrepairable (Motherboard / CPU / corrosion)</option>
-                        <option value="Customer rejected revised estimate">Customer rejected revised estimate</option>
                         <option value="Spare parts unavailable">Spare parts unavailable</option>
+                        <option value="Customer rejected revised estimate">Customer rejected revised estimate</option>
+                        <option value="Customer changed mind / Cancelled">Customer changed mind / Cancelled</option>
                         <option value="Other">Other</option>
                       </select>
                       <div className="rounded-[8px] bg-[#FFF4EB] border border-[#FFE4CF] p-2 text-[#B35300] space-y-0.5">
-                        <p className="font-semibold text-[#121212]">Cost & Advance Settlement:</p>
+                        <p className="font-semibold text-[#121212]">Cost & Advance Notice:</p>
                         <p className="text-xs">
                           Total repair cost will be set to ₹0.
                           {Number(ticket.advancePaid) > 0 ? (
-                            <strong className="text-[#121212]"> Advance of {formatCurrency(Number(ticket.advancePaid))} will be marked as refunded to customer.</strong>
+                            <strong className="text-[#121212]">
+                              {" "}
+                              Advance of {formatCurrency(Number(ticket.advancePaid))} will be refunded to customer.
+                            </strong>
                           ) : (
                             " No advance was collected."
                           )}
@@ -994,6 +1020,22 @@ export default function TicketDetailPage() {
                         className="font-semibold bg-[#121212] text-white px-2.5 py-1 rounded-[6px] hover:bg-black flex items-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> Send Estimate to Customer
+                      </button>
+                    </div>
+                  )}
+
+                  {justUpdatedStatus === "NOT_REPAIRABLE_READY_FOR_PICKUP" && (
+                    <div className="rounded-[10px] bg-[#FFF4EB] border border-[#FFE4CF] p-2.5 text-xs flex items-center justify-between text-[#121212] animate-fade-in">
+                      <span>Device marked as Not Able to Repair. Ready for pickup.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openWhatsApp("auto");
+                          setJustUpdatedStatus("");
+                        }}
+                        className="font-semibold bg-[#121212] text-white px-2.5 py-1 rounded-[6px] hover:bg-black flex items-center gap-1 shadow-2xs cursor-pointer"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> Send Pickup Notice
                       </button>
                     </div>
                   )}
@@ -1342,15 +1384,16 @@ export default function TicketDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => quickUpdateStatus("WAITING_FOR_PARTS")}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-[#EBEBEB] bg-white px-3 py-1.5 text-xs font-semibold text-[#121212] hover:bg-[#F7F7F8] active:scale-95 touch-target cursor-pointer"
+                  onClick={() => quickUpdateStatus("NOT_REPAIRABLE_READY_FOR_PICKUP")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:scale-95 touch-target cursor-pointer"
                 >
-                  Wait for Parts
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-700" />
+                  Not Able to Repair
                 </button>
               </>
             )}
 
-            {(ticket.status === "WAITING_FOR_APPROVAL" || ticket.status === "WAITING_FOR_PARTS") && (
+            {ticket.status === "WAITING_FOR_APPROVAL" && (
               <>
                 <button
                   type="button"
@@ -1367,7 +1410,26 @@ export default function TicketDetailPage() {
                 >
                   Mark Ready
                 </button>
+                <button
+                  type="button"
+                  onClick={() => quickUpdateStatus("NOT_REPAIRABLE_READY_FOR_PICKUP")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:scale-95 touch-target cursor-pointer"
+                >
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-700" />
+                  Not Able to Repair
+                </button>
               </>
+            )}
+
+            {ticket.status === "NOT_REPAIRABLE_READY_FOR_PICKUP" && (
+              <button
+                type="button"
+                onClick={() => quickUpdateStatus("RETURNED_UNREPAIRED")}
+                className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#121212] hover:bg-black px-4 py-1.5 text-xs font-bold text-white shadow-2xs active:scale-95 touch-target cursor-pointer transition-all"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
+                Hand Over & Return Unrepaired
+              </button>
             )}
 
             {ticket.status === "READY_FOR_PICKUP" && (

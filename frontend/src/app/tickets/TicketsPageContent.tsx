@@ -22,6 +22,7 @@ import { useNavigationState } from "@/hooks/useNavigationState";
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
   if (status === "READY_FOR_PICKUP") return "warning";
+  if (status === "NOT_REPAIRABLE_READY_FOR_PICKUP") return "warning";
   if (status.includes("WAITING")) return "warning";
   if (status === "RETURNED_UNREPAIRED") return "destructive";
   return "default";
@@ -35,6 +36,8 @@ function formatCompactStatus(status: string): string {
       return "In Progress";
     case "READY_FOR_PICKUP":
       return "Ready";
+    case "NOT_REPAIRABLE_READY_FOR_PICKUP":
+      return "Cannot Repair";
     case "DELIVERED":
       return "Delivered";
     case "WAITING_FOR_PARTS":
@@ -121,10 +124,16 @@ export default function TicketsPageContent() {
         cardFilter === "ACTIVE" &&
         (t.status === "DELIVERED" ||
           t.status === "RETURNED_UNREPAIRED" ||
-          t.status === "READY_FOR_PICKUP")
+          t.status === "READY_FOR_PICKUP" ||
+          t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP")
       )
         return false;
-      if (cardFilter === "READY" && t.status !== "READY_FOR_PICKUP") return false;
+      if (
+        cardFilter === "READY" &&
+        t.status !== "READY_FOR_PICKUP" &&
+        t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
+      )
+        return false;
       if (cardFilter === "OVERDUE" && !isOverdue(t.estimatedDeliveryDate, t.status)) return false;
       if (cardFilter === "DELIVERED" && t.status !== "DELIVERED") return false;
     }
@@ -148,10 +157,20 @@ export default function TicketsPageContent() {
     (t) =>
       t.status !== "DELIVERED" &&
       t.status !== "RETURNED_UNREPAIRED" &&
-      t.status !== "READY_FOR_PICKUP"
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
   ).length;
-  const readyCount = tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
-  const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
+  const readyCount = tickets.filter(
+    (t) => t.status === "READY_FOR_PICKUP" || t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP"
+  ).length;
+  const overdueCount = tickets.filter(
+    (t) =>
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP" &&
+      isOverdue(t.estimatedDeliveryDate, t.status)
+  ).length;
   const deliveredCount = tickets.filter((t) => t.status === "DELIVERED").length;
 
   const storeDisplay =

@@ -8,20 +8,19 @@ const PIPELINE_STATUSES: RepairStatus[] = [
   "DEVICE_RECEIVED",
   "UNDER_DIAGNOSIS",
   "WAITING_FOR_APPROVAL",
-  "WAITING_FOR_PARTS",
   "REPAIR_IN_PROGRESS",
-  "QUALITY_CHECK",
   "READY_FOR_PICKUP",
 ];
 
 export function StatusProgress({ status, compact }: { status: RepairStatus; compact?: boolean }) {
-  if (status === "RETURNED_UNREPAIRED") {
+  if (status === "RETURNED_UNREPAIRED" || status === "NOT_REPAIRABLE_READY_FOR_PICKUP") {
     return (
-      <div className="rounded-lg bg-slate-100/90 border border-slate-300 p-2 text-xs text-slate-800 flex items-center justify-between">
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-950 flex items-center justify-between">
         <span className="font-semibold flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-slate-500" /> Returned Unrepaired
+          <span className="h-2 w-2 rounded-full bg-amber-600" />
+          {status === "NOT_REPAIRABLE_READY_FOR_PICKUP" ? "Not Able to Repair (Ready for Pickup)" : "Returned Unrepaired"}
         </span>
-        <span className="text-slate-500 font-medium">Repair Cancelled · Cost ₹0</span>
+        <span className="text-amber-800 font-medium">Charge ₹0</span>
       </div>
     );
   }

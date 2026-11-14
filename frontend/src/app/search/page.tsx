@@ -55,6 +55,7 @@ function getCustomerInitials(name: string): string {
 function statusVariant(status: string): "default" | "success" | "warning" | "destructive" {
   if (status === "DELIVERED") return "success";
   if (status === "READY_FOR_PICKUP") return "warning";
+  if (status === "NOT_REPAIRABLE_READY_FOR_PICKUP") return "destructive";
   if (status === "RETURNED_UNREPAIRED") return "destructive";
   return "default";
 }
@@ -72,6 +73,8 @@ function formatCompactStatus(status: string): string {
       return "Quality Check";
     case "READY_FOR_PICKUP":
       return "Ready";
+    case "NOT_REPAIRABLE_READY_FOR_PICKUP":
+      return "Cannot Repair";
     case "DELIVERED":
       return "Delivered";
     case "WAITING_FOR_PARTS":

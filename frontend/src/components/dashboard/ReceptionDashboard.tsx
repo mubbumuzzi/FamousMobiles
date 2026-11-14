@@ -57,14 +57,21 @@ export function ReceptionDashboard({
       isOverdue(t.estimatedDeliveryDate, t.status) &&
       t.status !== "DELIVERED" &&
       t.status !== "RETURNED_UNREPAIRED" &&
-      t.status !== "READY_FOR_PICKUP"
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
   );
-  const ready = tickets.filter((t) => t.status === "READY_FOR_PICKUP");
+  const ready = tickets.filter(
+    (t) => t.status === "READY_FOR_PICKUP"
+  );
+  const notRepairableCount = tickets.filter(
+    (t) => t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP"
+  ).length;
   const activeRepairs = tickets.filter(
     (t) =>
       t.status !== "DELIVERED" &&
       t.status !== "RETURNED_UNREPAIRED" &&
-      t.status !== "READY_FOR_PICKUP"
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
   );
   const deliveredCount = tickets.filter((t) => t.status === "DELIVERED").length;
   const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
@@ -130,10 +137,10 @@ export function ReceptionDashboard({
             dot: null,
           },
           {
-            key: "waitingParts" as MetricDrilldownType,
-            label: "Waiting Parts",
-            value: loading ? null : metrics?.waitingForParts ?? 0,
-            helper: "Awaiting spare parts",
+            key: "notRepairable" as MetricDrilldownType,
+            label: "Not Repairable",
+            value: loading ? null : notRepairableCount,
+            helper: "Ready for return",
             dot: "bg-[#B35300]",
           },
           {

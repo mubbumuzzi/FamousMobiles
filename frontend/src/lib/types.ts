@@ -8,6 +8,7 @@ export type RepairStatus =
   | "REPAIR_IN_PROGRESS"
   | "QUALITY_CHECK"
   | "READY_FOR_PICKUP"
+  | "NOT_REPAIRABLE_READY_FOR_PICKUP"
   | "DELIVERED"
   | "RETURNED_UNREPAIRED";
 
@@ -222,6 +223,7 @@ export type MetricDrilldownType =
   | "receivedToday"
   | "readyPickup"
   | "waitingParts"
+  | "notRepairable"
   | "deliveredToday"
   | "overdue";
 
@@ -229,10 +231,9 @@ export const REPAIR_STATUSES: RepairStatus[] = [
   "DEVICE_RECEIVED",
   "UNDER_DIAGNOSIS",
   "WAITING_FOR_APPROVAL",
-  "WAITING_FOR_PARTS",
   "REPAIR_IN_PROGRESS",
-  "QUALITY_CHECK",
   "READY_FOR_PICKUP",
+  "NOT_REPAIRABLE_READY_FOR_PICKUP",
   "DELIVERED",
   "RETURNED_UNREPAIRED",
 ];

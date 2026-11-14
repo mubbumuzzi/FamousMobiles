@@ -69,7 +69,8 @@ public class DashboardService {
         }
 
         long waitingParts = breakdown.getOrDefault(RepairStatus.WAITING_FOR_PARTS.name(), 0L);
-        long readyPickup = breakdown.getOrDefault(RepairStatus.READY_FOR_PICKUP.name(), 0L);
+        long readyPickup = breakdown.getOrDefault(RepairStatus.READY_FOR_PICKUP.name(), 0L)
+                + breakdown.getOrDefault(RepairStatus.NOT_REPAIRABLE_READY_FOR_PICKUP.name(), 0L);
 
         BigDecimal repairRevenueToday = includeRevenue ? sumPaymentsSince(startOfDay, storeId) : null;
         BigDecimal salesRevenueToday = includeRevenue ? sumSalesSince(startOfDay, storeId) : null;

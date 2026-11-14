@@ -281,6 +281,17 @@ public class TicketService {
                 throw new BadRequestException("Cannot deliver device with pending balance of ₹" + ticket.getBalanceAmount() + ". Please record payment first.");
             }
             ticket.setDeliveredAt(Instant.now());
+        } else if (target == RepairStatus.NOT_REPAIRABLE_READY_FOR_PICKUP) {
+            ticket.setEstimatedCost(BigDecimal.ZERO);
+            ticket.setBalanceAmount(BigDecimal.ZERO);
+            BigDecimal refundAdvance = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;
+            if (refundAdvance.compareTo(BigDecimal.ZERO) > 0) {
+                finalRemarks = (finalRemarks != null && !finalRemarks.isBlank() ? finalRemarks + " · " : "") +
+                        "Device not repairable. Estimated cost set to ₹0. Advance of ₹" + refundAdvance + " refundable upon pickup.";
+            } else {
+                finalRemarks = (finalRemarks != null && !finalRemarks.isBlank() ? finalRemarks + " · " : "") +
+                        "Device not repairable. Estimated cost set to ₹0.";
+            }
         } else if (target == RepairStatus.RETURNED_UNREPAIRED) {
             ticket.setDeliveredAt(Instant.now());
             BigDecimal refundAdvance = ticket.getAdvancePaid() != null ? ticket.getAdvancePaid() : BigDecimal.ZERO;

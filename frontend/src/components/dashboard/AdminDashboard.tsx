@@ -55,6 +55,8 @@ function getStatusBadgeStyle(status: string): string {
       return "bg-[#FDF4FF] text-[#A21CAF] border-fuchsia-200";
     case "READY_FOR_PICKUP":
       return "bg-[#EAF6EE] text-[#0E8345] border-green-200";
+    case "NOT_REPAIRABLE_READY_FOR_PICKUP":
+      return "bg-[#FFF4EB] text-[#B35300] border-amber-300";
     case "DELIVERED":
       return "bg-[#F0FDF4] text-[#15803D] border-green-300";
     case "RETURNED_UNREPAIRED":
@@ -75,6 +77,8 @@ function formatCompactStatus(status: string): string {
       return "Diagnosing";
     case "READY_FOR_PICKUP":
       return "Ready";
+    case "NOT_REPAIRABLE_READY_FOR_PICKUP":
+      return "Cannot Repair";
     case "DELIVERED":
       return "Delivered";
     case "WAITING_FOR_PARTS":
@@ -120,14 +124,17 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
   const delivered = tickets.filter((t) => t.status === "DELIVERED").length;
   const deliveredTodayCount = tickets.filter((t) => t.status === "DELIVERED" && isSameDay(t.deliveredAt)).length;
   const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
+  const readyCount = tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
+  const notRepairableCount = tickets.filter((t) => t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP").length;
   const activeRepairs = tickets.filter(
     (t) =>
       t.status !== "DELIVERED" &&
       t.status !== "RETURNED_UNREPAIRED" &&
-      t.status !== "READY_FOR_PICKUP"
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
   );
   const activeCount = activeRepairs.length;
-  const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
+  const overdueCount = activeRepairs.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
 
   const displayedActiveRepairs = activeRepairs.filter((t) => {
     if (activeFilter === "OVERDUE") {
@@ -183,10 +190,10 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
     {
       key: "readyPickup" as MetricDrilldownType,
       label: "Ready Pickup",
-      value: loading ? null : (metrics?.readyForPickup ?? 0),
-      helper: "Verified & waiting",
+      value: loading ? null : (tickets.length > 0 ? readyCount : metrics?.readyForPickup ?? 0),
+      helper: "Repaired & waiting",
       dot: "bg-[#0E8345]", // green dot for ready status
-      actionPrompt: (metrics?.readyForPickup ?? 0) > 0 ? "Send alerts" : null,
+      actionPrompt: (tickets.length > 0 ? readyCount : metrics?.readyForPickup ?? 0) > 0 ? "Send alerts" : null,
       isOverdue: false,
     },
     {
@@ -206,11 +213,11 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
       isOverdue: false,
     },
     {
-      key: "waitingParts" as MetricDrilldownType,
-      label: "Waiting Parts",
-      value: loading ? null : (metrics?.waitingForParts ?? 0),
-      helper: "Awaiting spare parts",
-      dot: "bg-[#B35300]", // amber dot for waiting status
+      key: "notRepairable" as MetricDrilldownType,
+      label: "Not Repairable",
+      value: loading ? null : notRepairableCount,
+      helper: "Ready for return",
+      dot: "bg-[#B35300]", // amber dot for not repairable status
       isOverdue: false,
     },
     {

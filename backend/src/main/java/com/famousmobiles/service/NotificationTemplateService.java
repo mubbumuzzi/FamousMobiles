@@ -41,6 +41,13 @@ public class NotificationTemplateService {
 
                 Tracking ID: %s
                 """.formatted(customerName, trackingId);
+            case NOT_REPAIRABLE_READY_FOR_PICKUP -> """
+                Dear %s,
+
+                Diagnosis completed. Unfortunately, your device cannot be repaired and is ready for collection. Total repair charge is ₹0.
+
+                Tracking ID: %s
+                """.formatted(customerName, trackingId);
             case DELIVERED -> """
                 Dear %s,
 
@@ -57,6 +64,7 @@ public class NotificationTemplateService {
             case REPAIR_IN_PROGRESS -> NotificationTemplate.REPAIR_STARTED;
             case WAITING_FOR_APPROVAL -> NotificationTemplate.WAITING_FOR_APPROVAL;
             case READY_FOR_PICKUP -> NotificationTemplate.READY_FOR_PICKUP;
+            case NOT_REPAIRABLE_READY_FOR_PICKUP -> NotificationTemplate.NOT_REPAIRABLE_READY_FOR_PICKUP;
             case DELIVERED -> NotificationTemplate.DELIVERED;
             default -> null;
         };

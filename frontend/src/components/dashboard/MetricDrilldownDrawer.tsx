@@ -67,10 +67,10 @@ type MetricDrilldownDrawerProps = {
 const METRIC_TABS: { key: MetricDrilldownType; label: string; adminOnly?: boolean }[] = [
   { key: "activeRepairs", label: "Active Repairs" },
   { key: "readyPickup", label: "Ready Pickup" },
+  { key: "notRepairable", label: "Not Repairable" },
   { key: "receivedToday", label: "Received Today" },
   { key: "deliveredToday", label: "Delivered Today" },
   { key: "deliveredAll", label: "All Delivered", adminOnly: true },
-  { key: "waitingParts", label: "Waiting Parts" },
   { key: "revenueToday", label: "Revenue Today", adminOnly: true },
 ];
 
@@ -193,11 +193,17 @@ export function MetricDrilldownDrawer({
           (t) =>
             t.status !== "DELIVERED" &&
             t.status !== "RETURNED_UNREPAIRED" &&
-            t.status !== "READY_FOR_PICKUP"
+            t.status !== "READY_FOR_PICKUP" &&
+            t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
         );
         break;
       case "readyPickup":
-        list = tickets.filter((t) => t.status === "READY_FOR_PICKUP");
+        list = tickets.filter(
+          (t) => t.status === "READY_FOR_PICKUP"
+        );
+        break;
+      case "notRepairable":
+        list = tickets.filter((t) => t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP");
         break;
       case "receivedToday":
         list = tickets.filter((t) => isSameDay(t.createdAt));
@@ -209,7 +215,14 @@ export function MetricDrilldownDrawer({
         list = tickets.filter((t) => t.status === "WAITING_FOR_PARTS");
         break;
       case "overdue":
-        list = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status));
+        list = tickets.filter(
+          (t) =>
+            t.status !== "DELIVERED" &&
+            t.status !== "RETURNED_UNREPAIRED" &&
+            t.status !== "READY_FOR_PICKUP" &&
+            t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP" &&
+            isOverdue(t.estimatedDeliveryDate, t.status)
+        );
         break;
       case "deliveredAll":
         list = tickets.filter((t) => t.status === "DELIVERED");
@@ -240,10 +253,15 @@ export function MetricDrilldownDrawer({
           (t) =>
             t.status !== "DELIVERED" &&
             t.status !== "RETURNED_UNREPAIRED" &&
-            t.status !== "READY_FOR_PICKUP"
+            t.status !== "READY_FOR_PICKUP" &&
+            t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
         ).length;
       case "readyPickup":
-        return tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
+        return tickets.filter(
+          (t) => t.status === "READY_FOR_PICKUP"
+        ).length;
+      case "notRepairable":
+        return tickets.filter((t) => t.status === "NOT_REPAIRABLE_READY_FOR_PICKUP").length;
       case "receivedToday":
         return tickets.filter((t) => isSameDay(t.createdAt)).length;
       case "deliveredToday":
@@ -253,7 +271,14 @@ export function MetricDrilldownDrawer({
       case "waitingParts":
         return tickets.filter((t) => t.status === "WAITING_FOR_PARTS").length;
       case "overdue":
-        return tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;
+        return tickets.filter(
+          (t) =>
+            t.status !== "DELIVERED" &&
+            t.status !== "RETURNED_UNREPAIRED" &&
+            t.status !== "READY_FOR_PICKUP" &&
+            t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP" &&
+            isOverdue(t.estimatedDeliveryDate, t.status)
+        ).length;
       default:
         return null;
     }
@@ -365,6 +390,7 @@ export function MetricDrilldownDrawer({
                 {metric === "deliveredToday" && <Truck className="h-4 w-4" />}
                 {metric === "deliveredAll" && <PackageCheck className="h-4 w-4" />}
                 {metric === "waitingParts" && <Clock className="h-4 w-4" />}
+                {metric === "notRepairable" && <AlertTriangle className="h-4 w-4" />}
                 {metric === "overdue" && <AlertTriangle className="h-4 w-4" />}
               </span>
               <div>
@@ -372,6 +398,7 @@ export function MetricDrilldownDrawer({
                   {metric === "revenueToday" && "Revenue Today Breakdown"}
                   {metric === "activeRepairs" && `Active Repairs (${filteredTickets.length})`}
                   {metric === "readyPickup" && `Ready for Pickup (${filteredTickets.length})`}
+                  {metric === "notRepairable" && `Not Able to Repair - Ready for Pickup (${filteredTickets.length})`}
                   {metric === "receivedToday" && `Received Today (${filteredTickets.length})`}
                   {metric === "deliveredToday" && `Delivered Today (${filteredTickets.length})`}
                   {metric === "deliveredAll" && `All Delivered Tickets (${filteredTickets.length})`}
@@ -655,6 +682,8 @@ export function MetricDrilldownDrawer({
                                 ? "success"
                                 : ticket.status === "READY_FOR_PICKUP"
                                 ? "warning"
+                                : ticket.status === "NOT_REPAIRABLE_READY_FOR_PICKUP"
+                                ? "destructive"
                                 : "default"
                             }
                             className="text-[10px]"

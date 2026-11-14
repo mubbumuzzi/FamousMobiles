@@ -42,6 +42,41 @@ export function buildWhatsAppPickupUrl(ticket: Ticket): string {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
+export function buildWhatsAppUnrepairableUrl(ticket: Ticket): string {
+  const phone = cleanMobile(ticket.customer?.mobile);
+  const name = ticket.customer?.fullName || "Customer";
+  const device = `${ticket.brand || ""} ${ticket.model || ""}`.trim() || "Device";
+  const tracking = ticket.trackingNumber;
+
+  const shopName = ticket.store?.name || SHOP.name;
+  const shopAddress = ticket.store
+    ? [ticket.store.addressLine1, ticket.store.addressLine2, ticket.store.city].filter(Boolean).join(", ")
+    : SHOP.addressLines.join(", ");
+  const shopMobile = ticket.store?.mobile || SHOP.mobile;
+
+  const refundText =
+    Number(ticket.advancePaid || 0) > 0
+      ? `Any advance of ${formatCurrency(Number(ticket.advancePaid))} will be refunded upon collection.`
+      : `Total repair charges: ₹0.`;
+
+  const message = [
+    `Dear ${name},`,
+    ``,
+    `Regarding your *${device}* (Tracking ID: *${tracking}*) at *${shopName}*:`,
+    ``,
+    `Our technicians have diagnosed your device. Unfortunately, the device cannot be repaired and has been safely reassembled.`,
+    ``,
+    `📦 *Your device is ready for pickup/collection.*`,
+    `💳 ${refundText}`,
+    `📍 Shop Address: ${shopAddress}.`,
+    `📞 Phone: ${shopMobile}`,
+    ``,
+    `Please present your service bill or tracking ID when collecting. Thank you for visiting Famous Mobiles.`,
+  ].join("\n");
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
 export function buildWhatsAppDelayUrl(ticket: Ticket): string {
   const phone = cleanMobile(ticket.customer?.mobile);
   const name = ticket.customer?.fullName || "Customer";

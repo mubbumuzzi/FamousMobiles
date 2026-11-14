@@ -8,6 +8,7 @@ export const CUSTOMER_STATUS_MESSAGES: Record<RepairStatus, string> = {
   REPAIR_IN_PROGRESS: "Repair is currently in progress.",
   QUALITY_CHECK: "Your device is going through quality check.",
   READY_FOR_PICKUP: "Great news! Your device is ready for pickup.",
+  NOT_REPAIRABLE_READY_FOR_PICKUP: "Diagnosis completed. Unfortunately, your device cannot be repaired. It has been reassembled and is ready for collection at our shop.",
   DELIVERED: "Your device has been delivered. Thank you for choosing us!",
   RETURNED_UNREPAIRED: "This repair was cancelled and the device has been returned unrepaired. Any advance paid was refunded.",
 };
@@ -17,14 +18,12 @@ export function getCustomerStatusMessage(status: RepairStatus): string {
 }
 
 export function getProgressPercent(status: RepairStatus): number {
-  if (status === "RETURNED_UNREPAIRED") return 100;
+  if (status === "RETURNED_UNREPAIRED" || status === "NOT_REPAIRABLE_READY_FOR_PICKUP") return 100;
   const order: RepairStatus[] = [
     "DEVICE_RECEIVED",
     "UNDER_DIAGNOSIS",
     "WAITING_FOR_APPROVAL",
-    "WAITING_FOR_PARTS",
     "REPAIR_IN_PROGRESS",
-    "QUALITY_CHECK",
     "READY_FOR_PICKUP",
     "DELIVERED",
   ];
@@ -38,7 +37,8 @@ export function isOverdue(estimatedDeliveryDate?: string, status?: RepairStatus)
     !estimatedDeliveryDate ||
     status === "DELIVERED" ||
     status === "RETURNED_UNREPAIRED" ||
-    status === "READY_FOR_PICKUP"
+    status === "READY_FOR_PICKUP" ||
+    status === "NOT_REPAIRABLE_READY_FOR_PICKUP"
   )
     return false;
   const edd = new Date(estimatedDeliveryDate);

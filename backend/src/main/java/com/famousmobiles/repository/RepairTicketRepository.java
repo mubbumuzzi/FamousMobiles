@@ -103,6 +103,7 @@ public interface RepairTicketRepository extends JpaRepository<RepairTicket, UUID
         WHERE t.status NOT IN (
             com.famousmobiles.domain.enums.RepairStatus.DELIVERED,
             com.famousmobiles.domain.enums.RepairStatus.READY_FOR_PICKUP,
+            com.famousmobiles.domain.enums.RepairStatus.NOT_REPAIRABLE_READY_FOR_PICKUP,
             com.famousmobiles.domain.enums.RepairStatus.RETURNED_UNREPAIRED
         )
         AND (:storeId IS NULL OR t.store.id = :storeId)

@@ -125,6 +125,7 @@ export function StockDemandSnapshot({
   const activeOrders = orders.filter((o) => o.status !== "CANCELLED" && o.status !== "FULFILLED");
   const waitingOrders = orders.filter((o) => o.status === "PENDING");
   const arrivedOrders = orders.filter((o) => o.status === "ARRIVED");
+  const fulfilledOrders = orders.filter((o) => o.status === "FULFILLED");
   const totalAdvance = activeOrders.reduce((sum, o) => sum + (Number(o.advanceAmount) || 0), 0);
 
   // Top 4 urgent demands waiting wholesale
@@ -221,19 +222,19 @@ export function StockDemandSnapshot({
           <p className="text-[11px] text-[#767676] mt-0.5">Ready for customer pickup</p>
         </Link>
 
-        {/* Metric 3: Blocked Repairs */}
+        {/* Metric 3: Fulfilled Orders */}
         <Link
-          href="/tickets?status=WAITING_FOR_PARTS"
+          href="/stock-orders"
           className="rounded-[12px] border border-[#EBEBEB] bg-white p-3.5 hover:border-[#DFDFDF] hover:bg-[#FCFCFD] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] block"
         >
           <div className="flex items-center justify-between text-[#767676] mb-1">
-            <span className="text-[11px] font-medium tracking-wide uppercase">Blocked Repairs</span>
-            <Wrench className="h-3.5 w-3.5 text-[#767676]" />
+            <span className="text-[11px] font-medium tracking-wide uppercase">Fulfilled Orders</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-[#0E8345]" />
           </div>
           <div className="text-[22px] font-bold text-[#121212] leading-tight">
-            {loading ? <Skeleton className="h-6 w-12 my-1" /> : waitingPartsCount}
+            {loading ? <Skeleton className="h-6 w-12 my-1" /> : fulfilledOrders.length}
           </div>
-          <p className="text-[11px] text-[#767676] mt-0.5">Awaiting spare parts</p>
+          <p className="text-[11px] text-[#767676] mt-0.5">Completed & handed over</p>
         </Link>
 
         {/* Metric 4: Advance Collected */}

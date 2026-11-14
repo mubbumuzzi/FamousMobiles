@@ -23,7 +23,8 @@ export function TechnicianHome({ tickets, userName, loading, onRefresh }: Techni
     (t) =>
       t.status !== "DELIVERED" &&
       t.status !== "RETURNED_UNREPAIRED" &&
-      t.status !== "READY_FOR_PICKUP"
+      t.status !== "READY_FOR_PICKUP" &&
+      t.status !== "NOT_REPAIRABLE_READY_FOR_PICKUP"
   );
   const mine = active.filter((t) => t.assignedTechnicianName === userName);
   const unassigned = active.filter((t) => !t.assignedTechnicianName);
