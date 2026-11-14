@@ -45,6 +45,9 @@ interface DoorstepBooking {
   brandModel: string;
   repairCategory: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  googleMapsUrl?: string | null;
   visitCharge: number;
   firstVisitFree: boolean;
   technicianName?: string | null;
@@ -482,9 +485,34 @@ export default function DoorstepPage() {
                         <MapPin className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
                         <span>{b.address}</span>
                       </div>
-                      <div className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">
-                        <Navigation className="h-3 w-3 fill-emerald-600 text-emerald-600" />
-                        <span>Manikonda Hub Coverage Area (5 km)</span>
+
+                      {/* Direction action & Hub coverage indicator */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <a
+                          href={
+                            b.googleMapsUrl ||
+                            (b.latitude && b.longitude
+                              ? `https://www.google.com/maps/dir/?api=1&destination=${b.latitude},${b.longitude}`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                                  b.address.toLowerCase().includes("hyderabad")
+                                    ? b.address
+                                    : `${b.address}, Manikonda, Hyderabad`
+                                )}`)
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-blue-50 hover:bg-blue-100 text-[#1D4ED8] text-[11px] font-bold border border-blue-200 transition-colors shadow-2xs group"
+                          title="Open Google Maps Turn-by-Turn GPS Navigation for technician"
+                        >
+                          <Navigation className="h-3 w-3 fill-blue-600 text-blue-600 group-hover:scale-110 transition-transform" />
+                          <span>Get Directions</span>
+                          <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+                        </a>
+
+                        <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Manikonda Hub Coverage Area (5 km)</span>
+                        </div>
                       </div>
                     </div>
                   </div>
