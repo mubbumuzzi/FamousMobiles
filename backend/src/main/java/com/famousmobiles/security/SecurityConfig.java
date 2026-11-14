@@ -100,8 +100,14 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         for (String origin : appProperties.cors().allowedOrigins().split(",")) {
-            config.addAllowedOrigin(origin.trim());
+            String trimmed = origin.trim();
+            if (!trimmed.isEmpty()) {
+                config.addAllowedOriginPattern(trimmed);
+            }
         }
+        config.addAllowedOriginPattern("http://13.140.146.12:*");
+        config.addAllowedOriginPattern("http://localhost:*");
+        config.addAllowedOriginPattern("http://127.0.0.1:*");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
