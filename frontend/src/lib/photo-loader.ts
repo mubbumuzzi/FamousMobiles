@@ -1,42 +1,31 @@
+import { getApiUrl, getAccessToken, refreshAccessToken, loadTokens } from "./api.ts";
+
 // In-memory cache mapping fullUrl -> blobUrl
 const photoBlobCache = new Map<string, string>();
-
-function resolveApiUrl(): string {
-  if (typeof window !== "undefined") {
-    try {
-      const custom = localStorage.getItem("fm_server_url");
-      if (custom && custom.trim()) {
-        return custom.trim().replace(/\/+$/, "");
-      }
-    } catch (_) {}
-  }
-  return (process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8081/api").replace(/\/+$/, "");
-}
-
-function resolveAccessToken(): string | null {
-  if (typeof window !== "undefined") {
-    try {
-      return localStorage.getItem("fm_access");
-    } catch (_) {}
-  }
-  return null;
-}
 
 /**
  * Resolves a ticket photo's stored relative path or full URL against the active backend API.
  */
 export function getPhotoFullUrl(fileUrl?: string): string {
   if (!fileUrl) return "";
-  if (
-    fileUrl.startsWith("http://") ||
-    fileUrl.startsWith("https://") ||
-    fileUrl.startsWith("data:") ||
-    fileUrl.startsWith("blob:")
-  ) {
+  if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:")) {
     return fileUrl;
   }
-  const apiUrl = resolveApiUrl();
+
+  const apiUrl = getApiUrl();
   const apiRoot = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
+
+  // Stale domain / port rewrite: If stored URL has old domain or old 8080 port, rewrite to current API root
+  if (fileUrl.includes(":8080") || fileUrl.includes("famousmobiles.com")) {
+    const path = fileUrl.replace(/^https?:\/\/[^\/]+/, "");
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${apiRoot}${cleanPath}`;
+  }
+
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    return fileUrl;
+  }
+
   const path = fileUrl.startsWith("/") ? fileUrl : `/${fileUrl}`;
   return `${apiRoot}${path}`;
 }
@@ -44,7 +33,8 @@ export function getPhotoFullUrl(fileUrl?: string): string {
 /**
  * Loads a device photo via fetch() (which CapacitorHttp intercepts on Android natively),
  * converts the binary response into a local blob: URL, and caches it in memory.
- * This completely avoids Android WebView mixed-content and cleartext image-loading issues.
+ * This completely avoids Android WebView mixed-content and cleartext image-loading issues,
+ * and handles JWT token authorization and automatic refresh seamlessly.
  */
 export async function loadPhotoUrl(fileUrl: string): Promise<string> {
   if (!fileUrl) return "";
@@ -58,13 +48,27 @@ export async function loadPhotoUrl(fileUrl: string): Promise<string> {
   }
 
   try {
+    await loadTokens();
     const headers: Record<string, string> = {};
-    const token = resolveAccessToken();
+    let token = getAccessToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(fullUrl, { headers });
+    let res = await fetch(fullUrl, { headers });
+
+    // If 401 Unauthorized, automatically attempt token refresh and retry
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        token = getAccessToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        res = await fetch(fullUrl, { headers });
+      }
+    }
+
     if (!res.ok) {
       console.warn(`[photo-loader] Fetch returned HTTP ${res.status} for ${fullUrl}`);
       return fullUrl;

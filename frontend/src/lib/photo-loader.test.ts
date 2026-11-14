@@ -13,11 +13,18 @@ describe("Device Photo Loader & URL Resolution Tests", () => {
       assert.equal(getPhotoFullUrl(undefined), "");
     });
 
-    it("should return absolute http/https URLs as-is without modification", () => {
+    it("should return external http/https URLs as-is without modification", () => {
       const httpUrl = "http://example.com/photos/device.jpg";
-      const httpsUrl = "https://images.famousmobiles.com/photos/123.png";
+      const httpsUrl = "https://cdn.example.com/photos/123.png";
       assert.equal(getPhotoFullUrl(httpUrl), httpUrl);
       assert.equal(getPhotoFullUrl(httpsUrl), httpsUrl);
+    });
+
+    it("should rewrite stale famousmobiles.com and 8080 URLs to the active backend API root", () => {
+      const staleDomainUrl = "https://famousmobiles.com/api/files/tickets/1/photos/2";
+      const stalePortUrl = "http://13.140.146.12:8080/api/files/tickets/1/photos/2";
+      assert.equal(getPhotoFullUrl(staleDomainUrl), "http://13.140.146.12:8081/api/files/tickets/1/photos/2");
+      assert.equal(getPhotoFullUrl(stalePortUrl), "http://13.140.146.12:8081/api/files/tickets/1/photos/2");
     });
 
     it("should return data: and blob: URLs as-is without modification", () => {

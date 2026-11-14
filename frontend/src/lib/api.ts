@@ -6,13 +6,13 @@ import {
   storeServerUrl,
   storeTokens,
   removeAuthData,
-} from "./storage";
+} from "./storage.ts";
 import {
   getCachedApi,
   setCachedApi,
   invalidateApiCache,
   clearApiCache,
-} from "./api-cache";
+} from "./api-cache.ts";
 
 export { getCachedApi, setCachedApi, invalidateApiCache, clearApiCache };
 
