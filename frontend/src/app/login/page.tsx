@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Smartphone, Settings2, Wifi, Cloud, Cable, CheckCircle2, AlertCircle, X, RefreshCw } from "lucide-react";
+import { Smartphone, Settings2, CheckCircle2, AlertCircle, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Label } from "@/components/ui/input";
 import { setTokens, loadTokens, getAccessToken, getApiUrl, DEFAULT_API_URL } from "@/lib/api";
@@ -12,26 +12,6 @@ import { saveUser } from "@/hooks/useAuth";
 import { ShopTerms } from "@/components/ShopInfo";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
-const PRESET_SERVERS = [
-  {
-    name: "Production Cloud (Live 24/7)",
-    url: "http://13.140.146.12:8081/api",
-    description: "Connects anywhere on port 8081 (Wi-Fi or 4G/5G mobile data)",
-    icon: Cloud,
-  },
-  {
-    name: "Local Wi-Fi (Mac)",
-    url: "http://192.168.1.13:8080/api",
-    description: "Mac & phone on same Wi-Fi with ./scripts/start-backend.sh",
-    icon: Wifi,
-  },
-  {
-    name: "USB Debugging (adb reverse)",
-    url: "http://localhost:8080/api",
-    description: "USB cable with: adb reverse tcp:8080 tcp:8080",
-    icon: Cable,
-  },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -134,7 +114,7 @@ export default function LoginPage() {
       const msg = err instanceof Error ? err.message : "Login failed";
       if (msg.includes("fetch") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
         setError(
-          `Cannot reach server at ${targetUrl}. Tap "Change Server" below to switch to your Mac Wi-Fi IP or Cloud server.`
+          `Cannot reach server at ${targetUrl}. Tap "Change Server" below to check the connection.`
         );
       } else {
         setError(msg);
@@ -257,7 +237,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h3 className="text-[15px] font-bold text-[#121212]">Backend Server Settings</h3>
-                  <p className="text-[11px] text-[#767676]">Select where the app connects to</p>
+                  <p className="text-[11px] text-[#767676]">Configure the server API URL</p>
                 </div>
               </div>
               <button
@@ -270,52 +250,6 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-4 space-y-4">
-              {/* Presets */}
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-[#121212]">Quick Presets</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {PRESET_SERVERS.map((preset) => {
-                    const isSelected = customUrlInput === preset.url;
-                    const Icon = preset.icon;
-                    return (
-                      <button
-                        key={preset.name}
-                        type="button"
-                        onClick={() => {
-                          setCustomUrlInput(preset.url);
-                          handleTestConnection(preset.url);
-                        }}
-                        className={`flex items-start gap-3 rounded-[10px] border p-3 text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? "border-[#121212] bg-[#F7F7F8] shadow-2xs ring-1 ring-[#121212]"
-                            : "border-[#EBEBEB] bg-white hover:border-[#DFDFDF]"
-                        }`}
-                      >
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] ${
-                            isSelected ? "bg-[#121212] text-white" : "bg-[#F0F0F2] text-[#121212]"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[#121212]">{preset.name}</span>
-                            {isSelected && (
-                              <span className="text-[10px] font-bold text-[#121212] bg-[#EBEBEB] px-1.5 py-0.2 rounded-[4px]">
-                                Selected
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-[#767676]">{preset.description}</p>
-                          <p className="mt-0.5 font-mono text-[10.5px] text-[#A3A3A3] truncate">{preset.url}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Custom Input */}
               <div>
                 <Label htmlFor="custom-url" className="text-xs font-bold text-[#121212]">
@@ -330,7 +264,7 @@ export default function LoginPage() {
                       setCustomUrlInput(e.target.value);
                       setTestStatus("idle");
                     }}
-                    placeholder="http://192.168.1.13:8080/api"
+                    placeholder="http://13.140.146.12:8081/api"
                     className="font-mono text-xs flex-1"
                   />
                   <Button
