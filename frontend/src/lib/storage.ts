@@ -21,12 +21,25 @@ export async function initStorage(): Promise<void> {
     memRefresh = ref.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_refresh") : null);
     memUser = usr.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_user") : null);
     memServerUrl = srv.value ?? (typeof window !== "undefined" ? localStorage.getItem("fm_server_url") : null);
+
+    // Auto-purge stale 8080 or domain URLs from persistent storage
+    if (memServerUrl && (memServerUrl.includes(":8080") || memServerUrl.includes("famousmobiles.com"))) {
+      memServerUrl = null;
+      Preferences.remove({ key: "fm_server_url" }).catch(() => {});
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("fm_server_url");
+      }
+    }
   } catch {
     if (typeof window !== "undefined") {
       memAccess = localStorage.getItem("fm_access");
       memRefresh = localStorage.getItem("fm_refresh");
       memUser = localStorage.getItem("fm_user");
       memServerUrl = localStorage.getItem("fm_server_url");
+      if (memServerUrl && (memServerUrl.includes(":8080") || memServerUrl.includes("famousmobiles.com"))) {
+        memServerUrl = null;
+        localStorage.removeItem("fm_server_url");
+      }
     }
   }
   initialized = true;
@@ -56,6 +69,12 @@ export function getCachedUser(): string | null {
 export function getCachedServerUrl(): string | null {
   if (!memServerUrl && typeof window !== "undefined") {
     memServerUrl = localStorage.getItem("fm_server_url");
+  }
+  if (memServerUrl && (memServerUrl.includes(":8080") || memServerUrl.includes("famousmobiles.com"))) {
+    memServerUrl = null;
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("fm_server_url");
+    }
   }
   return memServerUrl;
 }

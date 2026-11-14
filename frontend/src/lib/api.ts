@@ -27,14 +27,13 @@ export function getApiUrl(): string {
     const custom = getCachedServerUrl();
     if (custom && custom.trim()) {
       const clean = custom.trim().replace(/\/+$/, "");
-      // Stale cache migration: If custom url points to old domain or old 8080 port while in web browser, discard it
-      if (
-        !isNativeCapacitor &&
-        (clean.includes("famousmobiles.com") || clean.includes(":8080")) &&
-        (window.location.port === "8081" || window.location.origin)
-      ) {
-        storeServerUrl(`${window.location.origin}/api`);
-        return `${window.location.origin}/api`;
+      // Stale cache migration: If custom url points to old domain or old 8080 port, migrate to 8081
+      if (clean.includes("famousmobiles.com") || clean.includes(":8080")) {
+        const migratedUrl = (!isNativeCapacitor && window.location.origin)
+          ? `${window.location.origin}/api`
+          : DEFAULT_API_URL;
+        storeServerUrl(migratedUrl);
+        return migratedUrl;
       }
       return clean;
     }

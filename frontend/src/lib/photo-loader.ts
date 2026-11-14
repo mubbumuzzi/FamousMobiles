@@ -10,7 +10,7 @@ function resolveApiUrl(): string {
       }
     } catch (_) {}
   }
-  return (process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8080/api").replace(/\/+$/, "");
+  return (process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8081/api").replace(/\/+$/, "");
 }
 
 function resolveAccessToken(): string | null {
