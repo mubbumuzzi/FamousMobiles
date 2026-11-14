@@ -3,6 +3,7 @@ import {
   getCachedAccessToken,
   getCachedRefreshToken,
   getCachedServerUrl,
+  storeServerUrl,
   storeTokens,
   removeAuthData,
 } from "./storage";
@@ -15,21 +16,38 @@ import {
 
 export { getCachedApi, setCachedApi, invalidateApiCache, clearApiCache };
 
-export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8080/api";
+export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://13.140.146.12:8081/api";
 
 export function getApiUrl(): string {
   if (typeof window !== "undefined") {
-    const custom = getCachedServerUrl();
-    if (custom && custom.trim()) {
-      return custom.trim().replace(/\/+$/, "");
-    }
-    // Local web browser dev fallback: connect to local Spring Boot API
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const isNativeCapacitor = Boolean(
       (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
     );
-    if (isLocalhost && !isNativeCapacitor) {
+
+    const custom = getCachedServerUrl();
+    if (custom && custom.trim()) {
+      const clean = custom.trim().replace(/\/+$/, "");
+      // Stale cache migration: If custom url points to old domain or old 8080 port while in web browser, discard it
+      if (
+        !isNativeCapacitor &&
+        (clean.includes("famousmobiles.com") || clean.includes(":8080")) &&
+        (window.location.port === "8081" || window.location.origin)
+      ) {
+        storeServerUrl(`${window.location.origin}/api`);
+        return `${window.location.origin}/api`;
+      }
+      return clean;
+    }
+
+    // Local web browser dev fallback: connect to local Spring Boot API
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (isLocalhost && !isNativeCapacitor && (window.location.port === "3000" || !window.location.port)) {
       return "http://localhost:8080/api";
+    }
+
+    if (!isNativeCapacitor && window.location.origin) {
+      // In web browser (e.g. http://13.140.146.12:8081), Nginx serves the frontend and proxies /api on the same origin
+      return `${window.location.origin}/api`;
     }
   }
   return DEFAULT_API_URL.replace(/\/+$/, "");

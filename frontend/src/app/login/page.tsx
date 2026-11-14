@@ -15,8 +15,8 @@ import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 const PRESET_SERVERS = [
   {
     name: "Production Cloud (Live 24/7)",
-    url: "http://13.140.146.12:8080/api",
-    description: "Connects anywhere (Wi-Fi or 4G/5G mobile data)",
+    url: "http://13.140.146.12:8081/api",
+    description: "Connects anywhere on port 8081 (Wi-Fi or 4G/5G mobile data)",
     icon: Cloud,
   },
   {
