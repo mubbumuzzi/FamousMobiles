@@ -53,6 +53,40 @@ export default function NewTicketPage() {
     }
   }, [activeStore, stores, selectedStoreId]);
 
+  // Pre-fill from Doorstep Repair intake if navigated with query params
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const qMobile = params.get("mobile");
+    const qName = params.get("name");
+    const qBrand = params.get("brand");
+    const qIssue = params.get("issue");
+    const qAddress = params.get("address");
+
+    if (qMobile || qName || qBrand || qIssue || qAddress) {
+      if (qMobile) updateDraft("mobile", qMobile);
+      if (qName || qAddress) {
+        updateDraft("newCustomer", {
+          fullName: qName || "",
+          mobile: qMobile || "",
+          alternateMobile: "",
+          address: qAddress || "",
+          city: "Hyderabad",
+        });
+      }
+      if (qBrand) {
+        const parts = qBrand.split(" ");
+        const b = parts[0] || "";
+        const m = parts.slice(1).join(" ") || "";
+        if (b) updateDraft("brand", b);
+        if (m) updateDraft("model", m);
+      }
+      if (qIssue) {
+        updateDraft("problem", qIssue);
+      }
+    }
+  }, [updateDraft]);
+
   const step = draft.step;
   const setStep = (val: number | ((prev: number) => number)) => {
     const nextVal = typeof val === "function" ? val(draft.step) : val;

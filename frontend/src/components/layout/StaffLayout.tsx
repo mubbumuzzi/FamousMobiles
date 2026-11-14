@@ -30,6 +30,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { clearAllNavigationState } from "@/hooks/useNavigationState";
+import { useDoorstepSync } from "@/lib/doorstep-sync";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -68,6 +69,7 @@ export function StaffLayout({
   useAndroidBackButton(() => setIsMoreOpen(false), isMoreOpen, 10);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { newCount: doorstepCount } = useDoorstepSync(8000);
 
   // Trigger global data refresh with visual feedback
   const triggerRefresh = useCallback(() => {
@@ -250,6 +252,11 @@ export function StaffLayout({
                 >
                   <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#121212]" : "text-[#767676]")} />
                   <span>{label}</span>
+                  {href === "/doorstep" && doorstepCount > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600 text-white shadow-2xs animate-pulse">
+                      {doorstepCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -326,13 +333,18 @@ export function StaffLayout({
             type="button"
             onClick={() => setIsMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 touch-target cursor-pointer",
-              pathname.startsWith("/stock-orders") || pathname.startsWith("/reports") || pathname.startsWith("/staff")
+              "flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 touch-target cursor-pointer relative",
+              pathname.startsWith("/stock-orders") || pathname.startsWith("/reports") || pathname.startsWith("/staff") || pathname.startsWith("/doorstep")
                 ? "text-[#121212]"
                 : "text-[#767676]"
             )}
           >
-            <MoreHorizontal className="h-5 w-5" />
+            <div className="relative">
+              <MoreHorizontal className="h-5 w-5" />
+              {doorstepCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
+              )}
+            </div>
             <span className="text-[11px] leading-none font-medium">More</span>
           </button>
         </div>
@@ -389,13 +401,20 @@ export function StaffLayout({
           <Link
             href="/doorstep"
             onClick={() => setIsMoreOpen(false)}
-            className="flex items-center gap-3 rounded-[10px] p-3 text-[14px] font-medium text-[#121212] hover:bg-[#F7F7F8] transition-colors"
+            className="flex items-center justify-between rounded-[10px] p-3 text-[14px] font-medium text-[#121212] hover:bg-[#F7F7F8] transition-colors"
           >
-            <Bike className="h-5 w-5 text-[#767676]" />
-            <div>
-              <p className="font-semibold text-[#121212]">Doorstep Orders</p>
-              <p className="text-[12px] text-[#767676]">Live online bookings from customer portal</p>
+            <div className="flex items-center gap-3">
+              <Bike className="h-5 w-5 text-[#767676]" />
+              <div>
+                <p className="font-semibold text-[#121212]">Doorstep Orders</p>
+                <p className="text-[12px] text-[#767676]">Live online bookings from customer portal</p>
+              </div>
             </div>
+            {doorstepCount > 0 && (
+              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600 text-white animate-pulse">
+                {doorstepCount} new
+              </span>
+            )}
           </Link>
 
           <div className="border-t border-[#EBEBEB] pt-2 mt-2">
