@@ -18,6 +18,7 @@ import {
   ChevronDown,
   User,
   ShieldCheck,
+  Bike,
 } from "lucide-react";
 import { logoutUser } from "@/lib/api";
 import { cn, formatRole } from "@/lib/utils";
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
   { href: "/staff", label: "Staff", icon: UserCog, adminOnly: true },
+  { href: "/doorstep", label: "Doorstep", icon: Bike },
 ];
 
 export function StaffLayout({
@@ -383,6 +385,18 @@ export function StaffLayout({
               </Link>
             </>
           )}
+
+          <Link
+            href="/doorstep"
+            onClick={() => setIsMoreOpen(false)}
+            className="flex items-center gap-3 rounded-[10px] p-3 text-[14px] font-medium text-[#121212] hover:bg-[#F7F7F8] transition-colors"
+          >
+            <Bike className="h-5 w-5 text-[#767676]" />
+            <div>
+              <p className="font-semibold text-[#121212]">Doorstep Orders</p>
+              <p className="text-[12px] text-[#767676]">Live online bookings from customer portal</p>
+            </div>
+          </Link>
 
           <div className="border-t border-[#EBEBEB] pt-2 mt-2">
             <button

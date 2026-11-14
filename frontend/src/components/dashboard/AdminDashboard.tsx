@@ -19,6 +19,7 @@ import {
   Phone,
   MessageCircle,
   CreditCard,
+  Bike,
 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -441,12 +442,22 @@ export function AdminDashboard({ metrics, tickets, loading, error, onRefresh }: 
             </div>
           </div>
 
-          <Link
-            href="/tickets"
-            className="text-[13px] font-semibold text-[#121212] hover:underline"
-          >
-            See all
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/doorstep"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-[#EFF6FF] hover:bg-blue-100 border border-blue-200 text-[#1D4ED8] text-[12px] font-bold transition-all"
+            >
+              <Bike className="h-3.5 w-3.5 text-[#1D4ED8]" />
+              <span>Doorstep Portal</span>
+            </Link>
+
+            <Link
+              href="/tickets"
+              className="text-[13px] font-semibold text-[#121212] hover:underline"
+            >
+              See all
+            </Link>
+          </div>
         </div>
 
         {displayedActiveRepairs.length === 0 ? (
