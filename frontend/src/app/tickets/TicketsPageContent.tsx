@@ -117,7 +117,13 @@ export default function TicketsPageContent() {
     // 1. Status Filter
     if (statusFilter && t.status !== statusFilter) return false;
     if (!statusFilter) {
-      if (cardFilter === "ACTIVE" && (t.status === "DELIVERED" || t.status === "RETURNED_UNREPAIRED")) return false;
+      if (
+        cardFilter === "ACTIVE" &&
+        (t.status === "DELIVERED" ||
+          t.status === "RETURNED_UNREPAIRED" ||
+          t.status === "READY_FOR_PICKUP")
+      )
+        return false;
       if (cardFilter === "READY" && t.status !== "READY_FOR_PICKUP") return false;
       if (cardFilter === "OVERDUE" && !isOverdue(t.estimatedDeliveryDate, t.status)) return false;
       if (cardFilter === "DELIVERED" && t.status !== "DELIVERED") return false;
@@ -139,7 +145,10 @@ export default function TicketsPageContent() {
   });
 
   const activeCount = tickets.filter(
-    (t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED"
+    (t) =>
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP"
   ).length;
   const readyCount = tickets.filter((t) => t.status === "READY_FOR_PICKUP").length;
   const overdueCount = tickets.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status)).length;

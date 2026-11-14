@@ -53,11 +53,18 @@ export function ReceptionDashboard({
   const [stockRefreshTrigger, setStockRefreshTrigger] = useState(0);
 
   const overdue = tickets.filter(
-    (t) => isOverdue(t.estimatedDeliveryDate, t.status) && t.status !== "DELIVERED"
+    (t) =>
+      isOverdue(t.estimatedDeliveryDate, t.status) &&
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP"
   );
   const ready = tickets.filter((t) => t.status === "READY_FOR_PICKUP");
   const activeRepairs = tickets.filter(
-    (t) => t.status !== "DELIVERED" && t.status !== "RETURNED_UNREPAIRED"
+    (t) =>
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP"
   );
   const deliveredCount = tickets.filter((t) => t.status === "DELIVERED").length;
   const receivedTodayCount = tickets.filter((t) => isSameDay(t.createdAt)).length;
@@ -336,7 +343,6 @@ export function ReceptionDashboard({
           <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
             {activeRepairs.slice(0, 6).map((ticket) => {
               const overdueItem = isOverdue(ticket.estimatedDeliveryDate, ticket.status);
-              const isReady = ticket.status === "READY_FOR_PICKUP";
 
               return (
                 <Link
@@ -357,9 +363,7 @@ export function ReceptionDashboard({
                     <span
                       className={cn(
                         "shrink-0 rounded-[6px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                        isReady
-                          ? "bg-[#EAF6EE] text-[#0E8345]"
-                          : overdueItem
+                        overdueItem
                           ? "bg-[#FDE8E8] text-[#C5221F]"
                           : "bg-[#F0F0F2] text-[#121212]"
                       )}

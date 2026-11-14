@@ -34,7 +34,13 @@ export function getProgressPercent(status: RepairStatus): number {
 }
 
 export function isOverdue(estimatedDeliveryDate?: string, status?: RepairStatus): boolean {
-  if (!estimatedDeliveryDate || status === "DELIVERED" || status === "RETURNED_UNREPAIRED") return false;
+  if (
+    !estimatedDeliveryDate ||
+    status === "DELIVERED" ||
+    status === "RETURNED_UNREPAIRED" ||
+    status === "READY_FOR_PICKUP"
+  )
+    return false;
   const edd = new Date(estimatedDeliveryDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);

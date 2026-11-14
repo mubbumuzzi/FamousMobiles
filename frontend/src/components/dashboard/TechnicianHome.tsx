@@ -19,7 +19,12 @@ type TechnicianHomeProps = {
 
 export function TechnicianHome({ tickets, userName, loading, onRefresh }: TechnicianHomeProps) {
   const router = useRouter();
-  const active = tickets.filter((t) => t.status !== "DELIVERED");
+  const active = tickets.filter(
+    (t) =>
+      t.status !== "DELIVERED" &&
+      t.status !== "RETURNED_UNREPAIRED" &&
+      t.status !== "READY_FOR_PICKUP"
+  );
   const mine = active.filter((t) => t.assignedTechnicianName === userName);
   const unassigned = active.filter((t) => !t.assignedTechnicianName);
   const overdue = mine.filter((t) => isOverdue(t.estimatedDeliveryDate, t.status));
