@@ -2,6 +2,17 @@
 # Start backend in background using packaged JAR (stable, survives terminal close)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [[ -z "${JAVA_HOME:-}" ]]; then
+  if [[ -d "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" ]]; then
+    export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+    export PATH="$JAVA_HOME/bin:$PATH"
+  elif [[ -d "/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home" ]]; then
+    export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
+    export PATH="$JAVA_HOME/bin:$PATH"
+  fi
+fi
+
 LOG="/tmp/fm-backend.log"
 PIDFILE="/tmp/fm-backend.pid"
 
