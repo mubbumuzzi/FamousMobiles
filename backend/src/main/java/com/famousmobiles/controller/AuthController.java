@@ -40,4 +40,9 @@ public class AuthController {
         authService.logout(body.get("refreshToken"));
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/me")
+    public com.famousmobiles.dto.UserResponse me() {
+        return authService.getCurrentUserResponse();
+    }
 }

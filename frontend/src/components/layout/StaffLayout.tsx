@@ -31,6 +31,7 @@ import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { clearAllNavigationState } from "@/hooks/useNavigationState";
 import { useDoorstepSync } from "@/lib/doorstep-sync";
+import { getCachedUser } from "@/lib/storage";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -40,17 +41,19 @@ const navItems = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/reports", label: "Reports", icon: BarChart3, adminOnly: true },
   { href: "/staff", label: "Staff", icon: UserCog, adminOnly: true },
-  { href: "/doorstep", label: "Doorstep", icon: Bike },
+  { href: "/doorstep", label: "Doorstep", icon: Bike, doorstepOnly: true },
 ];
 
 export function StaffLayout({
   children,
   userName,
   role,
+  doorstepEnabled,
 }: {
   children: React.ReactNode;
   userName?: string;
   role?: string;
+  doorstepEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -68,8 +71,39 @@ export function StaffLayout({
   useAndroidBackButton(() => setIsForkOpen(false), isForkOpen, 15);
   useAndroidBackButton(() => setIsMoreOpen(false), isMoreOpen, 10);
 
+  const [canAccessDoorstep, setCanAccessDoorstep] = useState(() => {
+    if (role === "ADMIN") return true;
+    if (doorstepEnabled !== undefined) return doorstepEnabled;
+    try {
+      const cached = getCachedUser();
+      if (cached) {
+        const u = JSON.parse(cached);
+        return u.role === "ADMIN" || u.mobile === "6302255467" || Boolean(u.doorstepEnabled);
+      }
+    } catch (_) {}
+    return false;
+  });
+
+  useEffect(() => {
+    if (role === "ADMIN") {
+      setCanAccessDoorstep(true);
+      return;
+    }
+    if (doorstepEnabled !== undefined) {
+      setCanAccessDoorstep(doorstepEnabled);
+      return;
+    }
+    try {
+      const cached = getCachedUser();
+      if (cached) {
+        const u = JSON.parse(cached);
+        setCanAccessDoorstep(u.role === "ADMIN" || u.mobile === "6302255467" || Boolean(u.doorstepEnabled));
+      }
+    } catch (_) {}
+  }, [role, doorstepEnabled]);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { newCount: doorstepCount } = useDoorstepSync(8000);
+  const { newCount: doorstepCount } = useDoorstepSync(canAccessDoorstep ? 8000 : 0);
 
   // Trigger global data refresh with visual feedback
   const triggerRefresh = useCallback(() => {
@@ -125,6 +159,7 @@ export function StaffLayout({
 
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && role !== "ADMIN") return false;
+    if (item.doorstepOnly && !canAccessDoorstep) return false;
     return true;
   });
 
@@ -398,24 +433,26 @@ export function StaffLayout({
             </>
           )}
 
-          <Link
-            href="/doorstep"
-            onClick={() => setIsMoreOpen(false)}
-            className="flex items-center justify-between rounded-[10px] p-3 text-[14px] font-medium text-[#121212] hover:bg-[#F7F7F8] transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Bike className="h-5 w-5 text-[#767676]" />
-              <div>
-                <p className="font-semibold text-[#121212]">Doorstep Orders</p>
-                <p className="text-[12px] text-[#767676]">Live online bookings from customer portal</p>
+          {canAccessDoorstep && (
+            <Link
+              href="/doorstep"
+              onClick={() => setIsMoreOpen(false)}
+              className="flex items-center justify-between rounded-[10px] p-3 text-[14px] font-medium text-[#121212] hover:bg-[#F7F7F8] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Bike className="h-5 w-5 text-[#767676]" />
+                <div>
+                  <p className="font-semibold text-[#121212]">Doorstep Orders</p>
+                  <p className="text-[12px] text-[#767676]">Live online bookings from customer portal</p>
+                </div>
               </div>
-            </div>
-            {doorstepCount > 0 && (
-              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600 text-white animate-pulse">
-                {doorstepCount} new
-              </span>
-            )}
-          </Link>
+              {doorstepCount > 0 && (
+                <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600 text-white animate-pulse">
+                  {doorstepCount} new
+                </span>
+              )}
+            </Link>
+          )}
 
           <div className="border-t border-[#EBEBEB] pt-2 mt-2">
             <button

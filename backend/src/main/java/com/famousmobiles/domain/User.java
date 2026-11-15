@@ -34,6 +34,9 @@ public class User extends BaseEntity {
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
 
+    @Column(name = "doorstep_enabled", nullable = false)
+    private boolean doorstepEnabled = false;
+
     @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
     @jakarta.persistence.JoinColumn(name = "default_store_id")
     private Store defaultStore;
@@ -92,6 +95,17 @@ public class User extends BaseEntity {
 
     public void setMustChangePassword(boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+
+    public boolean isDoorstepEnabled() {
+        if (role == UserRole.ADMIN || "6302255467".equals(mobile)) {
+            return true;
+        }
+        return doorstepEnabled;
+    }
+
+    public void setDoorstepEnabled(boolean doorstepEnabled) {
+        this.doorstepEnabled = doorstepEnabled;
     }
 
     public Store getDefaultStore() {

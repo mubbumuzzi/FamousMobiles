@@ -8,5 +8,6 @@ public record AuthResponse(
         String mobile,
         String fullName,
         UserRole role,
-        boolean mustChangePassword
+        boolean mustChangePassword,
+        boolean doorstepEnabled
 ) {}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -21,9 +21,12 @@ import {
   Smartphone,
   Wrench,
   Navigation,
+  Zap,
+  Bell,
 } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { PageLoading } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -88,7 +91,7 @@ function getCustFmApiUrl(): string {
 
 export default function DoorstepPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuthGuard();
+  const { user, loading: authLoading, canAccessDoorstep } = useAuthGuard();
 
   const [bookings, setBookings] = useState<DoorstepBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,14 +113,48 @@ export default function DoorstepPage() {
   const [isVerifyingHandshake, setIsVerifyingHandshake] = useState(false);
   const [handshakeSuccessMsg, setHandshakeSuccessMsg] = useState("");
 
+  // Real-time audio alert & incoming intake banner
+  const [newOrderAlert, setNewOrderAlert] = useState<{ id: string; name: string; model: string } | null>(null);
+  const lastCountRef = useRef<number | null>(null);
+
+  const playNewOrderChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.setValueAtTime(880, now + 0.12); // A5
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } catch {
+      // Audio context restricted or muted
+    }
+  };
+
   const fetchBookings = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${getCustFmApiUrl()}/public/bookings`);
+      const res = await fetch(`${getCustFmApiUrl()}/public/bookings`, {
+        headers: { "X-POS-API-KEY": "famous-pos-sec-2026" },
+      });
       if (res.ok) {
         const data = await res.json();
-        setBookings(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        if (lastCountRef.current !== null && arr.length > lastCountRef.current && arr.length > 0) {
+          playNewOrderChime();
+          setNewOrderAlert({ id: arr[0].bookingId, name: arr[0].customerName, model: arr[0].brandModel });
+        }
+        lastCountRef.current = arr.length;
+        setBookings(arr);
       } else {
         setError(`Failed to fetch enquiries (HTTP ${res.status}). Ensure CustFM backend is running.`);
       }
@@ -130,17 +167,63 @@ export default function DoorstepPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && canAccessDoorstep) {
       fetchBookings();
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, canAccessDoorstep]);
+
+  const handleQuickDispatch = (booking: DoorstepBooking) => {
+    updateBooking(booking.bookingId, {
+      stageIndex: 3,
+      technicianName: "Ramesh K.",
+      technicianPhone: "9063786751",
+      etaMinutes: "Dispatching (~45 mins)",
+    });
+  };
+
+  const getBookingAge = (createdAt: string) => {
+    const diffMs = Date.now() - new Date(createdAt).getTime();
+    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+    if (diffMins < 1) return { text: "Just now", level: "fresh" };
+    if (diffMins < 60) {
+      if (diffMins < 10) return { text: `${diffMins}m ago`, level: "fresh" };
+      if (diffMins < 25) return { text: `${diffMins}m ago`, level: "medium" };
+      return { text: `${diffMins}m ago`, level: "urgent" };
+    }
+    const diffHours = Math.floor(diffMins / 60);
+    return { text: `${diffHours}h ago`, level: "urgent" };
+  };
+
+  const getDistanceBadge = (b: DoorstepBooking) => {
+    let km = 1.6;
+    if (b.latitude && b.longitude) {
+      const lat1 = 17.4022;
+      const lon1 = 78.3888;
+      const R = 6371;
+      const dLat = ((b.latitude - lat1) * Math.PI) / 180;
+      const dLon = ((b.longitude - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((b.latitude * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      km = R * c;
+    }
+    const mins = Math.max(5, Math.round(km * 3.5 + 4));
+    return {
+      distance: km < 0.2 ? "<0.2 km" : `${km.toFixed(1)} km`,
+      time: `~${mins} min ride`,
+    };
+  };
 
   const updateBooking = async (bookingId: string, updates: Record<string, unknown>) => {
     setIsUpdating(true);
     try {
       const res = await fetch(`${getCustFmApiUrl()}/public/bookings/${bookingId}/pos-update`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-POS-API-KEY": "famous-pos-sec-2026",
+        },
         body: JSON.stringify(updates),
       });
       if (res.ok) {
@@ -241,6 +324,29 @@ export default function DoorstepPage() {
 
   if (authLoading) return <PageLoading label="Loading Doorstep Portal..." />;
 
+  if (!canAccessDoorstep) {
+    return (
+      <StaffLayout userName={user?.fullName} role={user?.role} doorstepEnabled={false}>
+        <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-4">
+          <div className="h-16 w-16 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-sm">
+            <Bike className="h-8 w-8" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[#121212]">Doorstep Access Restricted</h2>
+            <p className="text-sm text-[#767676] mt-1.5 leading-relaxed">
+              Doorstep repairs management has not been enabled for your account ({user?.fullName || "Staff"}). Please contact an administrator to request access.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Button variant="primary" onClick={() => router.push("/dashboard")} className="h-9 px-4 text-xs font-semibold">
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </StaffLayout>
+    );
+  }
+
   const handleConvertToTicket = (booking: DoorstepBooking) => {
     const params = new URLSearchParams({
       mobile: booking.mobileNumber,
@@ -255,6 +361,44 @@ export default function DoorstepPage() {
   return (
     <StaffLayout userName={user?.fullName} role={user?.role}>
       <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
+        {/* Floating Sound Alert Banner for New Online Intakes */}
+        {newOrderAlert && (
+          <div className="p-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-[12px] shadow-lg flex items-center justify-between gap-3 animate-fade-in border border-blue-400">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <Bell className="h-4 w-4 animate-bounce" />
+              </div>
+              <div>
+                <p className="text-[13px] font-black">
+                  🔔 New Doorstep Booking Received: {newOrderAlert.id}
+                </p>
+                <p className="text-[12px] text-blue-100">
+                  Customer: <strong>{newOrderAlert.name}</strong> • Device: <strong>{newOrderAlert.model}</strong>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery(newOrderAlert.id);
+                  setNewOrderAlert(null);
+                }}
+                className="px-3 py-1.5 bg-white text-blue-900 rounded-[8px] text-[12px] font-black hover:bg-blue-50 transition-all shadow-xs cursor-pointer"
+              >
+                View Order
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewOrderAlert(null)}
+                className="px-2 py-1 text-white/80 hover:text-white text-[12px] font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header Strip */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EBEBEB] pb-4">
           <div>
@@ -475,13 +619,36 @@ export default function DoorstepPage() {
                       )}
                     </div>
 
-                    <div className="text-[12px] text-[#767676]">
-                      {new Date(b.createdAt).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const age = getBookingAge(b.createdAt);
+                        return (
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1",
+                              age.level === "fresh"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : age.level === "medium"
+                                ? "bg-amber-50 text-amber-800 border-amber-200"
+                                : "bg-red-50 text-red-700 border-red-300 font-black animate-pulse"
+                            )}
+                            title={`Booked at ${new Date(b.createdAt).toLocaleTimeString()}`}
+                          >
+                            <Clock className="h-2.5 w-2.5" />
+                            <span>{age.text}</span>
+                            {age.level === "urgent" && <span>• Needs Dispatch</span>}
+                          </span>
+                        );
+                      })()}
+
+                      <span className="text-[12px] text-[#767676]">
+                        {new Date(b.createdAt).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </div>
                   </div>
 
@@ -569,6 +736,16 @@ export default function DoorstepPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           <span>Manikonda Hub Coverage Area (5 km)</span>
                         </div>
+
+                        {(() => {
+                          const distInfo = getDistanceBadge(b);
+                          return (
+                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/70">
+                              <Bike className="h-3 w-3 text-indigo-600" />
+                              <span>{distInfo.distance} • {distInfo.time}</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -591,6 +768,44 @@ export default function DoorstepPage() {
                       ></div>
                     </div>
                   </div>
+
+                  {/* Inline Doorstep Completion Handshake PIN Input (Stage 9) */}
+                  {b.currentStageIndex === 9 && (
+                    <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-[10px] flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-amber-700" />
+                        <div>
+                          <p className="text-[12px] font-black text-amber-900">Doorstep Handshake Completion</p>
+                          <p className="text-[11px] text-amber-800">Ask customer for the 4-digit code shown on their tracking screen</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="4-digit PIN"
+                          id={`pin-input-${b.bookingId}`}
+                          className="w-24 h-8 px-2 text-center font-mono font-black text-[13px] tracking-widest rounded-[6px] border border-amber-400 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(`pin-input-${b.bookingId}`) as HTMLInputElement;
+                            if (input && input.value.trim().length === 4) {
+                              setHandshakeModalBooking(b);
+                              handleVerifyHandshake(input.value.trim());
+                            } else {
+                              alert("Please enter the complete 4-digit PIN from customer.");
+                            }
+                          }}
+                          className="h-8 px-3 rounded-[6px] bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all flex items-center gap-1 active:scale-95 shadow-xs cursor-pointer"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Verify & Close Job</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Technician & Quote Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#EBEBEB] text-[12px]">
@@ -616,7 +831,41 @@ export default function DoorstepPage() {
                     </div>
 
                     {/* Action Buttons for POS Staff */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* 1-Tap Quick Dispatch (Stage 0, 1, 2) */}
+                      {b.currentStageIndex <= 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickDispatch(b)}
+                          disabled={isUpdating}
+                          className="h-8 px-3 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer"
+                          title="Assign Ramesh K. and advance directly to Stage 3: Technician Assigned"
+                        >
+                          <Bike className="h-3.5 w-3.5" />
+                          <span>⚡ Quick Dispatch (Ramesh K.)</span>
+                        </button>
+                      )}
+
+                      {/* 1-Tap WhatsApp Quotation Share */}
+                      {b.quoteAmount && !b.quoteApproved && (
+                        <a
+                          href={`https://wa.me/91${b.mobileNumber}?text=${encodeURIComponent(
+                            `Hello ${b.customerName}! Famous Mobiles Manikonda has completed diagnosis for your ${b.brandModel}.\n\n` +
+                            `🔧 Service: ${b.repairCategory}\n` +
+                            `💰 Official Repair Quote: ₹${b.quoteAmount} (Includes OEM replacement parts & 6-Month Warranty. Doorstep visit is ₹0 FREE).\n\n` +
+                            `👉 Click here to review & approve the quote on your live tracker:\n` +
+                            `http://localhost:3001/track-booking?id=${b.bookingId}&mobile=${b.mobileNumber}`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-8 px-3 rounded-[8px] bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-2xs"
+                          title="Send official quotation with live approval link to customer on WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>💬 WhatsApp Quote</span>
+                        </a>
+                      )}
+
                       {/* Step Forward / Complete Action */}
                       {b.currentStageIndex < 10 && (
                         <button

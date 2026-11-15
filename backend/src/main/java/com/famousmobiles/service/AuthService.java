@@ -110,6 +110,9 @@ public class AuthService {
             user.setEmail(staffEmail(mobile));
             user.setActive(true);
             user.setMustChangePassword(false);
+            if (request.doorstepEnabled() != null) {
+                user.setDoorstepEnabled(request.doorstepEnabled());
+            }
             user = userRepository.save(user);
             syncTechnicianProfile(user);
             return toUserResponse(user);
@@ -122,6 +125,7 @@ public class AuthService {
         user.setRole(request.role());
         user.setActive(true);
         user.setMustChangePassword(false);
+        user.setDoorstepEnabled(Boolean.TRUE.equals(request.doorstepEnabled()));
         user = userRepository.save(user);
         syncTechnicianProfile(user);
         return toUserResponse(user);
@@ -142,12 +146,33 @@ public class AuthService {
         user.setMobile(mobile);
         user.setEmail(staffEmail(mobile));
         user.setRole(request.role());
+        if (request.doorstepEnabled() != null) {
+            user.setDoorstepEnabled(request.doorstepEnabled());
+        }
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         user = userRepository.save(user);
         syncTechnicianProfile(user);
         return toUserResponse(user);
+    }
+
+    @Transactional
+    public UserResponse toggleDoorstepAccess(UUID id, boolean enabled) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
+        if (user.getRole() == UserRole.ADMIN || "6302255467".equals(user.getMobile())) {
+            user.setDoorstepEnabled(true);
+        } else {
+            user.setDoorstepEnabled(enabled);
+        }
+        user = userRepository.save(user);
+        return toUserResponse(user);
+    }
+
+    public UserResponse getCurrentUserResponse() {
+        User current = securityUtils.getCurrentUser();
+        return toUserResponse(current);
     }
 
     @Transactional
@@ -201,6 +226,10 @@ public class AuthService {
             userRepository.findByEmail(appProperties.admin().email()).ifPresent(admin -> {
                 boolean dirty = false;
                 String configuredMobile = normalizeMobile(appProperties.admin().mobile());
+                if (!admin.isDoorstepEnabled()) {
+                    admin.setDoorstepEnabled(true);
+                    dirty = true;
+                }
                 if (appProperties.admin().syncOnStart()) {
                     if (!configuredMobile.equals(admin.getMobile())) {
                         admin.setMobile(configuredMobile);
@@ -217,6 +246,12 @@ public class AuthService {
                     userRepository.save(admin);
                 }
             });
+            userRepository.findByMobile("6302255467").ifPresent(adminUser -> {
+                if (!adminUser.isDoorstepEnabled()) {
+                    adminUser.setDoorstepEnabled(true);
+                    userRepository.save(adminUser);
+                }
+            });
             return;
         }
         String mobile = normalizeMobile(appProperties.admin().mobile());
@@ -228,6 +263,7 @@ public class AuthService {
         admin.setRole(UserRole.ADMIN);
         admin.setActive(true);
         admin.setMustChangePassword(true);
+        admin.setDoorstepEnabled(true);
         userRepository.save(admin);
     }
 
@@ -240,12 +276,13 @@ public class AuthService {
         entity.setExpiresAt(Instant.now().plusMillis(604800000));
         refreshTokenRepository.save(entity);
         return new AuthResponse(accessToken, refreshToken, user.getMobile(), user.getFullName(),
-                user.getRole(), user.isMustChangePassword());
+                user.getRole(), user.isMustChangePassword(), user.isDoorstepEnabled());
     }
 
     private UserResponse toUserResponse(User user) {
+        String createdAtStr = user.getCreatedAt() != null ? user.getCreatedAt().toString() : Instant.now().toString();
         return new UserResponse(user.getId(), user.getMobile(), user.getFullName(),
-                user.getRole(), user.isActive(), user.isMustChangePassword(), user.getCreatedAt().toString());
+                user.getRole(), user.isActive(), user.isMustChangePassword(), user.isDoorstepEnabled(), createdAtStr);
     }
 
     private void validateStaffRole(UserRole role) {

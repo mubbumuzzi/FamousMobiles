@@ -80,6 +80,7 @@ export function useDoorstepSync(pollIntervalMs = 10000) {
     try {
       const res = await fetch(`${getCustFmApiUrl()}/public/bookings`, {
         cache: "no-store",
+        headers: { "X-POS-API-KEY": "famous-pos-sec-2026" },
       });
       if (!res.ok) return;
 
@@ -116,6 +117,7 @@ export function useDoorstepSync(pollIntervalMs = 10000) {
   }, []);
 
   useEffect(() => {
+    if (pollIntervalMs <= 0) return;
     checkBookings();
     const interval = setInterval(checkBookings, pollIntervalMs);
     return () => clearInterval(interval);

@@ -34,7 +34,6 @@ import com.lowagie.text.pdf.PdfReader;
 @ExtendWith(MockitoExtension.class)
 class PdfReceiptServiceTest {
 
-    @Mock
     private AppProperties appProperties;
 
     @Mock
@@ -47,6 +46,7 @@ class PdfReceiptServiceTest {
 
     @BeforeEach
     void setUp() {
+        appProperties = new AppProperties(null, null, null, null, null, null);
         pdfReceiptService = new PdfReceiptService(appProperties, fileStorageService);
     }
 
@@ -79,8 +79,6 @@ class PdfReceiptServiceTest {
 
     @Test
     void generateReceipt_shouldProduceCustomerCopyOnlyOnA4TopHalf() throws Exception {
-        when(appProperties.shop()).thenReturn(null);
-
         Path receiptFile = tempDir.resolve("TRK-TEST01.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
 
@@ -112,8 +110,6 @@ class PdfReceiptServiceTest {
 
     @Test
     void generateReceipt_duplicateOption_shouldFitBothCopiesOnSingleA4Page() throws Exception {
-        when(appProperties.shop()).thenReturn(null);
-
         Path receiptFile = tempDir.resolve("TRK-TEST02.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
 
@@ -134,8 +130,6 @@ class PdfReceiptServiceTest {
 
     @Test
     void generateAccessoryWarrantyBill_shouldProduceValidA4TopHalfPdf() throws Exception {
-        when(appProperties.shop()).thenReturn(null);
-
         Path receiptFile = tempDir.resolve("FM-ACC-TEST01.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
 
@@ -172,8 +166,6 @@ class PdfReceiptServiceTest {
 
     @Test
     void generateAccessoryWarrantyBill_zeroWarranty_shouldProduceInvoiceWithoutWarrantyRow() throws Exception {
-        when(appProperties.shop()).thenReturn(null);
-
         Path receiptFile = tempDir.resolve("FM-ACC-TEST02.pdf");
         when(fileStorageService.getReceiptPath(anyString())).thenReturn(receiptFile);
 

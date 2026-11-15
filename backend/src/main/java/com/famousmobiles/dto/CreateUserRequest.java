@@ -9,5 +9,6 @@ public record CreateUserRequest(
         @NotBlank String fullName,
         @NotBlank String mobile,
         @NotBlank String password,
-        @NotNull UserRole role
+        @NotNull UserRole role,
+        Boolean doorstepEnabled
 ) {}

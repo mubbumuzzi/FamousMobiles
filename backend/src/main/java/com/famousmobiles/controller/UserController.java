@@ -46,6 +46,12 @@ public class UserController {
         return authService.updateUser(id, request);
     }
 
+    @org.springframework.web.bind.annotation.PatchMapping("/{id}/doorstep")
+    public UserResponse toggleDoorstep(@PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestParam boolean enabled) {
+        return authService.toggleDoorstepAccess(id, enabled);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable UUID id,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean permanent) {

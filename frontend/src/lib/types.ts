@@ -23,6 +23,7 @@ export interface AuthResponse {
   fullName: string;
   role: UserRole;
   mustChangePassword: boolean;
+  doorstepEnabled?: boolean;
 }
 
 export interface StaffUser {
@@ -32,8 +33,11 @@ export interface StaffUser {
   role: UserRole;
   active: boolean;
   mustChangePassword: boolean;
+  doorstepEnabled: boolean;
   createdAt: string;
 }
+
+export type UserResponse = StaffUser;
 
 export interface CustomerMobile {
   number: string;

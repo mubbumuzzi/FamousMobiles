@@ -9,5 +9,6 @@ public record UpdateUserRequest(
         @NotBlank String fullName,
         @NotBlank String mobile,
         String password,
-        @NotNull UserRole role
+        @NotNull UserRole role,
+        Boolean doorstepEnabled
 ) {}

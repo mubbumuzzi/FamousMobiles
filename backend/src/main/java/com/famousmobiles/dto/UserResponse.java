@@ -11,5 +11,6 @@ public record UserResponse(
         UserRole role,
         boolean active,
         boolean mustChangePassword,
+        boolean doorstepEnabled,
         String createdAt
 ) {}
