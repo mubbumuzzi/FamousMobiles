@@ -23,6 +23,7 @@ import {
   Navigation,
   Zap,
   Bell,
+  Trash2,
 } from "lucide-react";
 import { StaffLayout } from "@/components/layout/StaffLayout";
 import { PageLoading } from "@/components/ui/skeleton";
@@ -105,6 +106,7 @@ export default function DoorstepPage() {
   const [techPhone, setTechPhone] = useState("9063786751");
   const [quoteInput, setQuoteInput] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Customer Handshake Completion OTP State (Zomato/Swiggy Model)
   const [handshakeModalBooking, setHandshakeModalBooking] = useState<DoorstepBooking | null>(null);
@@ -239,6 +241,35 @@ export default function DoorstepPage() {
       console.error(err);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteBooking = async (booking: DoorstepBooking) => {
+    const confirmMsg = `Are you sure you want to permanently delete doorstep enquiry #${booking.bookingId} (${booking.customerName} - ${booking.brandModel})?\n\nThis will remove the record from the database.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeletingId(booking.bookingId);
+    try {
+      const res = await fetch(`${getCustFmApiUrl()}/public/bookings/${booking.bookingId}`, {
+        method: "DELETE",
+        headers: {
+          "X-POS-API-KEY": "famous-pos-sec-2026",
+        },
+      });
+
+      if (res.ok) {
+        setBookings((prev) => prev.filter((b) => b.bookingId !== booking.bookingId));
+        if (activeBookingId === booking.bookingId) {
+          setActiveBookingId(null);
+        }
+      } else {
+        const errorData = await res.json().catch(() => null);
+        alert(`Failed to delete booking: ${errorData?.message || "HTTP " + res.status}`);
+      }
+    } catch (err) {
+      alert("Error deleting booking: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -920,6 +951,20 @@ export default function DoorstepPage() {
                         <Wrench className="h-3 w-3 text-[#121212]" />
                         <span>To POS Ticket</span>
                       </button>
+
+                      {/* Delete Booking */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBooking(b)}
+                        disabled={deletingId === b.bookingId}
+                        title="Delete this doorstep enquiry"
+                        className="h-8 px-2.5 rounded-[8px] border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                        <span className="hidden sm:inline">
+                          {deletingId === b.bookingId ? "Deleting..." : "Delete"}
+                        </span>
+                      </button>
                     </div>
                   </div>
 
@@ -981,35 +1026,47 @@ export default function DoorstepPage() {
                       </div>
 
                       {/* Save changes button */}
-                      <div className="flex justify-end gap-2 pt-2">
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EBEBEB]">
                         <button
                           type="button"
-                          onClick={() => setActiveBookingId(null)}
-                          className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-[#767676]"
+                          onClick={() => handleDeleteBooking(b)}
+                          disabled={deletingId === b.bookingId}
+                          className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         >
-                          Cancel
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete Booking</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updates: Record<string, unknown> = {
-                              technicianName: techName,
-                              technicianPhone: techPhone,
-                            };
-                            if (quoteInput.trim()) {
-                              updates.quoteAmount = Number(quoteInput);
-                              // Setting quote moves booking to stage 8 (Awaiting Customer Approval)
-                              if (b.currentStageIndex < 8) {
-                                updates.stageIndex = 8;
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveBookingId(null)}
+                            className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-[#767676] hover:bg-[#EBEBEB] cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updates: Record<string, unknown> = {
+                                technicianName: techName,
+                                technicianPhone: techPhone,
+                              };
+                              if (quoteInput.trim()) {
+                                updates.quoteAmount = Number(quoteInput);
+                                // Setting quote moves booking to stage 8 (Awaiting Customer Approval)
+                                if (b.currentStageIndex < 8) {
+                                  updates.stageIndex = 8;
+                                }
                               }
-                            }
-                            updateBooking(b.bookingId, updates);
-                          }}
-                          disabled={isUpdating}
-                          className="px-4 py-1.5 rounded-[8px] bg-[#121212] text-white text-[12px] font-bold hover:bg-black transition-colors"
-                        >
-                          {isUpdating ? "Saving..." : "Save Assignment & Quote"}
-                        </button>
+                              updateBooking(b.bookingId, updates);
+                            }}
+                            disabled={isUpdating}
+                            className="px-4 py-1.5 rounded-[8px] bg-[#121212] text-white text-[12px] font-bold hover:bg-black transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {isUpdating ? "Saving..." : "Save Assignment & Quote"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
