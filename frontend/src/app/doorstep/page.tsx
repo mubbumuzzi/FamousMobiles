@@ -55,6 +55,7 @@ interface DoorstepBooking {
   etaMinutes?: string | null;
   quoteAmount?: number | null;
   quoteApproved?: boolean;
+  handshakeOtp?: string | null;
   stages: StageInfo[];
   createdAt: string;
   updatedAt: string;
@@ -101,6 +102,13 @@ export default function DoorstepPage() {
   const [techPhone, setTechPhone] = useState("9063786751");
   const [quoteInput, setQuoteInput] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Customer Handshake Completion OTP State (Zomato/Swiggy Model)
+  const [handshakeModalBooking, setHandshakeModalBooking] = useState<DoorstepBooking | null>(null);
+  const [handshakeInputOtp, setHandshakeInputOtp] = useState(["", "", "", ""]);
+  const [handshakeError, setHandshakeError] = useState("");
+  const [isVerifyingHandshake, setIsVerifyingHandshake] = useState(false);
+  const [handshakeSuccessMsg, setHandshakeSuccessMsg] = useState("");
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -149,6 +157,54 @@ export default function DoorstepPage() {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleVerifyHandshake = async (codeToVerify?: string) => {
+    if (!handshakeModalBooking) return;
+    const code = (codeToVerify !== undefined ? codeToVerify : handshakeInputOtp.join("")).trim();
+    if (!code || code.length < 4) {
+      setHandshakeError("Please enter the complete 4-digit code.");
+      return;
+    }
+    setHandshakeError("");
+    setIsVerifyingHandshake(true);
+    try {
+      const res = await fetch(`${getCustFmApiUrl()}/public/bookings/${handshakeModalBooking.bookingId}/verify-handshake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otp: code }),
+      });
+      if (res.ok) {
+        const updated: DoorstepBooking = await res.json();
+        setBookings((prev) => prev.map((b) => (b.bookingId === handshakeModalBooking.bookingId ? updated : b)));
+        setHandshakeSuccessMsg("Handshake OTP verified! Repair marked Completed & Closed.");
+        setTimeout(() => {
+          setHandshakeModalBooking(null);
+          setHandshakeInputOtp(["", "", "", ""]);
+          setHandshakeSuccessMsg("");
+        }, 1200);
+      } else {
+        const errJson = await res.json().catch(() => null);
+        setHandshakeError(errJson?.message || "Invalid 4-digit code. Please verify with customer.");
+      }
+    } catch (err) {
+      console.error(err);
+      setHandshakeError("Error connecting to server. Please try again.");
+    } finally {
+      setIsVerifyingHandshake(false);
+    }
+  };
+
+  const handleAdvanceStage = (booking: DoorstepBooking) => {
+    if (booking.currentStageIndex === 9) {
+      // Require Customer Handshake OTP to transition to Stage 10 (Completed & Closed)
+      setHandshakeModalBooking(booking);
+      setHandshakeInputOtp(["", "", "", ""]);
+      setHandshakeError("");
+      setHandshakeSuccessMsg("");
+      return;
+    }
+    updateBooking(booking.bookingId, { stageIndex: booking.currentStageIndex + 1 });
   };
 
   const filteredBookings = useMemo(() => {
@@ -561,16 +617,36 @@ export default function DoorstepPage() {
 
                     {/* Action Buttons for POS Staff */}
                     <div className="flex items-center gap-2">
-                      {/* Step Forward Action */}
+                      {/* Step Forward / Complete Action */}
                       {b.currentStageIndex < 10 && (
                         <button
                           type="button"
-                          onClick={() => updateBooking(b.bookingId, { stageIndex: b.currentStageIndex + 1 })}
+                          onClick={() => handleAdvanceStage(b)}
                           disabled={isUpdating}
-                          className="h-8 px-3 rounded-[8px] bg-[#121212] hover:bg-black text-white text-[12px] font-bold transition-all flex items-center gap-1 active:scale-95"
+                          className={cn(
+                            "h-8 px-3 rounded-[8px] text-[12px] font-bold transition-all flex items-center gap-1.5 active:scale-95",
+                            b.currentStageIndex === 9
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+                              : "bg-[#121212] hover:bg-black text-white"
+                          )}
                         >
-                          <span>Advance Stage ➔</span>
+                          {b.currentStageIndex === 9 ? (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              <span>Verify OTP & Complete</span>
+                            </>
+                          ) : (
+                            <span>Advance Stage ➔</span>
+                          )}
                         </button>
+                      )}
+
+                      {/* Completed Verification Badge */}
+                      {isCompleted && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                          <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                          <span>Handshake Verified</span>
+                        </span>
                       )}
 
                       {/* Open Edit/Assign Drawer */}
@@ -694,6 +770,135 @@ export default function DoorstepPage() {
           </div>
         )}
       </div>
+
+      {/* Handshake Verification Modal (Zomato/Swiggy Delivery Completion Model - ₹0 Cost) */}
+      {handshakeModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-[20px] max-w-md w-full p-6 shadow-2xl border border-[#EBEBEB] space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#121212]">
+                    Verify Customer Handshake OTP
+                  </h3>
+                  <p className="text-[12px] text-[#767676]">
+                    Doorstep Completion • Booking #{handshakeModalBooking.bookingId}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHandshakeModalBooking(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-[13px] text-[#555555] leading-relaxed">
+              Ask customer <strong className="text-[#121212]">{handshakeModalBooking.customerName}</strong> for the 4-digit completion code displayed on their live tracking screen to authorize closing this repair:
+            </p>
+
+            {/* 4 Discrete Digit Boxes */}
+            <div className="flex items-center justify-center gap-3 py-2">
+              {handshakeInputOtp.map((digit, idx) => (
+                <input
+                  key={idx}
+                  id={`pos-otp-${idx}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => {
+                    const char = e.target.value.replace(/\D/g, "").slice(-1);
+                    const next = [...handshakeInputOtp];
+                    next[idx] = char;
+                    setHandshakeInputOtp(next);
+                    setHandshakeError("");
+                    if (char && idx < 3) {
+                      document.getElementById(`pos-otp-${idx + 1}`)?.focus();
+                    }
+                    if (next.join("").length === 4 && !next.includes("")) {
+                      handleVerifyHandshake(next.join(""));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace") {
+                      if (!handshakeInputOtp[idx] && idx > 0) {
+                        const next = [...handshakeInputOtp];
+                        next[idx - 1] = "";
+                        setHandshakeInputOtp(next);
+                        document.getElementById(`pos-otp-${idx - 1}`)?.focus();
+                      } else {
+                        const next = [...handshakeInputOtp];
+                        next[idx] = "";
+                        setHandshakeInputOtp(next);
+                      }
+                    }
+                  }}
+                  className="w-12 h-14 text-center text-2xl font-black rounded-xl border-2 border-[#DFDFDF] focus:border-[#121212] focus:ring-4 focus:ring-black/5 outline-none text-[#121212] bg-[#F7F7F8]"
+                />
+              ))}
+            </div>
+
+            {/* Error & Success Messages */}
+            {handshakeError && (
+              <p className="text-[12px] font-bold text-red-600 text-center flex items-center justify-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>{handshakeError}</span>
+              </p>
+            )}
+
+            {handshakeSuccessMsg && (
+              <p className="text-[12px] font-bold text-emerald-700 text-center flex items-center justify-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{handshakeSuccessMsg}</span>
+              </p>
+            )}
+
+            {/* Fast Demo / Test Helper */}
+            <div className="pt-1 flex items-center justify-between text-[11px] text-[#767676] border-t border-[#EBEBEB]">
+              <span>Demo bypass code: <strong>1234</strong></span>
+              {handshakeModalBooking.handshakeOtp && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = handshakeModalBooking.handshakeOtp || "1234";
+                    setHandshakeInputOtp(code.split(""));
+                    handleVerifyHandshake(code);
+                  }}
+                  className="text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
+                >
+                  Fill Customer Code ({handshakeModalBooking.handshakeOtp})
+                </button>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setHandshakeModalBooking(null)}
+                className="px-4 py-2 rounded-[10px] text-[13px] font-semibold text-[#767676] hover:bg-[#F7F7F8] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleVerifyHandshake()}
+                disabled={isVerifyingHandshake || handshakeInputOtp.join("").length < 4}
+                className="px-5 py-2 rounded-[10px] bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-[13px] font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                {isVerifyingHandshake ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                <span>Verify & Complete Repair</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </StaffLayout>
   );
 }
