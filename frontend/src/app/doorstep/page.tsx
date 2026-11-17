@@ -152,7 +152,7 @@ export default function DoorstepPage() {
       }
     } catch (err: unknown) {
       console.warn("Could not reach CustFM backend:", err);
-      setError("Unable to connect to customer booking server on port 8081.");
+      setError("Unable to connect to customer booking server on port 8080. Please retry.");
     } finally {
       setLoading(false);
     }
