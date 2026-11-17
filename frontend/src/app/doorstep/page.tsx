@@ -30,6 +30,7 @@ import { PageLoading } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAuthGuard } from "@/hooks/useAuth";
 import { cn, formatCurrency } from "@/lib/utils";
+import { getCustFmApiUrl } from "@/lib/doorstep-sync";
 
 interface StageInfo {
   index: number;
@@ -78,28 +79,6 @@ const STAGE_OPTIONS = [
   { index: 9, label: "9. Repair In Progress" },
   { index: 10, label: "10. Completed & Closed" },
 ];
-
-function getCustFmApiUrl(): string {
-  if (process.env.NEXT_PUBLIC_CUSTFM_API_URL) {
-    return process.env.NEXT_PUBLIC_CUSTFM_API_URL.replace(/\/+$/, "");
-  }
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-
-    if (isLocalhost) {
-      return "http://localhost:8081/api";
-    }
-    // In production, CustFM customer portal runs on port 80/443 (e.g. famousmobiles.com or server IP)
-    if (hostname.includes("famousmobiles.com")) {
-      return `${protocol}//famousmobiles.com/api`;
-    }
-    // If accessed by server IP directly (e.g. 13.140.146.12:8080), CustFM is on standard port 80 of the same IP
-    return `${protocol}//${hostname}/api`;
-  }
-  return "http://127.0.0.1:8081/api";
-}
 
 export default function DoorstepPage() {
   const router = useRouter();

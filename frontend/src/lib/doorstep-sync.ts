@@ -58,16 +58,25 @@ export function playDoorstepChime() {
 }
 
 export function getCustFmApiUrl(): string {
+  if (process.env.NEXT_PUBLIC_CUSTFM_API_URL) {
+    return process.env.NEXT_PUBLIC_CUSTFM_API_URL.replace(/\/+$/, "");
+  }
   if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
     const isLocalhost =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
+      hostname === "localhost" ||
+      hostname === "127.0.0.1";
     if (isLocalhost) {
       return "http://localhost:8081/api";
     }
-    return "http://13.140.146.12:8080/api";
+    if (hostname.includes("famousmobiles.com")) {
+      return `${protocol}//famousmobiles.com/api`;
+    }
+    // On server (13.140.146.12): CustFM customer app runs on port 8080
+    return `${protocol}//${hostname}:8080/api`;
   }
-  return "http://127.0.0.1:8081/api";
+  return "http://13.140.146.12:8080/api";
 }
 
 export function useDoorstepSync(pollIntervalMs = 10000) {
